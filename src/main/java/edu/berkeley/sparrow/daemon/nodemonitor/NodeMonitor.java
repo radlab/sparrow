@@ -29,7 +29,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
  * A Node Monitor which is responsible for communicating with application
- * backends. This class is wrapped by mutliple thrift servers, so it may 
+ * backends. This class is wrapped by multiple thrift servers, so it may 
  * be concurrently accessed when handling multiple function calls 
  * simultaneously.
  */
@@ -84,12 +84,17 @@ public class NodeMonitor {
   }
   
   /**
-   * Registers the backend with assumed 0 load, and return true if successful.
-   * Return false if the backend was already registered.
+   * Registers the backend with assumed 0 load, and returns true if successful.
+   * Returns false if the backend was already registered.
    */
   public boolean registerBackend(String appId, InetSocketAddress nmAddr, 
       InetSocketAddress backendAddr) {
     LOG.debug(Logging.functionCall(appId, nmAddr, backendAddr));
+    if (appLoads.containsKey(appId)) {
+      LOG.warn("Attempt to re-register app " + appId);
+      return false;
+    }
+ 
     appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
     TTransport tr = new TFramedTransport(
         new TSocket(backendAddr.getHostName(), backendAddr.getPort()));
@@ -108,7 +113,7 @@ public class NodeMonitor {
    */
   public TResourceVector getLoad(String appId) {
     LOG.debug(Logging.functionCall(appId));
-    if(appLoads.containsKey(appId)) {
+    if (appLoads.containsKey(appId)) {
       TResourceVector inUse = TResources.none();
       for (TResourceVector res : appLoads.get(appId).values()) {
         TResources.addTo(inUse, res);
