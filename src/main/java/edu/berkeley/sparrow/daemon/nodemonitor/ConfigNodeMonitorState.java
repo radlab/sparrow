@@ -26,7 +26,7 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
   @Override
   public boolean registerBackend(String appId, InetSocketAddress nodeMonitor, 
       TResourceVector resources) {
-    // Verify that the given backend info matches the static configuration.
+    // Verify that the given backend information matches the static configuration.
     if (!appId.equals(staticAppId)) {
       throw new RuntimeException("Requested to register backend for app " + appId +
           " but was expecting app " + staticAppId);
