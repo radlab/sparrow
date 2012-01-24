@@ -9,6 +9,10 @@ public class SparrowConf {
   public final static String SCHEDULER_THRIFT_PORT = "scheduler.thrift.port";
   public final static String SCHEDULER_THRIFT_THREADS =
       "scheduler.thrift.threads";
+  // Listen port for the state store --> scheduler interface
+  public final static String SCHEDULER_STATE_THRIFT_PORT = "scheduler.state.thrift.port";
+  public final static String SCHEDULER_STATE_THRIFT_THREADS =
+      "scheduler.state.thrift.threads";
   public final static String NM_THRIFT_PORT = "agent.thrift.port";
   public final static String NM_THRIFT_THREADS = "agent.thrift.threads";
   public final static String INTERNAL_THRIFT_PORT =

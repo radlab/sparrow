@@ -32,3 +32,9 @@ struct LoadSpec {
   1: double load;
 }
 
+# Represents the State Store's view of resource consumption on a Sparrow node.
+# TODO: will include information about per-user accounting.
+struct TNodeState {
+  1: TResourceVector sparrowUsage;   # Resources used by Sparrow
+  2: TResourceVector externalUsage;  # Resources used by other schedulers
+}

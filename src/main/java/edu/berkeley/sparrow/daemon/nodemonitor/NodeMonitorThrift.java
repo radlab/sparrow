@@ -1,5 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -7,15 +8,12 @@ import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.TException;
-import org.apache.thrift.server.THsHaServer;
-import org.apache.thrift.server.THsHaServer.Args;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.apache.thrift.transport.TNonblockingServerTransport;
-import org.apache.thrift.transport.TTransportException;
+
+import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.util.TServerRunnable;
+import edu.berkeley.sparrow.daemon.util.Serialization;
+import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -45,7 +43,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
    * agent service and the other exposing the internal-facing agent service,
    * and listens for requests to both servers.
    */
-  public void initialize(Configuration conf) throws TTransportException {
+  public void initialize(Configuration conf) throws IOException {
     nodeMonitor.initialize(conf);
     // Setup application-facing agent service.
     NodeMonitorService.Processor<NodeMonitorService.Iface> processor = 
@@ -53,49 +51,28 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
     
     int port = conf.getInt(SparrowConf.NM_THRIFT_PORT, 
         DEFAULT_NM_THRIFT_PORT);
-    TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
-        port);
-    
-    Args serverArgs = new Args(serverTransport);
-    serverArgs.processor(processor);
-    
     int threads = conf.getInt(SparrowConf.NM_THRIFT_THREADS, 
         DEFAULT_NM_THRIFT_THREADS);
-    serverArgs.workerThreads(threads);
-    TServer server = new THsHaServer(serverArgs);
-    new Thread(new TServerRunnable(server)).start();
+    TServers.launchThreadedThriftServer(port, threads, processor);
 
     // Setup internal-facing agent service.
     InternalService.Processor<InternalService.Iface> internalProcessor =
         new InternalService.Processor<InternalService.Iface>(this);
-   
     int internalPort = conf.getInt(SparrowConf.INTERNAL_THRIFT_PORT,
         DEFAULT_INTERNAL_THRIFT_PORT);
-    internalAddr = new InetSocketAddress(internalPort);
-    TNonblockingServerTransport internalServerTransport =
-        new TNonblockingServerSocket(internalAddr);
-    
-  
-    Args internalServerArgs = new Args(internalServerTransport);
-    internalServerArgs.processor(internalProcessor);
-    
     int internalThreads = conf.getInt(
         SparrowConf.INTERNAL_THRIFT_THREADS,
         DEFAULT_INTERNAL_THRIFT_THREADS);
-    internalServerArgs.workerThreads(internalThreads);
-    TServer internalServer = new THsHaServer(internalServerArgs);
-    new Thread(new TServerRunnable(internalServer)).start();
+    TServers.launchThreadedThriftServer(internalPort, internalThreads, internalProcessor);
   }
   
   @Override
-  public boolean registerBackend(String app, String backendPort) throws TException {
-    String[] parts = backendPort.split(":");
-    if (parts.length != 2) {
-      return false;
+  public boolean registerBackend(String app, String backendSocket) throws TException {
+    Optional<InetSocketAddress> backendAddr = Serialization.strToSocket(backendSocket);
+    if (!backendAddr.isPresent()) {
+      return false; // TODO: maybe we should throw some exception here?
     }
-    InetSocketAddress backendAddr = new InetSocketAddress(
-        parts[0], Integer.parseInt(parts[1]));
-    return nodeMonitor.registerBackend(app, internalAddr, backendAddr);
+    return nodeMonitor.registerBackend(app, internalAddr, backendAddr.get());
   }
   
   @Override

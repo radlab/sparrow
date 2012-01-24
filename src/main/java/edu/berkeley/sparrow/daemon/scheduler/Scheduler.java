@@ -60,7 +60,7 @@ public class Scheduler {
   SchedulerState state;
   TaskPlacer placer = new ProbingTaskPlacer();
 
-  public void initialize(Configuration conf) {
+  public void initialize(Configuration conf) throws IOException {
     LOG.setLevel(Level.DEBUG);
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {

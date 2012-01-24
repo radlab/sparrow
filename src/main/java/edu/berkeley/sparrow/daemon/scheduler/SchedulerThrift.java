@@ -16,7 +16,7 @@ import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.util.TServerRunnable;
+import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
@@ -40,26 +40,16 @@ public class SchedulerThrift implements SchedulerService.Iface {
    * This spawns a multi-threaded thrift server and listens for Sparrow
    * scheduler requests.
    */
-  public void initialize(Configuration conf) throws TTransportException {
+  public void initialize(Configuration conf) throws IOException {
     LOG.setLevel(Level.DEBUG);
     SchedulerService.Processor<SchedulerService.Iface> processor = 
         new SchedulerService.Processor<SchedulerService.Iface>(this);
     scheduler.initialize(conf);
-    
     int port = conf.getInt(SparrowConf.SCHEDULER_THRIFT_PORT, 
         DEFAULT_SCHEDULER_THRIFT_PORT);
-    TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(
-        port);
-    
-    Args serverArgs = new Args(serverTransport);
-    serverArgs.processor(processor);
-    
     int threads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS, 
         DEFAULT_SCHEDULER_THRIFT_THREADS);
-    serverArgs.workerThreads(threads);
-    TServer server = new THsHaServer(serverArgs);
-    LOG.debug("Spawning scheduler server");
-    new Thread(new TServerRunnable(server)).start();
+    TServers.launchThreadedThriftServer(port, threads, processor);
   }
 
   @Override

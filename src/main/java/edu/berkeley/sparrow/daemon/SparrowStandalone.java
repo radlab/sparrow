@@ -1,5 +1,6 @@
 package edu.berkeley.sparrow.daemon;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -21,7 +22,7 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  * and on which ports.
  */
 public class SparrowStandalone {
-  public static void main(String[] args) throws TException {
+  public static void main(String[] args) throws IOException, TException {
     Configuration conf1 = new BaseConfiguration();
     conf1.setProperty(SparrowConf.DEPLYOMENT_MODE, "standalone");
     conf1.setProperty(SparrowConf.NM_THRIFT_PORT, 20001);
