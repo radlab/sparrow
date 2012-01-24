@@ -1,9 +1,11 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.thrift.TResourceVector;
 
@@ -17,8 +19,9 @@ public interface SchedulerState {
   /**
    * Initialize state storage. This should open connections to any external
    * services if required.
+   * @throws IOException 
    */
-  public void initialize(Configuration conf);
+  public void initialize(Configuration conf) throws IOException;
   
   /**
    * Signal that state storage will be queried for information about

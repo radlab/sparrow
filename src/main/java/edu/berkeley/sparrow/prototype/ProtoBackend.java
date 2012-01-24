@@ -1,5 +1,6 @@
 package edu.berkeley.sparrow.prototype;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,7 +22,7 @@ import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.daemon.util.TServerRunnable;
+import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -154,20 +155,12 @@ public class ProtoBackend implements BackendService.Iface {
         taskId, sleepDuration, estimatedResources)).start();
   }
   
-  public static void main(String[] args) throws TException {
+  public static void main(String[] args) throws IOException, TException {
     // Start backend server
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(new ProtoBackend());
    
-    TNonblockingServerTransport serverTransport =
-        new TNonblockingServerSocket(LISTEN_PORT);
-  
-    Args serverArgs = new Args(serverTransport);
-    serverArgs.processor(processor);
-    serverArgs.workerThreads(WORKER_THREADS);
-    
-    TServer server = new THsHaServer(serverArgs);
-    new Thread(new TServerRunnable(server)).start();
+    TServers.launchThreadedThriftServer(LISTEN_PORT, WORKER_THREADS, processor);
     
     // Register server
     createNMClient().registerBackend(APP_ID, "localhost:" + LISTEN_PORT);

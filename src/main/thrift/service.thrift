@@ -45,11 +45,18 @@ service BackendService {
 
 }
 
-# The InternalService exposes state about application backends to
-# other Sparrow daemons.
+# The InternalService exposes state about application backends to:
+# 1) Other Sparrow daemons
+# 2) The central state store
 service InternalService {
   types.TResourceVector getLoad(1: string app);
   bool launchTask(1: string app, 2: binary message, 3: binary taskId, 4: types.TUserGroupInfo user, 5: types.TResourceVector estimatedResources);
- }
-  
-  
+}
+
+# This interface allows the state store to update the scheduler with
+# information about resource usage on each node from Sparrow and from external
+# frameworks. 
+service SchedulerStateStoreService {
+  void updateNodeState(1: map<string, types.TNodeState> snapshot);
+}
+
