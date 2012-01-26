@@ -5,7 +5,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.thrift.TResourceVector;
 

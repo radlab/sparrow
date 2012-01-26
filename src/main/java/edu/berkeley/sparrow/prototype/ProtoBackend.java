@@ -10,12 +10,7 @@ import java.util.Map;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.server.THsHaServer;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.THsHaServer.Args;
 import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
@@ -86,7 +81,7 @@ public class ProtoBackend implements BackendService.Iface {
     public void run() {
       ArrayList<ByteBuffer> tasksCopy = null;
       
-      // Update bookeeping for task start
+      // Update bookkeeping for task start
       synchronized(resourceUsage) {
         TResources.addTo(resourceUsage, taskResources);
       }
@@ -111,7 +106,7 @@ public class ProtoBackend implements BackendService.Iface {
       } catch (InterruptedException e) {
       }
       
-      // Update bookeeping for task finish
+      // Update bookkeeping for task finish
       synchronized(resourceUsage) {
         TResources.subtractFrom(resourceUsage, taskResources);
       }

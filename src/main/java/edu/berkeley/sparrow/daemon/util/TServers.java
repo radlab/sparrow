@@ -18,8 +18,8 @@ import org.apache.thrift.transport.TTransportException;
 public class TServers {
   private final static Logger LOG = Logger.getLogger(TServers.class);
 
-  public static void launchThreadedThriftServer(int port, int threads, 
-                                             TProcessor processor) throws IOException {
+  public static void launchThreadedThriftServer(int port, int threads,
+      TProcessor processor) throws IOException {
     LOG.info("Staring async thrift server of type: " + processor.getClass().toString());
     TNonblockingServerTransport serverTransport;
     try {

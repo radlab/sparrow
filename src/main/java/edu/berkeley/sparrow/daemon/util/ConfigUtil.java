@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
-import org.mortbay.log.Log;
+import org.apache.log4j.Logger;
 
 import com.google.common.base.Optional;
 
@@ -18,6 +18,8 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
  * Utilities to aid the configuration file-based scheduler and node monitor.
  */
 public class ConfigUtil {
+  private final static Logger LOG = Logger.getLogger(ConfigUtil.class);
+  
   /**
    * Parses the list of backends from a {@code Configuration}.
    */
@@ -36,7 +38,7 @@ public class ConfigUtil {
     for (String node: conf.getStringArray(SparrowConf.STATIC_BACKENDS)) {
       Optional<InetSocketAddress> addr = Serialization.strToSocket(node);
       if (!addr.isPresent()) {
-        Log.warn("Bad backend address: " + node);
+        LOG.warn("Bad backend address: " + node);
         continue;
       }
       backends.put(addr.get(), nodeResources);
@@ -57,7 +59,7 @@ public class ConfigUtil {
     for (String node: conf.getStringArray(SparrowConf.STATIC_SCHEDULERS)) {
       Optional<InetSocketAddress> addr = Serialization.strToSocket(node);
       if (!addr.isPresent()) {
-        Log.warn("Bad scheduler address: " + node);
+        LOG.warn("Bad scheduler address: " + node);
         continue;
       }
       frontends.add(addr.get());

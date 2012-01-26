@@ -8,8 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
-import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
 
@@ -22,7 +22,7 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 
 /**
- * {@link SchedulerState} implementation which relies on asynchronus updates from a 
+ * {@link SchedulerState} implementation which relies on asynchronous updates from a 
  * central state store.
  */
 public class StateStoreSchedulerState implements SchedulerState, 
@@ -30,6 +30,7 @@ public class StateStoreSchedulerState implements SchedulerState,
   public static int DEFAULT_SCHEDULER_STATE_THRIFT_PORT = 20503;
   public static int DEFAULT_SCHEDULER_STATE_THRIFT_THREADS = 2;
   
+  private final static Logger LOG = Logger.getLogger(StateStoreSchedulerState.class);
   private ConcurrentMap<InetSocketAddress, TResourceVector> backends = 
       new ConcurrentHashMap<InetSocketAddress, TResourceVector>();
   
@@ -63,7 +64,7 @@ public class StateStoreSchedulerState implements SchedulerState,
     for (Entry<String, TNodeState> entry : snapshot.entrySet()) {
       Optional<InetSocketAddress> address = Serialization.strToSocket(entry.getKey());
       if (!address.isPresent()) {
-        Log.warn("State store gave bad backend descriptor: " + entry.getKey());
+        LOG.warn("State store gave bad backend descriptor: " + entry.getKey());
         continue;
       }
       
