@@ -28,4 +28,5 @@ public class SparrowConf {
   public final static String STATIC_BACKENDS = "static.backends";
   public final static String STATIC_MEM_PER_BACKEND = "static.mem.per.backend";
   public final static String STATIC_APP_NAME = "static.app.name";
+  public final static String STATIC_SCHEDULERS = "static.frontends";
 }

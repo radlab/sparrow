@@ -53,9 +53,8 @@ service InternalService {
   bool launchTask(1: string app, 2: binary message, 3: binary taskId, 4: types.TUserGroupInfo user, 5: types.TResourceVector estimatedResources);
 }
 
-# This interface allows the state store to update the scheduler with
-# information about resource usage on each node from Sparrow and from external
-# frameworks. 
+# Message from the state store to update scheduler state. TODO: this should
+# be moved to internal interface or its own interface (maybe).
 service SchedulerStateStoreService {
   void updateNodeState(1: map<string, types.TNodeState> snapshot);
 }
