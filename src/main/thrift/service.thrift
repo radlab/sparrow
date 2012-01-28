@@ -35,7 +35,7 @@ service NodeMonitorService {
 }
 
 # A service that backends are expected to extend. Handles communication
-# from a NodeMontior.
+# from a NodeMonitor.
 service BackendService {  
   # Update the limit on resources allowed for this application, per user. If 
   # applications exceed their allowed usage, Sparrow may terminate the

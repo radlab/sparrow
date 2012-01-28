@@ -4,7 +4,6 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.configuration.Configuration;
 
-import edu.berkeley.sparrow.thrift.TResourceVector;
 
 public interface NodeMonitorState {
   /**
@@ -18,6 +17,5 @@ public interface NodeMonitorState {
    * a NodeMonitor running at the given address. The node is assumed to have
    * resources given by {@code capacity}.
    */
-  public boolean registerBackend(String appId, InetSocketAddress nodeMonitor, 
-      TResourceVector capacity);
+  public boolean registerBackend(String appId, InetSocketAddress nodeMonitor);
 }

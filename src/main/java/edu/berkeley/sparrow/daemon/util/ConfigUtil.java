@@ -21,7 +21,10 @@ public class ConfigUtil {
   private final static Logger LOG = Logger.getLogger(ConfigUtil.class);
   
   /**
-   * Parses the list of backends from a {@code Configuration}.
+   * Parses the list of backends from a {@link Configuration}.
+   * 
+   * Returns a map of address of backends to a {@link TResourceVector} describing the
+   * total resource capacity for that backend.
    */
   public static ConcurrentMap<InetSocketAddress, TResourceVector> parseBackends(
       Configuration conf) {
