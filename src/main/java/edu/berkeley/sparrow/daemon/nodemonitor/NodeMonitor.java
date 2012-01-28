@@ -58,7 +58,7 @@ public class NodeMonitor {
     capacity = new TResourceVector();
     
     // Interrogate system resources. We may want to put this in another class, and note
-    // that currently this will only work on linux machines (otherwise will use default).
+    // that currently this will only work on Linux machines (otherwise will use default).
     try {
       Process p = Runtime.getRuntime().exec("cat /proc/meminfo");  
       BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));

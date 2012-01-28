@@ -36,7 +36,7 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
     } else if (!backends.get(nodeMonitor).equals(resources)) {
       throw new RuntimeException("Given resources (" + resources.toString() +
           ") for node monitor at " + nodeMonitor.toString() +" for app " + appId +
-          "dont match statically configured resources (" +
+          " don't match statically configured resources (" +
           backends.get(nodeMonitor).toString() + ")");
     }
     
