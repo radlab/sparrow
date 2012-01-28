@@ -43,7 +43,7 @@ public class TestNodeMonitor {
   public void testEmptyResourcesForNewBackend() {
     TResourceVector initialCapacity = TResources.createResourceVector(1024);
     nodeMonitor.registerBackend("app1", 
-        new InetSocketAddress("localhost", 1234), initialCapacity);
+        new InetSocketAddress("localhost", 1234));
     TResourceVector resource = nodeMonitor.getLoad("app1");
     assertTrue(TResources.equal(TResources.createResourceVector(0), resource));
   }
@@ -52,7 +52,7 @@ public class TestNodeMonitor {
   public void testResourceGetAfterSet () {
     TResourceVector initialCapacity = TResources.createResourceVector(1024);
     nodeMonitor.registerBackend("app1", 
-        new InetSocketAddress("localhost", 1234), initialCapacity);
+        new InetSocketAddress("localhost", 1234));
     
     // Set load manually
     TResourceVector resPerUser = TResources.createResourceVector(256);

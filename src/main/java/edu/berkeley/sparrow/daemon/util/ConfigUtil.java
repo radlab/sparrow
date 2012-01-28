@@ -22,6 +22,9 @@ public class ConfigUtil {
   
   /**
    * Parses the list of backends from a {@code Configuration}.
+   * 
+   * Returns a map of address of backends to the total resource capacity (currently just
+   * the memory capacity) for that backend.
    */
   public static ConcurrentMap<InetSocketAddress, TResourceVector> parseBackends(
       Configuration conf) {

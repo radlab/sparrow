@@ -33,11 +33,11 @@ public class StandaloneStateStore {
   
   // SOURCE: StandaloneNodeMonitorState
   public synchronized void registerBackend(
-      String appId, InetSocketAddress nmAddr, TResourceVector capacity) {
+      String appId, InetSocketAddress nmAddr) {
     if (!this.applications.containsKey(appId)) {
       this.applications.put(appId, new HashMap<InetSocketAddress, TResourceVector>());
     }
-    this.applications.get(appId).put(nmAddr, capacity);
+    this.applications.get(appId).put(nmAddr, new TResourceVector());
   }
   
   // SOURCE: StandaloneSchedulerState

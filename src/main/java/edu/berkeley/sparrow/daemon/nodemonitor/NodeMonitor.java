@@ -105,7 +105,7 @@ public class NodeMonitor {
     }
     TProtocol proto = new TBinaryProtocol(tr);
     backendClients.put(appId, new BackendService.Client(proto));
-    return state.registerBackend(appId, nmAddr, capacity);
+    return state.registerBackend(appId, nmAddr);
   }
 
   /**
