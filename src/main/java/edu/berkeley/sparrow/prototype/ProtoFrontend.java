@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.api.SparrowFrontendClient;
@@ -41,6 +42,9 @@ public class ProtoFrontend {
   }
   
   public static void main(String[] args) throws TException {
+    // Set up a simple configuration that logs on the console.
+    BasicConfigurator.configure();
+    
     SparrowFrontendClient client = new SparrowFrontendClient();
     TUserGroupInfo user = new TUserGroupInfo();
     user.setUser("*");

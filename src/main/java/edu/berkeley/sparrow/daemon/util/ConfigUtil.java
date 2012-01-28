@@ -25,7 +25,7 @@ public class ConfigUtil {
    */
   public static ConcurrentMap<InetSocketAddress, TResourceVector> parseBackends(
       Configuration conf) {
-    if (!conf.containsKey(SparrowConf.STATIC_BACKENDS) || 
+    if (!conf.containsKey(SparrowConf.STATIC_NODE_MONITORS) || 
         !conf.containsKey(SparrowConf.STATIC_MEM_PER_BACKEND)) {
       throw new RuntimeException("Missing configuration backend list.");
     }
@@ -35,7 +35,7 @@ public class ConfigUtil {
     TResourceVector nodeResources = TResources.createResourceVector(
         conf.getInt(SparrowConf.STATIC_MEM_PER_BACKEND));
     
-    for (String node: conf.getStringArray(SparrowConf.STATIC_BACKENDS)) {
+    for (String node: conf.getStringArray(SparrowConf.STATIC_NODE_MONITORS)) {
       Optional<InetSocketAddress> addr = Serialization.strToSocket(node);
       if (!addr.isPresent()) {
         LOG.warn("Bad backend address: " + node);

@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -32,7 +33,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 2;
  
   private NodeMonitor nodeMonitor = new NodeMonitor();
-  // The socket addr (ip:port) where we listen for internal requests.
+  // The socket addr (ip:port) where we listen for requests from other Sparrow daemons.
   // Used when registering backends with the state store.
   private InetSocketAddress internalAddr;
   
@@ -45,10 +46,11 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
    */
   public void initialize(Configuration conf) throws IOException {
     nodeMonitor.initialize(conf);
+
     // Setup application-facing agent service.
     NodeMonitorService.Processor<NodeMonitorService.Iface> processor = 
         new NodeMonitorService.Processor<NodeMonitorService.Iface>(this);
-    
+
     int port = conf.getInt(SparrowConf.NM_THRIFT_PORT, 
         DEFAULT_NM_THRIFT_PORT);
     int threads = conf.getInt(SparrowConf.NM_THRIFT_THREADS, 
@@ -64,6 +66,8 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
         SparrowConf.INTERNAL_THRIFT_THREADS,
         DEFAULT_INTERNAL_THRIFT_THREADS);
     TServers.launchThreadedThriftServer(internalPort, internalThreads, internalProcessor);
+    
+    internalAddr = new InetSocketAddress(InetAddress.getLocalHost(),internalPort);
   }
   
   @Override

@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -151,6 +152,9 @@ public class ProtoBackend implements BackendService.Iface {
   }
   
   public static void main(String[] args) throws IOException, TException {
+    // Set up a simple configuration that logs on the console.
+    BasicConfigurator.configure();
+   
     // Start backend server
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(new ProtoBackend());

@@ -23,9 +23,10 @@ public class SparrowConf {
   // Values: "production", "standalone", "configbased"
   public final static String DEPLYOMENT_MODE = "deployment.mode";
   
-  // For static operation (least usable system tests). Expects a comma seperated
-  // list of host:port pairs.
-  public final static String STATIC_BACKENDS = "static.backends";
+  // Parameters for static operation (least usable system tests).
+  // Expects a comma-separated list of host:port pairs describing the address of the
+  // internal interface of the node monitors.
+  public final static String STATIC_NODE_MONITORS = "static.node_monitors";
   public final static String STATIC_MEM_PER_BACKEND = "static.mem.per.backend";
   public final static String STATIC_APP_NAME = "static.app.name";
   public final static String STATIC_SCHEDULERS = "static.frontends";
