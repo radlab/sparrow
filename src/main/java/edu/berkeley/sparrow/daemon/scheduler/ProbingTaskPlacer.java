@@ -56,20 +56,22 @@ public class ProbingTaskPlacer implements TaskPlacer {
     Map<InetSocketAddress, TResourceVector> loads;
     CountDownLatch latch; // Synchronization latch so caller can return when enough
                           // backends have responded.
+    private String appId;
     
     private ProbeCallback(
         InetSocketAddress socket, Map<InetSocketAddress, TResourceVector> loads, 
-        CountDownLatch latch) {
+        CountDownLatch latch, String appId) {
       this.socket = socket;
       this.loads = loads;
       this.latch = latch;
+      this.appId = appId;
     }
     
     @Override
     public void onComplete(getLoad_call response) {
       LOG.debug("Received load response from node " + socket);
       try {
-        TResourceVector result = response.getResult();
+        TResourceVector result = response.getResult().get(appId);
         loads.put(socket,result);
         latch.countDown();
       } catch (TException e) {
@@ -114,7 +116,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
           factory, clientManager, nbTr);
       clients.put(node, client);
       try {
-        ProbeCallback callback = new ProbeCallback(node, loads, latch);
+        ProbeCallback callback = new ProbeCallback(node, loads, latch, appId);
         LOG.debug("Launching probe on node: " + node); 
         client.getLoad(appId, callback);
       } catch (TException e) {

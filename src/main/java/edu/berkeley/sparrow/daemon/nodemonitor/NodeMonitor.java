@@ -109,23 +109,39 @@ public class NodeMonitor {
   }
 
   /**
-   * Returns the load for the given app, or -1 if no information is available.
+   * Return a map of applications to current resource usage (aggregated across all users).
+   * If appId is set to "*", this map includes all applications. If it is set to an
+   * application name, the map only includes that application. If it is set to anything
+   * else, an empty map is returned.
    */
-  public TResourceVector getLoad(String appId) {
+  public Map<String, TResourceVector> getLoad(String appId) {
     LOG.debug(Logging.functionCall(appId));
-    if (appLoads.containsKey(appId)) {
-      TResourceVector inUse = TResources.none();
-      for (TResourceVector res : appLoads.get(appId).values()) {
-        TResources.addTo(inUse, res);
-      }
-      LOG.debug("Returning " + inUse);
-      return inUse;
+    Map<String, TResourceVector> out = new HashMap<String, TResourceVector>();
+    if (appId.equals("*")) {
+      for (String app : appLoads.keySet()) {out.put(app, aggregateAppResources(app)); }
+      LOG.debug("Returning " + out);
+      return out;
+    }
+    else if (appLoads.containsKey(appId)) {
+      out.put(appId, aggregateAppResources(appId));
+      LOG.debug("Returning " + out);
+      return out;
     } else {
       LOG.warn("Request for load of uknown app " + appId);
-      return TResources.createResourceVector(-1);
+      return out;
     }
   }
   
+  /** Return the aggregate resource usage for a given appId, across all users. This will
+   *  fail if appId is not currently tracked.
+   */
+  public TResourceVector aggregateAppResources(String appId) {
+    TResourceVector inUse = TResources.none();
+    for (TResourceVector res : appLoads.get(appId).values()) {
+      TResources.addTo(inUse, res);
+    }
+    return inUse;
+  }
   /**
    * Update the resource usage for a given application.
    */

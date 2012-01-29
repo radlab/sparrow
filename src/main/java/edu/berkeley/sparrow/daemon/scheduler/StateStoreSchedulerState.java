@@ -8,12 +8,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
 import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
@@ -31,7 +33,7 @@ public class StateStoreSchedulerState implements SchedulerState,
   public static int DEFAULT_SCHEDULER_STATE_THRIFT_THREADS = 2;
   
   private final static Logger LOG = Logger.getLogger(StateStoreSchedulerState.class);
-  private ConcurrentMap<InetSocketAddress, TResourceVector> backends = 
+  private ConcurrentMap<InetSocketAddress, TResourceVector> nodeMonitors = 
       new ConcurrentHashMap<InetSocketAddress, TResourceVector>();
   
   @Override
@@ -44,6 +46,7 @@ public class StateStoreSchedulerState implements SchedulerState,
         DEFAULT_SCHEDULER_STATE_THRIFT_THREADS);
 
     TServers.launchThreadedThriftServer(port, threads, processor);
+    LOG.setLevel(Level.DEBUG);
   }
 
   @Override
@@ -55,23 +58,24 @@ public class StateStoreSchedulerState implements SchedulerState,
   @Override
   public ConcurrentMap<InetSocketAddress, TResourceVector> getBackends(
       String appId) {
-    return backends;
+    return nodeMonitors;
   }
 
   @Override
   public void updateNodeState(Map<String, TNodeState> snapshot)
       throws TException {
+    LOG.debug(Logging.functionCall(snapshot));
     for (Entry<String, TNodeState> entry : snapshot.entrySet()) {
       Optional<InetSocketAddress> address = Serialization.strToSocket(entry.getKey());
       if (!address.isPresent()) {
-        LOG.warn("State store gave bad backend descriptor: " + entry.getKey());
+        LOG.warn("State store gave bad node monitor descriptor: " + entry.getKey());
         continue;
       }
       
       // For now, simply combine Sparrow and external resource usage
       TResourceVector total = TResources.add(entry.getValue().getExternalUsage(), 
           entry.getValue().getSparrowUsage());
-      backends.put(address.get(), total);
+      nodeMonitors.put(address.get(), total);
     }
   }
 
