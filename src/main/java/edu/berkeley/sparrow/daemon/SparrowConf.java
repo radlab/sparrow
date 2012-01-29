@@ -28,6 +28,7 @@ public class SparrowConf {
   // internal interface of the node monitors.
   public final static String STATIC_NODE_MONITORS = "static.node_monitors";
   public final static String STATIC_MEM_PER_BACKEND = "static.mem.per.backend";
+  public final static String STATIC_CPU_PER_BACKEND = "static.cpu.per.backend";
   public final static String STATIC_APP_NAME = "static.app.name";
   public final static String STATIC_SCHEDULERS = "static.frontends";
 }

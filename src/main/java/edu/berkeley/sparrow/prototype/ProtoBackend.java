@@ -127,7 +127,7 @@ public class ProtoBackend implements BackendService.Iface {
   }
   
   private TUserGroupInfo user; // We force all tasks to be run by same user
-  private TResourceVector resourceUsage = TResources.createResourceVector(0);
+  private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
   private List<ByteBuffer> ongoingTasks = new ArrayList<ByteBuffer>();
   
   public ProtoBackend() {
