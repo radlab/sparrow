@@ -48,7 +48,7 @@ public class TResources {
   
   /** Return whether this resource is valid. */
   public static boolean isValid(TResourceVector r) {
-    return (r.memory > 0 || r.cores > 0);
+    return (r.memory > 0 && r.cores > 0);
   }
   
   /** Return whether two resources are equal. */
