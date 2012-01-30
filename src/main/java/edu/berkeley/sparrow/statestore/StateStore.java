@@ -12,6 +12,7 @@ import joptsimple.OptionSet;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -21,6 +22,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
 
+import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
@@ -42,7 +44,8 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 public class StateStore {
   private static enum EventType { QUERY, UPDATE };
   private static final Logger LOG = Logger.getLogger(StateStore.class);
-  
+
+  public final static Level DEFAULT_LOG_LEVEL = Level.DEBUG;
   // Delay between consecutive updates to a given scheduler
   private static final int SCHEDULER_DELAY_MS = 5000;
   // Delay between consecutive queries to a given node monitor
@@ -160,6 +163,10 @@ public class StateStore {
   TAsyncClientManager schedulerManager;
   
   public void initialize(Configuration conf) throws IOException {
+    Level logLevel = Level.toLevel(conf.getString(SparrowConf.LOG_LEVEL, ""),
+        DEFAULT_LOG_LEVEL);
+    Logger.getRootLogger().setLevel(logLevel);
+ 
     internalManager = new TAsyncClientManager();
     schedulerManager = new TAsyncClientManager();
     this.state = new ConfigStateStoreState();
