@@ -11,9 +11,15 @@ public class Serialization {
     if (parts.length != 2) {
       return Optional.absent();
     }
+    String host = parts[0];
+    // This deals with the wonky way Java InetAddress toString() represents an address:
+    // "hostname/IP"
+    if (parts[0].contains("/")) {
+      host = parts[0].split("/")[1];
+    }
     try {
       return Optional.of(new InetSocketAddress(
-        parts[0], Integer.parseInt(parts[1])));
+        host, Integer.parseInt(parts[1])));
     } catch (NumberFormatException e) {
       return Optional.absent();
     }

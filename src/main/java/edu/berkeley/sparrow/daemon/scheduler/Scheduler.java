@@ -66,7 +66,7 @@ public class Scheduler {
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
     } else if (mode.equals("configbased")) {
-      state = new ConfigSchedulerState();
+      state = new StateStoreSchedulerState(); // TODO figure this out
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }

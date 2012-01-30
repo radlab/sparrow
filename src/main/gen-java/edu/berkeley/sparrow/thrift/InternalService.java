@@ -24,7 +24,7 @@ public class InternalService {
 
   public interface Iface {
 
-    public edu.berkeley.sparrow.thrift.TResourceVector getLoad(String app) throws org.apache.thrift.TException;
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app) throws org.apache.thrift.TException;
 
     public boolean launchTask(String app, ByteBuffer message, ByteBuffer taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException;
 
@@ -58,7 +58,7 @@ public class InternalService {
       super(iprot, oprot);
     }
 
-    public edu.berkeley.sparrow.thrift.TResourceVector getLoad(String app) throws org.apache.thrift.TException
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app) throws org.apache.thrift.TException
     {
       send_getLoad(app);
       return recv_getLoad();
@@ -71,7 +71,7 @@ public class InternalService {
       sendBase("getLoad", args);
     }
 
-    public edu.berkeley.sparrow.thrift.TResourceVector recv_getLoad() throws org.apache.thrift.TException
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> recv_getLoad() throws org.apache.thrift.TException
     {
       getLoad_result result = new getLoad_result();
       receiveBase(result, "getLoad");
@@ -148,7 +148,7 @@ public class InternalService {
         prot.writeMessageEnd();
       }
 
-      public edu.berkeley.sparrow.thrift.TResourceVector getResult() throws org.apache.thrift.TException {
+      public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getResult() throws org.apache.thrift.TException {
         if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -554,9 +554,9 @@ public class InternalService {
   public static class getLoad_result implements org.apache.thrift.TBase<getLoad_result, getLoad_result._Fields>, java.io.Serializable, Cloneable   {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("getLoad_result");
 
-    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.STRUCT, (short)0);
+    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.MAP, (short)0);
 
-    public edu.berkeley.sparrow.thrift.TResourceVector success; // required
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> success; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -622,7 +622,9 @@ public class InternalService {
     static {
       Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
       tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class)));
+          new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
+              new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING), 
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class))));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getLoad_result.class, metaDataMap);
     }
@@ -631,7 +633,7 @@ public class InternalService {
     }
 
     public getLoad_result(
-      edu.berkeley.sparrow.thrift.TResourceVector success)
+      Map<String,edu.berkeley.sparrow.thrift.TResourceVector> success)
     {
       this();
       this.success = success;
@@ -642,7 +644,19 @@ public class InternalService {
      */
     public getLoad_result(getLoad_result other) {
       if (other.isSetSuccess()) {
-        this.success = new edu.berkeley.sparrow.thrift.TResourceVector(other.success);
+        Map<String,edu.berkeley.sparrow.thrift.TResourceVector> __this__success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceVector>();
+        for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceVector> other_element : other.success.entrySet()) {
+
+          String other_element_key = other_element.getKey();
+          edu.berkeley.sparrow.thrift.TResourceVector other_element_value = other_element.getValue();
+
+          String __this__success_copy_key = other_element_key;
+
+          edu.berkeley.sparrow.thrift.TResourceVector __this__success_copy_value = new edu.berkeley.sparrow.thrift.TResourceVector(other_element_value);
+
+          __this__success.put(__this__success_copy_key, __this__success_copy_value);
+        }
+        this.success = __this__success;
       }
     }
 
@@ -654,11 +668,22 @@ public class InternalService {
       this.success = null;
     }
 
-    public edu.berkeley.sparrow.thrift.TResourceVector getSuccess() {
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public void putToSuccess(String key, edu.berkeley.sparrow.thrift.TResourceVector val) {
+      if (this.success == null) {
+        this.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceVector>();
+      }
+      this.success.put(key, val);
+    }
+
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getSuccess() {
       return this.success;
     }
 
-    public getLoad_result setSuccess(edu.berkeley.sparrow.thrift.TResourceVector success) {
+    public getLoad_result setSuccess(Map<String,edu.berkeley.sparrow.thrift.TResourceVector> success) {
       this.success = success;
       return this;
     }
@@ -684,7 +709,7 @@ public class InternalService {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((edu.berkeley.sparrow.thrift.TResourceVector)value);
+          setSuccess((Map<String,edu.berkeley.sparrow.thrift.TResourceVector>)value);
         }
         break;
 
@@ -779,9 +804,21 @@ public class InternalService {
         }
         switch (field.id) {
           case 0: // SUCCESS
-            if (field.type == org.apache.thrift.protocol.TType.STRUCT) {
-              this.success = new edu.berkeley.sparrow.thrift.TResourceVector();
-              this.success.read(iprot);
+            if (field.type == org.apache.thrift.protocol.TType.MAP) {
+              {
+                org.apache.thrift.protocol.TMap _map22 = iprot.readMapBegin();
+                this.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceVector>(2*_map22.size);
+                for (int _i23 = 0; _i23 < _map22.size; ++_i23)
+                {
+                  String _key24; // required
+                  edu.berkeley.sparrow.thrift.TResourceVector _val25; // required
+                  _key24 = iprot.readString();
+                  _val25 = new edu.berkeley.sparrow.thrift.TResourceVector();
+                  _val25.read(iprot);
+                  this.success.put(_key24, _val25);
+                }
+                iprot.readMapEnd();
+              }
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
             }
@@ -802,7 +839,15 @@ public class InternalService {
 
       if (this.isSetSuccess()) {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-        this.success.write(oprot);
+        {
+          oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, this.success.size()));
+          for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceVector> _iter26 : this.success.entrySet())
+          {
+            oprot.writeString(_iter26.getKey());
+            _iter26.getValue().write(oprot);
+          }
+          oprot.writeMapEnd();
+        }
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();

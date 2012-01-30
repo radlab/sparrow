@@ -26,7 +26,7 @@ public class ProtoFrontend {
     Random r = new Random();
     
     // Duration of tasks (each task is the same)
-    int msToSleep = 250 + r.nextInt(500);
+    int msToSleep = 10000 + r.nextInt(500);
     byte[] message = ByteBuffer.allocate(4).putInt(msToSleep).array();
 
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
