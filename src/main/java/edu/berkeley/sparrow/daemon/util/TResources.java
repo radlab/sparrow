@@ -10,31 +10,34 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 public class TResources {
   
   /** Constructor for resources */
-  public static TResourceVector createResourceVector(long memory) {
+  public static TResourceVector createResourceVector(long memory, int cores) {
     TResourceVector out = new TResourceVector();
     out.setMemory(memory);
+    out.setCores(cores);
     return out;
   }
   
-  /** Return a copy of a resoure */
+  /** Return a copy of a resource */
   public static TResourceVector clone(TResourceVector in) {
-    return createResourceVector(in.getMemory()); 
+    return createResourceVector(in.getMemory(), in.getCores()); 
   }
   
   /** Return a new empty resource object. */
   public static TResourceVector none() {
-    return createResourceVector(0);
+    return createResourceVector(0, 0);
   }
   
   /** Add the resource {@code b} to resource {@code a} */
   public static TResourceVector addTo(TResourceVector a, TResourceVector b) {
     a.setMemory(a.getMemory() + b.getMemory());
+    a.setCores(a.getCores() + b.getCores());
     return a;
   }
   
   /** Subtract the resource {@code b} from the resource {@code a} */
   public static TResourceVector subtractFrom(TResourceVector a, TResourceVector b) {
     a.setMemory(a.getMemory() - b.getMemory());
+    a.setCores(a.getCores() - b.getCores());
     return a;
   }
   
@@ -45,21 +48,11 @@ public class TResources {
   
   /** Return whether this resource is valid. */
   public static boolean isValid(TResourceVector r) {
-    return (r.memory > 0);
+    return (r.memory > 0 && r.cores > 0);
   }
   
   /** Return whether two resources are equal. */
   public static boolean equal(TResourceVector a, TResourceVector b) {
-    return a.getMemory() == b.getMemory();
-  }
-  
-  /** Return a comparison between two resources. */
-  public static int compareTo(TResourceVector a, TResourceVector b) {
-    if (a.getMemory() > b.getMemory()) {
-      return 1;
-    } else if (a.getMemory() == b.getMemory()) {
-      return 0;
-    }
-    return -1;
+    return ((a.getMemory() == b.getMemory()) && (a.getCores() == b.getCores()));
   }
 }

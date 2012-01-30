@@ -22,7 +22,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  */
 public class ProtoFrontend {
   public static List<TTaskSpec> generateJob() {
-    TResourceVector resources = TResources.createResourceVector(100);
+    TResourceVector resources = TResources.createResourceVector(100, 1);
     Random r = new Random();
     
     // Duration of tasks (each task is the same)

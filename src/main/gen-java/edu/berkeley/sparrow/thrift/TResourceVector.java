@@ -24,12 +24,15 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TResourceVector");
 
   private static final org.apache.thrift.protocol.TField MEMORY_FIELD_DESC = new org.apache.thrift.protocol.TField("memory", org.apache.thrift.protocol.TType.I64, (short)1);
+  private static final org.apache.thrift.protocol.TField CORES_FIELD_DESC = new org.apache.thrift.protocol.TField("cores", org.apache.thrift.protocol.TType.I32, (short)2);
 
   public long memory; // required
+  public int cores; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    MEMORY((short)1, "memory");
+    MEMORY((short)1, "memory"),
+    CORES((short)2, "cores");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -46,6 +49,8 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
       switch(fieldId) {
         case 1: // MEMORY
           return MEMORY;
+        case 2: // CORES
+          return CORES;
         default:
           return null;
       }
@@ -87,13 +92,16 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
 
   // isset id assignments
   private static final int __MEMORY_ISSET_ID = 0;
-  private BitSet __isset_bit_vector = new BitSet(1);
+  private static final int __CORES_ISSET_ID = 1;
+  private BitSet __isset_bit_vector = new BitSet(2);
 
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
     tmpMap.put(_Fields.MEMORY, new org.apache.thrift.meta_data.FieldMetaData("memory", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
+    tmpMap.put(_Fields.CORES, new org.apache.thrift.meta_data.FieldMetaData("cores", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TResourceVector.class, metaDataMap);
   }
@@ -102,11 +110,14 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
   }
 
   public TResourceVector(
-    long memory)
+    long memory,
+    int cores)
   {
     this();
     this.memory = memory;
     setMemoryIsSet(true);
+    this.cores = cores;
+    setCoresIsSet(true);
   }
 
   /**
@@ -116,6 +127,7 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
     this.memory = other.memory;
+    this.cores = other.cores;
   }
 
   public TResourceVector deepCopy() {
@@ -125,6 +137,8 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
   public void clear() {
     setMemoryIsSet(false);
     this.memory = 0;
+    setCoresIsSet(false);
+    this.cores = 0;
   }
 
   public long getMemory() {
@@ -150,6 +164,29 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     __isset_bit_vector.set(__MEMORY_ISSET_ID, value);
   }
 
+  public int getCores() {
+    return this.cores;
+  }
+
+  public TResourceVector setCores(int cores) {
+    this.cores = cores;
+    setCoresIsSet(true);
+    return this;
+  }
+
+  public void unsetCores() {
+    __isset_bit_vector.clear(__CORES_ISSET_ID);
+  }
+
+  /** Returns true if field cores is set (has been assigned a value) and false otherwise */
+  public boolean isSetCores() {
+    return __isset_bit_vector.get(__CORES_ISSET_ID);
+  }
+
+  public void setCoresIsSet(boolean value) {
+    __isset_bit_vector.set(__CORES_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case MEMORY:
@@ -160,6 +197,14 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
       }
       break;
 
+    case CORES:
+      if (value == null) {
+        unsetCores();
+      } else {
+        setCores((Integer)value);
+      }
+      break;
+
     }
   }
 
@@ -167,6 +212,9 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     switch (field) {
     case MEMORY:
       return Long.valueOf(getMemory());
+
+    case CORES:
+      return Integer.valueOf(getCores());
 
     }
     throw new IllegalStateException();
@@ -181,6 +229,8 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     switch (field) {
     case MEMORY:
       return isSetMemory();
+    case CORES:
+      return isSetCores();
     }
     throw new IllegalStateException();
   }
@@ -204,6 +254,15 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
       if (!(this_present_memory && that_present_memory))
         return false;
       if (this.memory != that.memory)
+        return false;
+    }
+
+    boolean this_present_cores = true;
+    boolean that_present_cores = true;
+    if (this_present_cores || that_present_cores) {
+      if (!(this_present_cores && that_present_cores))
+        return false;
+      if (this.cores != that.cores)
         return false;
     }
 
@@ -233,6 +292,16 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetCores()).compareTo(typedOther.isSetCores());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetCores()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.cores, typedOther.cores);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -258,6 +327,14 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
           }
           break;
+        case 2: // CORES
+          if (field.type == org.apache.thrift.protocol.TType.I32) {
+            this.cores = iprot.readI32();
+            setCoresIsSet(true);
+          } else { 
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
       }
@@ -276,6 +353,9 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     oprot.writeFieldBegin(MEMORY_FIELD_DESC);
     oprot.writeI64(this.memory);
     oprot.writeFieldEnd();
+    oprot.writeFieldBegin(CORES_FIELD_DESC);
+    oprot.writeI32(this.cores);
+    oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
@@ -287,6 +367,10 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
 
     sb.append("memory:");
     sb.append(this.memory);
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("cores:");
+    sb.append(this.cores);
     first = false;
     sb.append(")");
     return sb.toString();

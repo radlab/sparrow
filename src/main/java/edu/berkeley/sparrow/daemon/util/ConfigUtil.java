@@ -29,14 +29,17 @@ public class ConfigUtil {
   public static ConcurrentMap<InetSocketAddress, TResourceVector> parseBackends(
       Configuration conf) {
     if (!conf.containsKey(SparrowConf.STATIC_NODE_MONITORS) || 
-        !conf.containsKey(SparrowConf.STATIC_MEM_PER_BACKEND)) {
-      throw new RuntimeException("Missing configuration backend list.");
+        !conf.containsKey(SparrowConf.STATIC_MEM_PER_NM) ||
+        !conf.containsKey(SparrowConf.STATIC_CPU_PER_NM)) {
+      throw new RuntimeException("Missing configuration node monitor list, " +
+      		"or default mem/cpu allocation.");
     }
     
     ConcurrentMap<InetSocketAddress, TResourceVector> backends =
         new ConcurrentHashMap<InetSocketAddress, TResourceVector>();
     TResourceVector nodeResources = TResources.createResourceVector(
-        conf.getInt(SparrowConf.STATIC_MEM_PER_BACKEND));
+        conf.getInt(SparrowConf.STATIC_MEM_PER_NM),
+        conf.getInt(SparrowConf.STATIC_CPU_PER_NM));
     
     for (String node: conf.getStringArray(SparrowConf.STATIC_NODE_MONITORS)) {
       Optional<InetSocketAddress> addr = Serialization.strToSocket(node);

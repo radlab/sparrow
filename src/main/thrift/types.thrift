@@ -7,7 +7,8 @@ struct TPlacementPreference {
 }
 
 struct TResourceVector {
-  1: i64 memory; // Memory, in GB
+  1: i64 memory; // Memory, in Mb
+  2: i32 cores;    // # Cores
 }
 
 struct TUserGroupInfo {

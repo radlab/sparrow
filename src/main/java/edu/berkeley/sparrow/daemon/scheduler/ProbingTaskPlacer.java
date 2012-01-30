@@ -24,7 +24,6 @@ import org.apache.thrift.transport.TNonblockingTransport;
 
 import com.google.common.base.Optional;
 
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -44,7 +43,13 @@ public class ProbingTaskPlacer implements TaskPlacer {
     @Override
     public int compare(Entry<InetSocketAddress, TResourceVector> e1, 
         Entry<InetSocketAddress, TResourceVector> e2) {
-      return TResources.compareTo(e1.getValue(), e2.getValue());
+      // NOTE: right now we just compare based on memory. This is a simplification, since
+      // resource vectors are actually multi-dimensional.
+      long m1 = e1.getValue().memory;
+      long m2 = e2.getValue().memory;
+      if (m1 > m2) { return 1; }
+      if (m1 < m2) { return -1; }
+      return 0;
     }
   }
   
