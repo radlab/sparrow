@@ -4,6 +4,9 @@ package edu.berkeley.sparrow.daemon;
  * Configuration parameters for sparrow.
  */
 public class SparrowConf {
+  // Values: "debug", "info", "warn", "error", "fatal"
+  public final static String LOG_LEVEL = "log_level";
+
   public final static String ZK_SERVERS = "zk.server.string";
   public final static String ZK_TIMEOUT = "zk.timeout";
   public final static String SCHEDULER_THRIFT_PORT = "scheduler.thrift.port";

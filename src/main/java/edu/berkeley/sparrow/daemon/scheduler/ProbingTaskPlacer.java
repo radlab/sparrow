@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -94,10 +93,6 @@ public class ProbingTaskPlacer implements TaskPlacer {
       // TODO Auto-generated method stub
       
     }
-  }
-    
-  public ProbingTaskPlacer() {
-    LOG.setLevel(Level.DEBUG);
   }
   
   @Override

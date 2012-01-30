@@ -22,13 +22,14 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
 
+import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.InternalService;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService.AsyncClient.updateNodeState_call;
 import edu.berkeley.sparrow.thrift.TNodeState;
+import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
  * The State Store is the key centralized component of Sparrow. It periodically updates
@@ -43,7 +44,8 @@ import edu.berkeley.sparrow.thrift.TNodeState;
 public class StateStore {
   private static enum EventType { QUERY, UPDATE };
   private static final Logger LOG = Logger.getLogger(StateStore.class);
-  
+
+  public final static Level DEFAULT_LOG_LEVEL = Level.DEBUG;
   // Delay between consecutive updates to a given scheduler
   private static final int SCHEDULER_DELAY_MS = 5000;
   // Delay between consecutive queries to a given node monitor
@@ -161,11 +163,14 @@ public class StateStore {
   TAsyncClientManager schedulerManager;
   
   public void initialize(Configuration conf) throws IOException {
+    Level logLevel = Level.toLevel(conf.getString(SparrowConf.LOG_LEVEL, ""),
+        DEFAULT_LOG_LEVEL);
+    Logger.getRootLogger().setLevel(logLevel);
+ 
     internalManager = new TAsyncClientManager();
     schedulerManager = new TAsyncClientManager();
     this.state = new ConfigStateStoreState();
     state.initialize(conf);
-    LOG.setLevel(Level.DEBUG);
     
     // Bootstrap the event queue with queries to all node monitors we know about
     // TODO: It's not clear how this will work when the set of node monitors and

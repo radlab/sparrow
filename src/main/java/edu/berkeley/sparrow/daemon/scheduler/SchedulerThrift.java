@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
@@ -23,8 +21,6 @@ public class SchedulerThrift implements SchedulerService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_SCHEDULER_THRIFT_PORT = 12345;
   private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 2;
-
-  private final static Logger LOG = Logger.getLogger(SchedulerThrift.class);
   
   private Scheduler scheduler = new Scheduler();
 
@@ -35,7 +31,6 @@ public class SchedulerThrift implements SchedulerService.Iface {
    * scheduler requests.
    */
   public void initialize(Configuration conf) throws IOException {
-    LOG.setLevel(Level.DEBUG);
     SchedulerService.Processor<SchedulerService.Iface> processor = 
         new SchedulerService.Processor<SchedulerService.Iface>(this);
     scheduler.initialize(conf);
