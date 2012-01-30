@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
@@ -19,9 +18,9 @@ import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
+import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 import edu.berkeley.sparrow.thrift.TNodeState;
 import edu.berkeley.sparrow.thrift.TResourceVector;
-import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 
 /**
  * {@link SchedulerState} implementation which relies on asynchronous updates from a 
@@ -46,7 +45,6 @@ public class StateStoreSchedulerState implements SchedulerState,
         DEFAULT_SCHEDULER_STATE_THRIFT_THREADS);
 
     TServers.launchThreadedThriftServer(port, threads, processor);
-    LOG.setLevel(Level.DEBUG);
   }
 
   @Override

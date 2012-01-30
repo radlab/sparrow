@@ -12,7 +12,6 @@ import joptsimple.OptionSet;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -24,11 +23,11 @@ import org.apache.thrift.transport.TNonblockingTransport;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.InternalService;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService.AsyncClient.updateNodeState_call;
 import edu.berkeley.sparrow.thrift.TNodeState;
+import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
  * The State Store is the key centralized component of Sparrow. It periodically updates
@@ -165,7 +164,6 @@ public class StateStore {
     schedulerManager = new TAsyncClientManager();
     this.state = new ConfigStateStoreState();
     state.initialize(conf);
-    LOG.setLevel(Level.DEBUG);
     
     // Bootstrap the event queue with queries to all node monitors we know about
     // TODO: It's not clear how this will work when the set of node monitors and
