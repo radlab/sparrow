@@ -2,12 +2,11 @@ package edu.berkeley.sparrow.daemon.util;
 
 import java.io.IOException;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.server.THsHaServer;
-import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.THsHaServer.Args;
+import org.apache.thrift.server.TServer;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TTransportException;
@@ -41,7 +40,6 @@ public class TServers {
     private TServer server;
     
     public TServerRunnable(TServer server) {
-      LOG.setLevel(Level.DEBUG);
       this.server = server;
     }
     

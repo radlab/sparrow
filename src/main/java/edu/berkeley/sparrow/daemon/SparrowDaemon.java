@@ -6,6 +6,8 @@ import joptsimple.OptionSet;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
@@ -16,11 +18,17 @@ import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
  * such as the backends running on other nodes.
  */
 public class SparrowDaemon {
+  // Eventually, we'll want to change this to something higher than debug.
+  public final static Level DEFAULT_LOG_LEVEL = Level.DEBUG;
   
   private SchedulerThrift scheduler;
   private NodeMonitorThrift nodeMonitor;
   
-  public void initialize(Configuration conf) throws Exception {    
+  public void initialize(Configuration conf) throws Exception {
+    Level logLevel = Level.toLevel(conf.getString(SparrowConf.LOG_LEVEL, ""),
+        DEFAULT_LOG_LEVEL);
+    Logger.getRootLogger().setLevel(logLevel);
+
     // Start thrift daemons for scheduler and nodemonitor services
     scheduler = new SchedulerThrift();
     scheduler.initialize(conf);

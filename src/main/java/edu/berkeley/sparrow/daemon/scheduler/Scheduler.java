@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -61,7 +60,6 @@ public class Scheduler {
   TaskPlacer placer = new ProbingTaskPlacer();
 
   public void initialize(Configuration conf) throws IOException {
-    LOG.setLevel(Level.DEBUG);
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
