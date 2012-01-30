@@ -12,6 +12,8 @@ public class Serialization {
       return Optional.absent();
     }
     String host = parts[0];
+    // This deals with the wonky way Java InetAddress toString() represents an address:
+    // "hostname/IP"
     if (parts[0].contains("/")) {
       host = parts[0].split("/")[1];
     }

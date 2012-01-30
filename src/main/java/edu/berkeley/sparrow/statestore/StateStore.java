@@ -74,7 +74,9 @@ public class StateStore {
   private class NMCallBack implements AsyncMethodCallback<getLoad_call> {
     private InetSocketAddress node;
     
-    public NMCallBack(InetSocketAddress node) { this.node = node; }
+    public NMCallBack(InetSocketAddress node) {
+      this.node = node;
+    }
     
     @Override
     public void onComplete(getLoad_call response) {
@@ -89,7 +91,8 @@ public class StateStore {
       } catch (TException e) {
         state.sparrowUsage = TResources.none();
       }
-      state.externalUsage = TResources.none();
+      state.externalUsage = TResources.none(); // TODO: set this based on
+                                               //       external scheduler
       currentUsage.put(node.toString(), state);
       
       LOG.debug("Polled node monitor " + node);
@@ -113,7 +116,9 @@ public class StateStore {
   private class SchedulerCallback implements AsyncMethodCallback<updateNodeState_call> {
     private InetSocketAddress node;
     
-    public SchedulerCallback(InetSocketAddress node) { this.node = node; }
+    public SchedulerCallback(InetSocketAddress node) {
+      this.node = node;
+    }
     
     @Override
     public void onComplete(updateNodeState_call response) {

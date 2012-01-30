@@ -71,9 +71,14 @@ public class ProbingTaskPlacer implements TaskPlacer {
     public void onComplete(getLoad_call response) {
       LOG.debug("Received load response from node " + socket);
       try {
-        TResourceVector result = response.getResult().get(appId);
-        loads.put(socket,result);
-        latch.countDown();
+        if (!response.getResult().containsKey(appId)) {
+          LOG.warn("Probe returned no load information for " + appId);
+        }
+        else {
+          TResourceVector result = response.getResult().get(appId);
+          loads.put(socket,result);
+          latch.countDown();
+        }
       } catch (TException e) {
         LOG.error("Error getting resources from response data", e);
       }
