@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
+import edu.berkeley.sparrow.daemon.util.Logging;
 
 /**
  * Class representing the Sparrow daemon. This stores state about the frontends
@@ -50,6 +51,8 @@ public class SparrowDaemon {
     
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
+    
+    Logging.configureAuditLogging();
         
     String configFile = (String) options.valueOf("c");
     Configuration conf = new PropertiesConfiguration(configFile);

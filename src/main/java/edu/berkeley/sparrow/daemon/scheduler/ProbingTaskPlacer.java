@@ -23,6 +23,7 @@ import org.apache.thrift.transport.TNonblockingTransport;
 
 import com.google.common.base.Optional;
 
+import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -99,6 +100,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   public Collection<TaskPlacer.TaskPlacementResponse> placeTasks(String appId,
       Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
       throws IOException {
+    LOG.debug(Logging.functionCall(appId, nodes, tasks));
     Map<InetSocketAddress, TResourceVector> loads = 
         new HashMap<InetSocketAddress, TResourceVector>(); 
 

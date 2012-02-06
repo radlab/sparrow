@@ -61,10 +61,9 @@ public class ProtoFrontend {
     byte[] message = ByteBuffer.allocate(4).putInt(taskDurationMs).array();
 
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
-    for (int i = 0; i < numTasks; i++) {
+    for (int taskId = 0; taskId < numTasks; taskId++) {
       TTaskSpec spec = new TTaskSpec();
-      byte[] taskId = ByteBuffer.allocate(4).putInt(i).array();
-      spec.setTaskID(taskId);
+      spec.setTaskID(Integer.toString(taskId));
       spec.setMessage(message);
       spec.setEstimatedResources(resources);
       out.add(spec);

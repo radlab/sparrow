@@ -54,7 +54,7 @@ public class SparrowStandalone {
     System.out.println(StandaloneStateStore.getInstance().getBackends("foo"));
     
     TTaskSpec task1 = new TTaskSpec();
-    task1.setTaskID(new byte[] {1});
+    task1.setTaskID("1");
     TResourceVector requiredResources = new TResourceVector();
     requiredResources.setMemory(1024);
     task1.setEstimatedResources(requiredResources);

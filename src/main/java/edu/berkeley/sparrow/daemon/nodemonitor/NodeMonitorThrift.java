@@ -84,18 +84,17 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
     return nodeMonitor.getLoad(app);
   }
 
-
   @Override
-  public boolean launchTask(String app, ByteBuffer message, ByteBuffer taskId,
-      TUserGroupInfo user, TResourceVector estimatedResources)
-      throws TException {
-    return nodeMonitor.launchTask(app, message, taskId, user, estimatedResources);
+  public boolean launchTask(String app, ByteBuffer message,
+      String requestId, String taskId, TUserGroupInfo user,
+      TResourceVector estimatedResources) throws TException {
+    return nodeMonitor.launchTask(app, message, requestId, taskId, user,
+                                  estimatedResources);
   }
-
 
   @Override
   public void updateResourceUsage(String app,
-      Map<TUserGroupInfo, TResourceVector> usage, List<ByteBuffer> activeTaskIds)
+      Map<TUserGroupInfo, TResourceVector> usage, List<String> activeTaskIds)
       throws TException {
     nodeMonitor.updateResourceUsage(app, usage, activeTaskIds);
   }
