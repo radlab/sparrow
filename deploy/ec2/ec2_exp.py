@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 def parse_args():
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, start, and stop")
+    "\n\n<action> can be: launch, start, stop, start-proto, stop-proto")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-83c717ea",
@@ -232,6 +232,29 @@ def stop_cluster(frontends, backends, opts):
   ssh_all(all_machines, opts, "chmod 755 /root/stop_sparrow.sh;" +
                               "/root/stop_sparrow.sh;")
 
+# Start the prototype backends/frontends
+def start_proto(frontends, backends, opts):
+  print "Starting Proto backends..."
+  ssh_all([be.public_dns_name for be in backends], opts,
+         "chmod 755 /root/start_proto_backend.sh;" + 
+         "/root/start_proto_backend.sh")
+  print "Starting Proto frontends..."
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "chmod 755 /root/start_proto_frontend.sh;" + 
+          "/root/start_proto_frontend.sh")
+
+# Start the prototype backends/frontends
+def stop_proto(frontends, backends, opts):
+  print "Stopping Proto backends..."
+  ssh_all([be.public_dns_name for be in backends], opts,
+         "chmod 755 /root/stop_proto_backend.sh;" +
+         "/root/stop_proto_backend.sh")
+  print "Stopping Proto frontends..."
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "chmod 755 /root/stop_proto_frontend.sh;" +
+          "/root/stop_proto_frontend.sh")
+
+
 def main():
   (opts, args) = parse_args()
   conn = boto.connect_ec2()
@@ -241,16 +264,15 @@ def main():
     (frontends, backends) = launch_cluster(conn, opts)
     return
 
-  if action == "start" or action == "stop" or action == "deploy":
-    # Wait until ec2 says the cluster is started, then possibly wait more time
-    # to make sure all nodes have booted.
-    (frontends, backends) = find_existing_cluster(conn, opts)
-    print "Waiting for instances to start up"
-    wait_for_instances(conn, frontends)
-    wait_for_instances(conn, backends)
+  # Wait until ec2 says the cluster is started, then possibly wait more time
+  # to make sure all nodes have booted.
+  (frontends, backends) = find_existing_cluster(conn, opts)
+  print "Waiting for instances to start up"
+  wait_for_instances(conn, frontends)
+  wait_for_instances(conn, backends)
 
-    print "Waiting %d more seconds..." % opts.wait
-    time.sleep(opts.wait)
+  print "Waiting %d more seconds..." % opts.wait
+  time.sleep(opts.wait)
 
   if action == "deploy":
     print "Deploying files..."
@@ -263,6 +285,14 @@ def main():
   if action == "stop":
     print "Stopping cluster..."
     stop_cluster(frontends, backends, opts)
+
+  if action == "start-proto":
+    print "Starting proto application..."
+    start_proto(frontends, backends, opts)
+
+  if action == "stop-proto":
+    print "Stopping proto application..."
+    stop_proto(frontends, backends, opts)
 
 if __name__ == "__main__":
   main()

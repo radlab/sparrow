@@ -22,5 +22,16 @@ This script automates the deployment of a Sparrow cluster on ec2. To use it:
    # Start Sparrow
    ./ec2-exp.sh start -k eastkey -i ~/.ssh/eastkey.pem
 
+   # Start proto application
+   ./ec2-exp.sh start-proto -k eastkey -i ~/.ssh/eastkey.pem
+
+   # Stop proto application
+   ./ec2-exp.sh stop-proto -k eastkey -i ~/.ssh/eastkey.pem
+
    # Stop Sparrow
    ./ec2-exp.sh stop -k eastkey -i ~/.ssh/eastkey.pem
+
+NOTE:
+Right now if you start and stop the proto application while keeping Sparrow
+running (i.e. you don't also restart Sparrow) things break. You will get a
+confusing Thrift error if you do this.
