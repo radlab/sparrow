@@ -10,7 +10,7 @@ if [ ! $APPCHK = '0' ]; then
   exit 1;
 fi
 
-nohup java -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoFrontend  > $LOG 2>&1 &
+nohup java -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoFrontend -c frontend.conf > $LOG 2>&1 &
 PID=$!
 echo "Logging to $LOG"
 sleep 1

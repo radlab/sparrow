@@ -15,9 +15,10 @@ This script automates the deployment of a Sparrow cluster on ec2. To use it:
    ./ec2-exp.sh launch -k eastkey -i ~/.ssh/eastkey.pem
 
    # Deploy Sparrow files, waiting 100 seconds for instances to boot before
-   # attempting to contact them. This will generate config files and send
+   # attempting to contact them. It will also set the job rate to 10 jobs/s
+   # on each frontend (-l 10). This will generate config files and send
    # them to all machines.
-   ./ec2-exp.sh deploy -k eastkey -i ~/.ssh/eastkey.pem -w 100
+   ./ec2-exp.sh deploy -k eastkey -i ~/.ssh/eastkey.pem -w 100 -l 10
 
    # Start Sparrow
    ./ec2-exp.sh start -k eastkey -i ~/.ssh/eastkey.pem
