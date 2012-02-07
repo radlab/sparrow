@@ -19,6 +19,8 @@ def parse_args():
   parser.add_option("-t", "--instance-type", default="m1.large",
       help="Type of instance to launch (default: m1.large). " +
            "WARNING: must be 64 bit, thus small instances won't work")
+  parser.add_option("-l", "--arrival-rate", type="int", default=100,
+      help = "Arrival rate of jobs in proto frontends (jobs/s)")
   parser.add_option("-k", "--key-pair",
       help="Key pair to use on instances")
   parser.add_option("-i", "--identity-file",
@@ -174,7 +176,8 @@ def deploy_cluster(frontends, backends, opts):
     "static_backends": ",".join(["%s:20502" % i.public_dns_name \
                                  for i in backends]),
     "backend_list": "\n".join(["%s" % i.public_dns_name \
-                                 for i in backends])
+                                 for i in backends]),
+    "arrival_lambda": "%s" % opts.arrival_rate
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
