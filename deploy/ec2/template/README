@@ -1,0 +1,2 @@
+All files in this folder are copied to each remote Sparrow node, with any
+variables filled in by the EC2 install script.
