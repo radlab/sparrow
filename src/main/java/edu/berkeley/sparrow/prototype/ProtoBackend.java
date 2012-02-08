@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
@@ -17,6 +18,7 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
+import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
@@ -43,6 +45,8 @@ public class ProtoBackend implements BackendService.Iface {
   private static final String NM_HOST = "localhost";
   private static final int NM_PORT = NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT;
   
+  private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
+  
   /**
    * Create a thrift client connection to the Node Monitor.
    */
@@ -68,19 +72,22 @@ public class ProtoBackend implements BackendService.Iface {
   private class TaskRunnable implements Runnable {
     private int sleepMs;
     private TResourceVector taskResources;
-    private ByteBuffer taskId;
+    private String requestId;
+    private String taskId;
     private NodeMonitorService.Client client;
     
-    public TaskRunnable(ByteBuffer taskId, int sleepMs, TResourceVector taskResources) {
+    public TaskRunnable(String requestId, String taskId, int sleepMs,
+        TResourceVector taskResources) {
       this.sleepMs = sleepMs;
       this.taskResources = taskResources;
+      this.requestId = requestId;
       this.taskId = taskId;
       client = createNMClient();
     }
     
     @Override
     public void run() {
-      ArrayList<ByteBuffer> tasksCopy = null;
+      ArrayList<String> tasksCopy = null;
       
       // Update bookkeeping for task start
       synchronized(resourceUsage) {
@@ -88,7 +95,7 @@ public class ProtoBackend implements BackendService.Iface {
       }
       synchronized(ongoingTasks) {
         ongoingTasks.add(this.taskId);
-        tasksCopy = new ArrayList<ByteBuffer>(ongoingTasks);
+        tasksCopy = new ArrayList<String>(ongoingTasks);
       }
   
       // Inform NM of resource usage
@@ -107,13 +114,18 @@ public class ProtoBackend implements BackendService.Iface {
       } catch (InterruptedException e) {
       }
       
+      // Log task finish before updating bookkeeping, in case bookkeeping ends up being
+      // expensive.
+      AUDIT_LOG.info(Logging.auditEventString("task_completion", this.requestId,
+                                              this.taskId));
+      
       // Update bookkeeping for task finish
       synchronized(resourceUsage) {
         TResources.subtractFrom(resourceUsage, taskResources);
       }
       synchronized(ongoingTasks) {
         ongoingTasks.remove(this.taskId);
-        tasksCopy = new ArrayList<ByteBuffer>(ongoingTasks);
+        tasksCopy = new ArrayList<String>(ongoingTasks);
       }
       
       // Inform NM of resource usage
@@ -128,7 +140,7 @@ public class ProtoBackend implements BackendService.Iface {
   
   private TUserGroupInfo user; // We force all tasks to be run by same user
   private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
-  private List<ByteBuffer> ongoingTasks = new ArrayList<ByteBuffer>();
+  private List<String> ongoingTasks = new ArrayList<String>();
   
   public ProtoBackend() {
     this.user = new TUserGroupInfo();
@@ -143,17 +155,19 @@ public class ProtoBackend implements BackendService.Iface {
   }
 
   @Override
-  public void launchTask(ByteBuffer message, ByteBuffer taskId, TUserGroupInfo user,
-      TResourceVector estimatedResources) throws TException {
+  public void launchTask(ByteBuffer message, String requestId, String taskId,
+      TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
     int sleepDuration = message.getInt();
     // Note we ignore user here
     new Thread(new TaskRunnable(
-        taskId, sleepDuration, estimatedResources)).start();
+        requestId, taskId, sleepDuration, estimatedResources)).start();
   }
   
   public static void main(String[] args) throws IOException, TException {
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
+    
+    Logging.configureAuditLogging();
    
     // Start backend server
     BackendService.Processor<BackendService.Iface> processor =

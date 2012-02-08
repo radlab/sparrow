@@ -1,8 +1,8 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -30,6 +30,11 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  */
 public class Scheduler {
   private final static Logger LOG = Logger.getLogger(Scheduler.class);
+  private final static Logger AUDIT_LOG = Logging.getAuditLogger(Scheduler.class);
+  
+  /** Used to uniquely identify requests arriving at this scheduler. */
+  private int counter = 0;
+  private InetAddress address;
   
   /**
    * A callback handler for asynchronous task launches.
@@ -39,6 +44,7 @@ public class Scheduler {
    */
   private class TaskLaunchCallback implements AsyncMethodCallback<launchTask_call> {
     private CountDownLatch latch;
+
     public TaskLaunchCallback(CountDownLatch latch) {
       this.latch = latch;
     }
@@ -60,6 +66,8 @@ public class Scheduler {
   TaskPlacer placer = new ProbingTaskPlacer();
 
   public void initialize(Configuration conf) throws IOException {
+    address = InetAddress.getLocalHost();
+
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
@@ -79,6 +87,10 @@ public class Scheduler {
 
   public boolean submitJob(TSchedulingRequest req) throws TException {
     LOG.debug(Logging.functionCall(req));
+    
+    String requestId = getRequestId();
+    AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
+                                            req.getTasks().size()));
     Collection<TaskPlacementResponse> placement = null;
     try {
       placement = getJobPlacementResp(req);
@@ -86,6 +98,8 @@ public class Scheduler {
       e.printStackTrace();
       return false;
     }
+    
+    // Launch tasks.
     CountDownLatch latch = new CountDownLatch(placement.size());
     for (TaskPlacementResponse response : placement) {
       if (!response.getClient().isPresent()) {
@@ -93,9 +107,11 @@ public class Scheduler {
       }
       LOG.debug("Attempting to launch task on " + response.getNodeAddr());
       InternalService.AsyncClient client = response.getClient().get();
-      client.launchTask(req.getApp(), response.getTaskSpec().message, 
-         response.getTaskSpec().taskID, req.getUser(), 
-         response.getTaskSpec().getEstimatedResources(), new TaskLaunchCallback(latch));
+      String taskId = response.getTaskSpec().taskID;
+      AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
+      client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
+          taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
+          new TaskLaunchCallback(latch));
     }
     try {
       LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");
@@ -118,7 +134,7 @@ public class Scheduler {
     for (TaskPlacementResponse placement : placements) {
       TTaskPlacement tPlacement = new TTaskPlacement();
       tPlacement.node = placement.getNodeAddr().toString();
-      tPlacement.taskID = ByteBuffer.wrap(placement.getTaskSpec().getTaskID());
+      tPlacement.taskID = placement.getTaskSpec().getTaskID();
       out.add(tPlacement);
     }
     Log.debug("Returning task placement: " + out);
@@ -139,5 +155,18 @@ public class Scheduler {
       backendList.add(backend);
     }
     return placer.placeTasks(app, backendList, tasks);
+  }
+  
+  /**
+   * Returns an ID that identifies a request uniquely (across all Sparrow schedulers).
+   * 
+   * This should only be called once for each request (it will return a different
+   * identifier if called a second time).
+   */
+  private String getRequestId() {
+    /* The request id is a string that includes the IP address of this scheduler followed
+     * by the counter.  We use a counter rather than a hash of the request because there
+     * may be multiple requests to run an identical job. */
+    return String.format("%s_%d", address.toString(), counter++);
   }
 }

@@ -2,13 +2,6 @@ include 'types.thrift'
 
 namespace java edu.berkeley.sparrow.thrift
 
-struct TSchedulingRequest {
-  1: string app;
-  2: list<types.TTaskSpec> tasks;
-  3: types.TUserGroupInfo user;
-  4: optional bool reserve;
-}
-
 # SchedulerService is used by application frontends to communicate with Sparrow
 # and place jobs.
 service SchedulerService {
@@ -16,13 +9,13 @@ service SchedulerService {
   bool registerFrontend(1: string app);
 
   # Submit a job composed of a list of individual tasks. 
-  bool submitJob(1: TSchedulingRequest req);
+  bool submitJob(1: types.TSchedulingRequest req);
 
   # Get task placement for a specific job. If request.reserve is set to true
   # scheduling will pass through the central scheduler and resources will
   # be reserved (this will take much longer, but guarantee no     
   # preemption). Otherwise, resources are acquired opportunistically.
-  list<types.TTaskPlacement> getJobPlacement(1: TSchedulingRequest req);
+  list<types.TTaskPlacement> getJobPlacement(1: types.TSchedulingRequest req);
 }
 
 # A service used by application backends to coordinate with Sparrow.
@@ -31,7 +24,9 @@ service NodeMonitorService {
   bool registerBackend(1: string app, 2: string listenSocket);
 
   # Inform the NodeMonitor of the node's current resource usage.
-  void updateResourceUsage(1: string app, 2: map<types.TUserGroupInfo, types.TResourceVector> usage, 3: list<binary> activeTaskIds);
+  void updateResourceUsage(1: string app,
+                           2: map<types.TUserGroupInfo, types.TResourceVector> usage,
+                           3: list<string> activeTaskIds);
 }
 
 # A service that backends are expected to extend. Handles communication
@@ -41,7 +36,9 @@ service BackendService {
   # applications exceed their allowed usage, Sparrow may terminate the
   # backend.
   void updateResourceLimits(1: map<types.TUserGroupInfo, types.TResourceVector> resources);
-  void launchTask(1: binary message, 2: binary taskId, 3: types.TUserGroupInfo user, 4: types.TResourceVector estimatedResources);
+  void launchTask(1: binary message, 2: string requestId, 3: string taskId,
+                  4: types.TUserGroupInfo user,
+                  5: types.TResourceVector estimatedResources);
 
 }
 
@@ -50,7 +47,9 @@ service BackendService {
 # 2) The central state store
 service InternalService {
   map<string, types.TResourceVector> getLoad(1: string app);
-  bool launchTask(1: string app, 2: binary message, 3: binary taskId, 4: types.TUserGroupInfo user, 5: types.TResourceVector estimatedResources);
+  bool launchTask(1: string app, 2: binary message, 3: string requestId,
+                  4: string taskId, 5: types.TUserGroupInfo user,
+                  6: types.TResourceVector estimatedResources);
 }
 
 # Message from the state store to update scheduler state. TODO: this should

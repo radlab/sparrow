@@ -17,14 +17,21 @@ struct TUserGroupInfo {
 }
 
 struct TTaskSpec {
-  1: binary taskID;
+  1: string taskID;
   2: TPlacementPreference preference;
   3: TResourceVector estimatedResources;
   4: optional binary message;
 }
 
+struct TSchedulingRequest {
+  1: string app;
+  2: list<TTaskSpec> tasks;
+  3: TUserGroupInfo user;
+  4: optional bool reserve;
+}
+
 struct TTaskPlacement {
-  1: binary taskID;
+  1: string taskID;
   2: string node;
   3: optional binary message;
 }

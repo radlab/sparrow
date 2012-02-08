@@ -34,6 +34,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  */
 public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
+  private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
   
   private static NodeMonitorState state;
@@ -145,7 +146,7 @@ public class NodeMonitor {
    */
   public void updateResourceUsage(
       String app, Map<TUserGroupInfo, TResourceVector> load, 
-      List<ByteBuffer> activeTaskIds) {
+      List<String> activeTaskIds) {
     LOG.debug(Logging.functionCall(app, load, activeTaskIds));
     // TODO: currently ignores active task list, eventually want to check the duration
     // of tasks in that list.
@@ -155,15 +156,18 @@ public class NodeMonitor {
   /**
    * Launch a task for the given app.
    */
-  public boolean launchTask(String app, ByteBuffer message, ByteBuffer taskId,
-      TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
-    LOG.debug(Logging.functionCall(app, message, taskId, user, estimatedResources));
+  public boolean launchTask(String app, ByteBuffer message, String requestId,
+      String taskId, TUserGroupInfo user, TResourceVector estimatedResources)
+          throws TException {
+    LOG.debug(Logging.functionCall(app, message, requestId, taskId, user,
+                                   estimatedResources));
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch", requestId, taskId));
     if (!backendClients.containsKey(app)) {
       LOG.warn("Requested task launch for unknown app: " + app);
       return false;
     }
     BackendService.Client client = backendClients.get(app);
-    client.launchTask(message, taskId, user, estimatedResources);
+    client.launchTask(message, requestId, taskId, user, estimatedResources);
     LOG.debug("Launched task " + taskId + " for app " + app);
     return true;
   }

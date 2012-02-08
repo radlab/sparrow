@@ -1,0 +1,2 @@
+Shell scripts in this file aid with setting up the correct path to run
+Python programs.  To run X.py, run ./X.sh.
