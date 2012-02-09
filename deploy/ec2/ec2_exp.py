@@ -31,7 +31,8 @@ def parse_args():
       help="Number of backends to launch (default: 1)")
   parser.add_option("-w", "--wait", type="int", default=0,
       help="Number of seconds to wait for cluster nodes to boot (default: 0)")
-
+  parser.add_option("-b", "--branch", default="master",
+      help="Which git branch to checkout")
   (opts, args) = parser.parse_args()
   if len(args) != 1:
     parser.print_help()
@@ -177,7 +178,8 @@ def deploy_cluster(frontends, backends, opts):
                                  for i in backends]),
     "backend_list": "\n".join(["%s" % i.public_dns_name \
                                  for i in backends]),
-    "arrival_lambda": "%s" % opts.arrival_rate
+    "arrival_lambda": "%s" % opts.arrival_rate,
+    "git_branch": "%s" % opts.branch
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
