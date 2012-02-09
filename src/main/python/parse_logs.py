@@ -8,15 +8,14 @@ get as much info as possible out of them.
 
 TODO(kay): Add functionality to make response time vs. utilization graph.
 """
-import datetime
 import logging
 import os
 import sys
 
 import stats
 
-INVALID_TIME = datetime.datetime.fromtimestamp(0)
-INVALID_TIME_DELTA = datetime.timedelta.min
+INVALID_TIME = 0
+INVALID_TIME_DELTA = -sys.maxint - 1
 
 class Task:
     """ Class to store information about a task.
@@ -53,8 +52,11 @@ class Task:
         
     def network_delay(self):
         """ Returns the network delay (as the difference between launch times).
+        
+        In the presence of clock skew, this may be negative. The caller should
+        ensure that complete information is available for this task before
+        calling this function.
         """
-        assert self.node_monitor_launch_time > self.scheduler_launch_time
         return self.node_monitor_launch_time - self.scheduler_launch_time
         
     def complete(self):
@@ -168,10 +170,8 @@ class LogParser:
                                  (line, len(items)))
                 continue
             
-            epoch_millis = int(items[self.TIME_INDEX])
-            extra_millis = epoch_millis % 1000
-            time = (datetime.datetime.fromtimestamp(epoch_millis / 1000) +
-                    datetime.timedelta(milliseconds=extra_millis))
+            # Time is expressed in epoch milliseconds.
+            time = int(items[self.TIME_INDEX])
             
             audit_event_params = items[self.AUDIT_EVENT_INDEX].split(":")
             if audit_event_params[0] == "arrived":
@@ -205,25 +205,18 @@ class LogParser:
         file = open(results_filename, "w")
         file.write("%ile\tResponseTime\tNetworkDelay\n")
         num_data_points = 100
+        response_times.sort()
+        network_delays.sort()
         response_stride = max(1, len(response_times) / num_data_points)
         network_stride = max(1, len(network_delays) / num_data_points)
-        print response_times
-        print network_delays
         for i, (response_time, network_delay) in enumerate(
                 zip(response_times[::response_stride],
                     network_delays[::network_stride])):
             percentile = (i + 1) * response_stride * 1.0 / len(response_times)
-            file.write("%f\t%d\t%d\n" % (percentile,
-                                         self.__get_millis(response_time),
-                                         self.__get_millis(network_delay)))
+            file.write("%f\t%d\t%d\n" % (percentile, response_time, network_delay))
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
-    
-    def __get_millis(self, time_delta):
-        seconds = (time_delta.days * 24 * 60) + time_delta.seconds
-        milliseconds = seconds * (10^3) + time_delta.microseconds * 1.0 / (10^3)
-        return milliseconds
         
     def plot_response_time_cdf(self, results_filename, file_prefix):
         gnuplot_file = open("%s_response_time_cdf.gp" % file_prefix, "w")
