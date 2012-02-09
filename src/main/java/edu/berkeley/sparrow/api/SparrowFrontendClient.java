@@ -17,10 +17,14 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
- * Java client to Sparrow scheduling service.
+ * Java client to Sparrow scheduling service. Once a client is initialize()'d it
+ * can be used safely from multiple threads. There is no concurrency in requests,
+ * however, and if an existing request is in progress it will block other requests
+ * from completing.
  */
 public class SparrowFrontendClient {
   private SchedulerService.Client client; // Thrift client
+  TTransport transport;                   // Pointer to underlying socket
   
   /**
    * Initialize a connection to a sparrow scheduler.
@@ -29,16 +33,16 @@ public class SparrowFrontendClient {
    */
   public void initialize(InetSocketAddress sparrowSchedulerAddr, String app) 
       throws TException {
-    TTransport tr = new TFramedTransport(
+    transport = new TFramedTransport(
         new TSocket(sparrowSchedulerAddr.getHostName(),
             sparrowSchedulerAddr.getPort()));
-    tr.open();
-    TProtocol proto = new TBinaryProtocol(tr);
+    transport.open();
+    TProtocol proto = new TBinaryProtocol(transport);
     client = new SchedulerService.Client(proto);
     client.registerFrontend(app);
   }
   
-  public boolean submitJob(String app, 
+  public synchronized boolean submitJob(String app, 
       List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user) 
           throws TException {
     TSchedulingRequest request = new TSchedulingRequest();
@@ -48,12 +52,16 @@ public class SparrowFrontendClient {
     return client.submitJob(request);
   }
   
-  public List<TTaskPlacement> getJobPlacement(String app,
+  public synchronized List<TTaskPlacement> getJobPlacement(String app,
       List<TTaskSpec> tasks, TUserGroupInfo user) throws TException {
     TSchedulingRequest request = new TSchedulingRequest();
     request.setTasks(tasks);
     request.setApp(app);
     request.setUser(user);
     return client.getJobPlacement(request);
+  }
+  
+  public void close() {
+    transport.close();
   }
 }

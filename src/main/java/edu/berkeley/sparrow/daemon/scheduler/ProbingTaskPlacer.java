@@ -20,6 +20,7 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
+import org.apache.thrift.transport.TTransport;
 
 import com.google.common.base.Optional;
 
@@ -62,10 +63,11 @@ public class ProbingTaskPlacer implements TaskPlacer {
     CountDownLatch latch; // Synchronization latch so caller can return when enough
                           // backends have responded.
     private String appId;
+    private TTransport transport;
     
     private ProbeCallback(
         InetSocketAddress socket, Map<InetSocketAddress, TResourceVector> loads, 
-        CountDownLatch latch, String appId) {
+        CountDownLatch latch, String appId, TTransport transport) {
       this.socket = socket;
       this.loads = loads;
       this.latch = latch;
@@ -76,6 +78,9 @@ public class ProbingTaskPlacer implements TaskPlacer {
     public void onComplete(getLoad_call response) {
       LOG.debug("Received load response from node " + socket);
       try {
+        if (latch.getCount() == 0) {
+          transport.close();
+        }
         if (!response.getResult().containsKey(appId)) {
           LOG.warn("Probe returned no load information for " + appId);
         }
@@ -91,29 +96,30 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
     @Override
     public void onError(Exception exception) {
-      // TODO Auto-generated method stub
-      
+      LOG.error("Error in probe callback", exception);
+      // TODO: Figure out what failure model we want here
+      latch.countDown(); 
     }
   }
   
   @Override
   public Collection<TaskPlacer.TaskPlacementResponse> placeTasks(String appId,
-      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
-      throws IOException {
+      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, 
+      TAsyncClientManager clientManager) throws IOException {
     LOG.debug(Logging.functionCall(appId, nodes, tasks));
     Map<InetSocketAddress, TResourceVector> loads = 
         new HashMap<InetSocketAddress, TResourceVector>(); 
-
-    TAsyncClientManager clientManager = new TAsyncClientManager();
     
-    // Keep track of thrift clients since we return handles on them to caller
+    // Keep track of thrift clients/transports since we return handles on them to caller
     Map<InetSocketAddress, InternalService.AsyncClient> clients = 
         new HashMap<InetSocketAddress, InternalService.AsyncClient>();
+    Map<InetSocketAddress, TTransport> transports = 
+        new HashMap<InetSocketAddress, TTransport>();
     
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
     // per-task information to decide when to return.
-    CountDownLatch latch = new CountDownLatch(tasks.size());
+    CountDownLatch latch = new CountDownLatch(nodes.size());
     
     for (InetSocketAddress node : nodes) {
       TNonblockingTransport nbTr = new TNonblockingSocket(
@@ -122,8 +128,9 @@ public class ProbingTaskPlacer implements TaskPlacer {
       InternalService.AsyncClient client = new InternalService.AsyncClient(
           factory, clientManager, nbTr);
       clients.put(node, client);
+      transports.put(node, nbTr);
       try {
-        ProbeCallback callback = new ProbeCallback(node, loads, latch, appId);
+        ProbeCallback callback = new ProbeCallback(node, loads, latch, appId, nbTr);
         LOG.debug("Launching probe on node: " + node); 
         client.getLoad(appId, callback);
       } catch (TException e) {
@@ -150,10 +157,20 @@ public class ProbingTaskPlacer implements TaskPlacer {
       Entry<InetSocketAddress, TResourceVector> entry = results.get(i++ % results.size());
       
       TaskPlacementResponse place = new TaskPlacementResponse(
-          task, entry.getKey(), Optional.of(clients.get(entry.getKey())));
+          task, entry.getKey(), Optional.of(clients.get(entry.getKey())),
+          Optional.of(transports.get(entry.getKey())));
       out.add(place);
     }
     
+    // Close out any sockets related to nodes we aren't going to use
+    // TODO: really we need to change the way that thrift handles are re-used,
+    // and have a pool of thrift handles that is shared between the Scheduler and
+    // this class. The pool should be periodically cleaned up based on LRU.
+    for (;i < results.size(); i++) {
+      InetSocketAddress addr = results.get(i).getKey();
+      transports.get(addr).close();
+      System.out.println("Closing transport to: " + addr);
+    }
     return out;
   }
 }

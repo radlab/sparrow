@@ -7,6 +7,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
+import org.apache.thrift.async.TAsyncClientManager;
+import org.apache.thrift.transport.TTransport;
+
 import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.thrift.InternalService;
@@ -21,21 +24,23 @@ public class RandomTaskPlacer implements TaskPlacer {
   
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
-      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
+      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, 
+      TAsyncClientManager clientManager)
       throws IOException {
     Collection<TaskPlacementResponse> out = new HashSet<TaskPlacementResponse>();
     
     ArrayList<InetSocketAddress> orderedNodes = new ArrayList<InetSocketAddress>(nodes);
     Collections.shuffle(orderedNodes);
     
-    // Empty client used for all responses
+    // Empty client/transport used for all responses
     Optional<InternalService.AsyncClient> client = Optional.absent();
+    Optional<TTransport> transport = Optional.absent();
    
     int i = 0;
     for (TTaskSpec task : tasks) {
       InetSocketAddress addr = orderedNodes.get(i++ % nodes.size());
       TaskPlacementResponse response = new TaskPlacementResponse(task,
-          addr, client);
+          addr, client, transport);
       out.add(response);
     }
     return out;

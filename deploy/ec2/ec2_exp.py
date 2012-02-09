@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 def parse_args():
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, start, stop, start-proto, stop-proto")
+    "\n\n<action> can be: launch, deploy, start, stop, start-proto, stop-proto, command")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-83c717ea",
@@ -31,10 +31,10 @@ def parse_args():
       help="Number of backends to launch (default: 1)")
   parser.add_option("-w", "--wait", type="int", default=0,
       help="Number of seconds to wait for cluster nodes to boot (default: 0)")
-  parser.add_option("-b", "--branch", default="master",
+  parser.add_option("-g", "--branch", default="master",
       help="Which git branch to checkout")
   (opts, args) = parser.parse_args()
-  if len(args) != 1:
+  if len(args) < 1:
     parser.print_help()
     sys.exit(1)
   if os.getenv('AWS_ACCESS_KEY_ID') == None:
@@ -259,6 +259,10 @@ def stop_proto(frontends, backends, opts):
           "chmod 755 /root/stop_proto_frontend.sh;" +
           "/root/stop_proto_frontend.sh")
 
+# Execute a shell command on all machines
+def execute_command(frontends, backends, opts, cmd):
+  ssh_all([fe.public_dns_name for fe in frontends], opts, cmd)
+  ssh_all([be.public_dns_name for be in backends], opts, cmd)
 
 def main():
   (opts, args) = parse_args()
@@ -269,6 +273,9 @@ def main():
     (frontends, backends) = launch_cluster(conn, opts)
     return
 
+  if action == "command" and len(args) < 2:
+    print "Command action requires command string"
+
   # Wait until ec2 says the cluster is started, then possibly wait more time
   # to make sure all nodes have booted.
   (frontends, backends) = find_existing_cluster(conn, opts)
@@ -278,6 +285,11 @@ def main():
 
   print "Waiting %d more seconds..." % opts.wait
   time.sleep(opts.wait)
+
+  if action == "command":
+    cmd = " ".join(args[1:])
+    print "Executing command: %s" % cmd
+    execute_command(frontends, backends, opts, cmd)
 
   if action == "deploy":
     print "Deploying files..."
