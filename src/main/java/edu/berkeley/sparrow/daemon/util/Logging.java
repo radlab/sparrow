@@ -26,7 +26,6 @@ public class Logging {
    * @throws IOException if the audit log file could not be opened for writing.
    */
   public static void configureAuditLogging() throws IOException {
-    // Set up audit logging to log to a file.
     PatternLayout layout = new PatternLayout(AUDIT_LOG_FORMAT);
     // This assumes that no other daemon will be started within 1 millisecond.
     String filename = String.format(AUDIT_LOG_FILENAME_FORMAT,
@@ -35,7 +34,7 @@ public class Logging {
     Logger auditLogger = Logger.getLogger(Logging.AUDIT_LOGGER_NAME);
     auditLogger.addAppender(fileAppender);
     auditLogger.setLevel(Level.ALL);
-    /* We don't want audit messages to be appended to the main appender. which is
+    /* We don't want audit messages to be appended to the main appender, which is
      * intended for potentially user-facing messages. */
     auditLogger.setAdditivity(false);
   }
