@@ -169,7 +169,6 @@ public class ProbingTaskPlacer implements TaskPlacer {
     for (;i < results.size(); i++) {
       InetSocketAddress addr = results.get(i).getKey();
       transports.get(addr).close();
-      System.out.println("Closing transport to: " + addr);
     }
     return out;
   }

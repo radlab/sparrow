@@ -12,6 +12,8 @@ import joptsimple.OptionSet;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.api.SparrowFrontendClient;
@@ -29,6 +31,8 @@ public class ProtoFrontend {
   public static final int DEFAULT_TASKS_PER_JOB = 1;          // Tasks/job
   public static final int DEFAULT_TASK_DURATION_MS = 100;     // Task duration
   
+  private static final Logger LOG = Logger.getLogger(ProtoFrontend.class);
+
   /** A runnable which Spawns a new thread to launch a scheduling request. */
   private static class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
@@ -46,10 +50,9 @@ public class ProtoFrontend {
       user.setGroup("*");
       try {
         client.submitJob("testApp", request, user);
-        System.out.println("Submitted job");
+        LOG.debug("Submitted job");
       } catch (TException e) {
-        System.out.println("Scheduling request failed!");
-        e.printStackTrace();
+        LOG.error("Scheduling request failed!", e);
       }
     }
   }
@@ -89,8 +92,9 @@ public class ProtoFrontend {
         System.exit(-1);
       }
       
-      // Set up a simple configuration that logs on the console.
+      // Logger configuration: log to the console
       BasicConfigurator.configure();
+      LOG.setLevel(Level.DEBUG);
           
       String configFile = (String) options.valueOf("c");
       Configuration conf = new PropertiesConfiguration(configFile);
@@ -114,8 +118,7 @@ public class ProtoFrontend {
       }
     }
     catch (Exception e) {
-      System.out.println("Fatal exception");
-      e.printStackTrace();
+      LOG.error("Fatal exception", e);
     }
   }
 }

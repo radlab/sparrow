@@ -20,7 +20,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  * Java client to Sparrow scheduling service. Once a client is initialize()'d it
  * can be used safely from multiple threads. There is no concurrency in requests,
  * however, and if an existing request is in progress it will block other requests
- * from completing.
+ * from starting.
  */
 public class SparrowFrontendClient {
   private SchedulerService.Client client; // Thrift client

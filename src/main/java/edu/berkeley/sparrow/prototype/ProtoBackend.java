@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -45,6 +46,7 @@ public class ProtoBackend implements BackendService.Iface {
   private static final String NM_HOST = "localhost";
   private static final int NM_PORT = NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT;
   
+  private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
   
   /**
@@ -115,7 +117,7 @@ public class ProtoBackend implements BackendService.Iface {
         Thread.sleep(sleepMs);
       } catch (InterruptedException e) {
       }
-      System.out.println("Task finished");
+      LOG.debug("Task finished");
       // Log task finish before updating bookkeeping, in case bookkeeping ends up being
       // expensive.
       AUDIT_LOG.info(Logging.auditEventString("task_completion", this.requestId,
@@ -168,8 +170,9 @@ public class ProtoBackend implements BackendService.Iface {
   }
   
   public static void main(String[] args) throws IOException, TException {
-    // Set up a simple configuration that logs on the console.
+    // Logger configuration: log to the console
     BasicConfigurator.configure();
+    LOG.setLevel(Level.DEBUG);
     
     Logging.configureAuditLogging();
    
