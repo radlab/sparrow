@@ -14,6 +14,8 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.apache.thrift.async.TAsyncClientManager;
+import org.apache.thrift.transport.TTransport;
 import org.mortbay.log.Log;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
@@ -36,6 +38,9 @@ public class Scheduler {
   private int counter = 0;
   private InetAddress address;
   
+  /** Pointer to shared selector thread. */
+  TAsyncClientManager clientManager;
+  
   /**
    * A callback handler for asynchronous task launches.
    * 
@@ -44,21 +49,26 @@ public class Scheduler {
    */
   private class TaskLaunchCallback implements AsyncMethodCallback<launchTask_call> {
     private CountDownLatch latch;
+    private TTransport transport;
 
-    public TaskLaunchCallback(CountDownLatch latch) {
+    public TaskLaunchCallback(CountDownLatch latch, TTransport transport) {
       this.latch = latch;
+      this.transport = transport;
     }
     
     @Override
     public void onComplete(launchTask_call response) {
-      latch.countDown(); // TODO, see whether this was successful
+      latch.countDown();
+      transport.close();
     }
 
     @Override
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
-      // TODO We need to have a story here, right now since we don't decrement the latch
-      // any task launch failing will mean the latch will never fully drain.
+      // TODO We need to have a story here, regarding the failure model when the
+      //      probe doesn't succeed.
+      transport.close();
+      latch.countDown();
     }
   }
   
@@ -67,7 +77,7 @@ public class Scheduler {
 
   public void initialize(Configuration conf) throws IOException {
     address = InetAddress.getLocalHost();
-
+    clientManager = new TAsyncClientManager();
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
@@ -111,7 +121,7 @@ public class Scheduler {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
       client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
           taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
-          new TaskLaunchCallback(latch));
+          new TaskLaunchCallback(latch, response.getTransport().get()));
     }
     try {
       LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");
@@ -154,7 +164,7 @@ public class Scheduler {
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);
     }
-    return placer.placeTasks(app, backendList, tasks);
+    return placer.placeTasks(app, backendList, tasks, clientManager);
   }
   
   /**

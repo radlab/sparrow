@@ -40,6 +40,9 @@ public class NodeMonitor {
   private static NodeMonitorState state;
   private HashMap<String, Map<TUserGroupInfo, TResourceVector>> appLoads = 
       new HashMap<String, Map<TUserGroupInfo, TResourceVector>>();
+  
+  // Cache of thrift clients to backends. Keep in mind, the use of a given client
+  // should be synchronized.
   private HashMap<String, BackendService.Client> backendClients =
       new HashMap<String, BackendService.Client>();
   private TResourceVector capacity;
@@ -167,7 +170,11 @@ public class NodeMonitor {
       return false;
     }
     BackendService.Client client = backendClients.get(app);
-    client.launchTask(message, requestId, taskId, user, estimatedResources);
+    
+    synchronized(client) {
+      client.launchTask(message, requestId, taskId, user, estimatedResources);
+    }
+    
     LOG.debug("Launched task " + taskId + " for app " + app);
     return true;
   }

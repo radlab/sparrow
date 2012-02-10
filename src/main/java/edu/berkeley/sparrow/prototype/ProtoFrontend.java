@@ -12,6 +12,8 @@ import joptsimple.OptionSet;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.api.SparrowFrontendClient;
@@ -22,34 +24,35 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
- * This is the frontend for the prototype implementation. Right now this does almost
- * nothing except launch a single job with one task of random deviation.
+ * Frontend for the prototype implementation.
  */
 public class ProtoFrontend {
-  public static final double DEFAULT_JOB_ARRIVAL_RATE_S = 100;   // Jobs/second
-  public static final int DEFAULT_TASKS_PER_JOB = 30;          // Tasks/job
-  public static final int DEFAULT_TASK_DURATION_MS = 1000;     // Task duration
+  public static final double DEFAULT_JOB_ARRIVAL_RATE_S = 500;   // Jobs/second
+  public static final int DEFAULT_TASKS_PER_JOB = 1;          // Tasks/job
+  public static final int DEFAULT_TASK_DURATION_MS = 100;     // Task duration
   
+  private static final Logger LOG = Logger.getLogger(ProtoFrontend.class);
+
   /** A runnable which Spawns a new thread to launch a scheduling request. */
   private static class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
+    private SparrowFrontendClient client;
     
-    public JobLaunchRunnable(List<TTaskSpec> request) {
+    public JobLaunchRunnable(List<TTaskSpec> request, SparrowFrontendClient client) {
       this.request = request;
+      this.client = client;
     }
     
     @Override
     public void run() {
-      SparrowFrontendClient client = new SparrowFrontendClient();
       TUserGroupInfo user = new TUserGroupInfo();
       user.setUser("*");
       user.setGroup("*");
       try {
-        client.initialize(new InetSocketAddress("localhost", 
-            SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT), "testApp");
         client.submitJob("testApp", request, user);
+        LOG.debug("Submitted job");
       } catch (TException e) {
-        System.out.println("Scheduling request failed!"); // TODO log this
+        LOG.error("Scheduling request failed!", e);
       }
     }
   }
@@ -76,34 +79,46 @@ public class ProtoFrontend {
     return -Math.log(u)/lambda;
   }
   
-  public static void main(String[] args) throws Exception {
-    OptionParser parser = new OptionParser();
-    parser.accepts("c", "configuration file (required)").
-      withRequiredArg().ofType(String.class);
-    parser.accepts("help", "print help statement");
-    OptionSet options = parser.parse(args);
-    
-    if (options.has("help") || !options.has("c")) {
-      parser.printHelpOn(System.out);
-      System.exit(-1);
+  public static void main(String[] args) {
+    try {
+      OptionParser parser = new OptionParser();
+      parser.accepts("c", "configuration file (required)").
+        withRequiredArg().ofType(String.class);
+      parser.accepts("help", "print help statement");
+      OptionSet options = parser.parse(args);
+      
+      if (options.has("help") || !options.has("c")) {
+        parser.printHelpOn(System.out);
+        System.exit(-1);
+      }
+      
+      // Logger configuration: log to the console
+      BasicConfigurator.configure();
+      LOG.setLevel(Level.DEBUG);
+          
+      String configFile = (String) options.valueOf("c");
+      Configuration conf = new PropertiesConfiguration(configFile);
+      
+      Random r = new Random();
+      double lambda = conf.getDouble("job.arrival.rate.s", DEFAULT_JOB_ARRIVAL_RATE_S);
+      int tasksPerJob = conf.getInt("tasks.per.job", DEFAULT_TASKS_PER_JOB);
+      int taskLenMs = conf.getInt("tasks.duration.ms", DEFAULT_TASK_DURATION_MS);
+      
+      SparrowFrontendClient client = new SparrowFrontendClient();
+      client.initialize(new InetSocketAddress("localhost", 
+          SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT), "testApp");
+      
+      // Loop and generate tasks launches
+      while (true) {
+        // Lambda is the arrival rate in S, so we need to multiply the result here by
+        // 1000 to convert to ms.
+        Thread.sleep((long) (generateInterarrivalDelay(r, lambda) * 1000));
+        new Thread(
+            new JobLaunchRunnable(generateJob(tasksPerJob, taskLenMs), client)).start();
+      }
     }
-    
-    // Set up a simple configuration that logs on the console.
-    BasicConfigurator.configure();
-        
-    String configFile = (String) options.valueOf("c");
-    Configuration conf = new PropertiesConfiguration(configFile);
-    
-    Random r = new Random();
-    double lambda = conf.getDouble("job.arrival.rate.s", DEFAULT_JOB_ARRIVAL_RATE_S);
-    int tasksPerJob = conf.getInt("tasks.per.job", DEFAULT_TASKS_PER_JOB);
-    int taskLenMs = conf.getInt("tasks.duration.ms", DEFAULT_TASK_DURATION_MS);
-    // Loop and generate tasks launches
-    while (true) {
-      // Lambda is the arrival rate in S, so we need to multiply the result here by
-      // 1000 to convert to ms.
-      Thread.sleep((long) (generateInterarrivalDelay(r, lambda) * 1000));
-      new Thread(new JobLaunchRunnable(generateJob(tasksPerJob, taskLenMs))).start();
+    catch (Exception e) {
+      LOG.error("Fatal exception", e);
     }
   }
 }
