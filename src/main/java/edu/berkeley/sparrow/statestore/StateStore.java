@@ -213,7 +213,7 @@ public class StateStore {
         case QUERY:
           try {
             InternalService.AsyncClient client = getInternalClient(event.node);
-            client.getLoad("*", new NMCallBack(event.node));
+            client.getLoad("*", "*", new NMCallBack(event.node));
           } catch (IOException e) {
             LOG.warn("Failed to create thrift client to " + event.node, e);
           } catch (TException e) {

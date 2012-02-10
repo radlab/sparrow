@@ -9,7 +9,6 @@ import org.apache.thrift.transport.TTransport;
 
 import com.google.common.base.Optional;
 
-import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
@@ -45,7 +44,7 @@ public interface TaskPlacer {
    * @throws IOException 
    */
   Collection<TaskPlacementResponse> placeTasks(String appId,
-      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
       TAsyncClientManager clientManager) throws IOException;
   // TODO: For performance reasons it might make sense to just have these arguments as 
   //       List rather than Collection since they need to be returned as a list eventually.

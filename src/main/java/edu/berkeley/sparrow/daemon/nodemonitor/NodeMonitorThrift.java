@@ -80,8 +80,9 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   }
   
   @Override
-  public Map<String, TResourceVector> getLoad(String app) throws TException {
-    return nodeMonitor.getLoad(app);
+  public Map<String, TResourceVector> getLoad(String app, String requestId)
+      throws TException {
+    return nodeMonitor.getLoad(app, requestId);
   }
 
   @Override

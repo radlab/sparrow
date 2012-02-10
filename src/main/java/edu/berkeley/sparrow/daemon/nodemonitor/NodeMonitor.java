@@ -3,7 +3,9 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
@@ -46,8 +48,9 @@ public class NodeMonitor {
   private HashMap<String, BackendService.Client> backendClients =
       new HashMap<String, BackendService.Client>();
   private TResourceVector capacity;
+  private InetAddress address;
 
-  public void initialize(Configuration conf) {
+  public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneNodeMonitorState();
@@ -58,6 +61,7 @@ public class NodeMonitor {
     }
     state.initialize(conf);
     capacity = new TResourceVector();
+    address = InetAddress.getLocalHost();
     
     // Interrogate system resources. We may want to put this in another class, and note
     // that currently this will only work on Linux machines (otherwise will use default).
@@ -116,8 +120,10 @@ public class NodeMonitor {
    * application name, the map only includes that application. If it is set to anything
    * else, an empty map is returned.
    */
-  public Map<String, TResourceVector> getLoad(String appId) {
+  public Map<String, TResourceVector> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
+    AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
+                                            address.getHostAddress()));
     Map<String, TResourceVector> out = new HashMap<String, TResourceVector>();
     if (appId.equals("*")) {
       for (String app : appLoads.keySet()) {out.put(app, aggregateAppResources(app)); }
@@ -164,7 +170,8 @@ public class NodeMonitor {
           throws TException {
     LOG.debug(Logging.functionCall(app, message, requestId, taskId, user,
                                    estimatedResources));
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch", requestId, taskId));
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch", requestId,
+                                            address.getHostAddress(), taskId));
     if (!backendClients.containsKey(app)) {
       LOG.warn("Requested task launch for unknown app: " + app);
       return false;

@@ -35,6 +35,7 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  */
 public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(TaskPlacer.class);
+  private static final Logger AUDIT_LOG = Logging.getAuditLogger(TaskPlacer.class);
   
   /**
    * A comparator for (node, resource vector) pairs, based on the resource vector.
@@ -63,20 +64,24 @@ public class ProbingTaskPlacer implements TaskPlacer {
     CountDownLatch latch; // Synchronization latch so caller can return when enough
                           // backends have responded.
     private String appId;
+    private String requestId;
     private TTransport transport;
     
     private ProbeCallback(
         InetSocketAddress socket, Map<InetSocketAddress, TResourceVector> loads, 
-        CountDownLatch latch, String appId, TTransport transport) {
+        CountDownLatch latch, String appId, String requestId, TTransport transport) {
       this.socket = socket;
       this.loads = loads;
       this.latch = latch;
       this.appId = appId;
+      this.requestId = requestId;
     }
     
     @Override
     public void onComplete(getLoad_call response) {
       LOG.debug("Received load response from node " + socket);
+      AUDIT_LOG.info(Logging.auditEventString("probe_completion", requestId,
+                                              socket.getAddress().getHostAddress()));
       try {
         if (latch.getCount() == 0) {
           transport.close();
@@ -104,7 +109,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   
   @Override
   public Collection<TaskPlacer.TaskPlacementResponse> placeTasks(String appId,
-      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, 
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
       TAsyncClientManager clientManager) throws IOException {
     LOG.debug(Logging.functionCall(appId, nodes, tasks));
     Map<InetSocketAddress, TResourceVector> loads = 
@@ -130,9 +135,12 @@ public class ProbingTaskPlacer implements TaskPlacer {
       clients.put(node, client);
       transports.put(node, nbTr);
       try {
-        ProbeCallback callback = new ProbeCallback(node, loads, latch, appId, nbTr);
+        ProbeCallback callback = new ProbeCallback(node, loads, latch, appId, requestId,
+                                                   nbTr);
         LOG.debug("Launching probe on node: " + node); 
-        client.getLoad(appId, callback);
+        AUDIT_LOG.info(Logging.auditEventString("probe_launch", requestId,
+                                                node.getAddress().getHostAddress()));
+        client.getLoad(appId, requestId, callback);
       } catch (TException e) {
         e.printStackTrace();
       }
