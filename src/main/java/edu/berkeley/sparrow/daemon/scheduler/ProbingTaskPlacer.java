@@ -60,9 +60,11 @@ public class ProbingTaskPlacer implements TaskPlacer {
    */
   private class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
     InetSocketAddress socket;
+    /** This should not be modified after the {@code latch} count is zero! */
     Map<InetSocketAddress, TResourceVector> loads;
-    CountDownLatch latch; // Synchronization latch so caller can return when enough
-                          // backends have responded.
+    /** Synchronization latch so caller can return when enough backends have
+     * responded. */
+    CountDownLatch latch;
     private String appId;
     private String requestId;
     private TTransport transport;
@@ -75,6 +77,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
       this.latch = latch;
       this.appId = appId;
       this.requestId = requestId;
+      this.transport = transport;
     }
     
     @Override
@@ -89,7 +92,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
         if (latch.getCount() == 0) {
           transport.close();
         }
-        if (!response.getResult().containsKey(appId)) {
+        else if (!response.getResult().containsKey(appId)) {
           LOG.warn("Probe returned no load information for " + appId);
         }
         else {
