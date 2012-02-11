@@ -46,7 +46,7 @@ service BackendService {
 # 1) Other Sparrow daemons
 # 2) The central state store
 service InternalService {
-  map<string, types.TResourceVector> getLoad(1: string app);
+  map<string, types.TResourceVector> getLoad(1: string app, 2: string requestId);
   bool launchTask(1: string app, 2: binary message, 3: string requestId,
                   4: string taskId, 5: types.TUserGroupInfo user,
                   6: types.TResourceVector estimatedResources);

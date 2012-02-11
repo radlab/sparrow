@@ -103,7 +103,7 @@ public class Scheduler {
                                             req.getTasks().size()));
     Collection<TaskPlacementResponse> placement = null;
     try {
-      placement = getJobPlacementResp(req);
+      placement = getJobPlacementResp(req, requestId);
     } catch (IOException e) {
       e.printStackTrace();
       return false;
@@ -137,7 +137,8 @@ public class Scheduler {
       throws IOException {
     LOG.debug(Logging.functionCall(req));
     // Get placement
-    Collection<TaskPlacementResponse> placements = getJobPlacementResp(req);
+    Collection<TaskPlacementResponse> placements = getJobPlacementResp(req, 
+                                                                       getRequestId());
     
     // Massage into correct Thrift output type
     Collection<TTaskPlacement> out = new HashSet<TTaskPlacement>(placements.size());
@@ -154,8 +155,8 @@ public class Scheduler {
   /**
    * Internal method called by both submitJob() and getJobPlacement().
    */
-  private Collection<TaskPlacementResponse> getJobPlacementResp(TSchedulingRequest req)
-      throws IOException {
+  private Collection<TaskPlacementResponse> getJobPlacementResp(TSchedulingRequest req,
+      String requestId) throws IOException {
     LOG.debug(Logging.functionCall(req));
     String app = req.getApp();
     List<TTaskSpec> tasks = req.getTasks();
@@ -164,7 +165,7 @@ public class Scheduler {
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);
     }
-    return placer.placeTasks(app, backendList, tasks, clientManager);
+    return placer.placeTasks(app, requestId, backendList, tasks, clientManager);
   }
   
   /**
@@ -172,6 +173,9 @@ public class Scheduler {
    * 
    * This should only be called once for each request (it will return a different
    * identifier if called a second time).
+   * 
+   * TODO: Include the port number, so this works when there are multiple schedulers
+   * running on a single machine (as there will be when we do large scale testing).
    */
   private String getRequestId() {
     /* The request id is a string that includes the IP address of this scheduler followed

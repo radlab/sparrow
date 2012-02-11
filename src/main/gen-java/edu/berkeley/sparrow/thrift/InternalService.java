@@ -31,7 +31,7 @@ public class InternalService {
 
   public interface Iface {
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app) throws org.apache.thrift.TException;
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app, String requestId) throws org.apache.thrift.TException;
 
     public boolean launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException;
 
@@ -39,7 +39,7 @@ public class InternalService {
 
   public interface AsyncIface {
 
-    public void getLoad(String app, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getLoad_call> resultHandler) throws org.apache.thrift.TException;
+    public void getLoad(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getLoad_call> resultHandler) throws org.apache.thrift.TException;
 
     public void launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.launchTask_call> resultHandler) throws org.apache.thrift.TException;
 
@@ -65,16 +65,17 @@ public class InternalService {
       super(iprot, oprot);
     }
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app) throws org.apache.thrift.TException
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app, String requestId) throws org.apache.thrift.TException
     {
-      send_getLoad(app);
+      send_getLoad(app, requestId);
       return recv_getLoad();
     }
 
-    public void send_getLoad(String app) throws org.apache.thrift.TException
+    public void send_getLoad(String app, String requestId) throws org.apache.thrift.TException
     {
       getLoad_args args = new getLoad_args();
       args.setApp(app);
+      args.setRequestId(requestId);
       sendBase("getLoad", args);
     }
 
@@ -134,24 +135,27 @@ public class InternalService {
       super(protocolFactory, clientManager, transport);
     }
 
-    public void getLoad(String app, org.apache.thrift.async.AsyncMethodCallback<getLoad_call> resultHandler) throws org.apache.thrift.TException {
+    public void getLoad(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<getLoad_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      getLoad_call method_call = new getLoad_call(app, resultHandler, this, ___protocolFactory, ___transport);
+      getLoad_call method_call = new getLoad_call(app, requestId, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
 
     public static class getLoad_call extends org.apache.thrift.async.TAsyncMethodCall {
       private String app;
-      public getLoad_call(String app, org.apache.thrift.async.AsyncMethodCallback<getLoad_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private String requestId;
+      public getLoad_call(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<getLoad_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.app = app;
+        this.requestId = requestId;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
         prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("getLoad", org.apache.thrift.protocol.TMessageType.CALL, 0));
         getLoad_args args = new getLoad_args();
         args.setApp(app);
+        args.setRequestId(requestId);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -242,7 +246,7 @@ public class InternalService {
 
       protected getLoad_result getResult(I iface, getLoad_args args) throws org.apache.thrift.TException {
         getLoad_result result = new getLoad_result();
-        result.success = iface.getLoad(args.app);
+        result.success = iface.getLoad(args.app, args.requestId);
         return result;
       }
     }
@@ -270,6 +274,7 @@ public class InternalService {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("getLoad_args");
 
     private static final org.apache.thrift.protocol.TField APP_FIELD_DESC = new org.apache.thrift.protocol.TField("app", org.apache.thrift.protocol.TType.STRING, (short)1);
+    private static final org.apache.thrift.protocol.TField REQUEST_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("requestId", org.apache.thrift.protocol.TType.STRING, (short)2);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -278,10 +283,12 @@ public class InternalService {
     }
 
     public String app; // required
+    public String requestId; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-      APP((short)1, "app");
+      APP((short)1, "app"),
+      REQUEST_ID((short)2, "requestId");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -298,6 +305,8 @@ public class InternalService {
         switch(fieldId) {
           case 1: // APP
             return APP;
+          case 2: // REQUEST_ID
+            return REQUEST_ID;
           default:
             return null;
         }
@@ -343,6 +352,8 @@ public class InternalService {
       Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
       tmpMap.put(_Fields.APP, new org.apache.thrift.meta_data.FieldMetaData("app", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      tmpMap.put(_Fields.REQUEST_ID, new org.apache.thrift.meta_data.FieldMetaData("requestId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getLoad_args.class, metaDataMap);
     }
@@ -351,10 +362,12 @@ public class InternalService {
     }
 
     public getLoad_args(
-      String app)
+      String app,
+      String requestId)
     {
       this();
       this.app = app;
+      this.requestId = requestId;
     }
 
     /**
@@ -364,6 +377,9 @@ public class InternalService {
       if (other.isSetApp()) {
         this.app = other.app;
       }
+      if (other.isSetRequestId()) {
+        this.requestId = other.requestId;
+      }
     }
 
     public getLoad_args deepCopy() {
@@ -372,6 +388,7 @@ public class InternalService {
 
     public void clear() {
       this.app = null;
+      this.requestId = null;
     }
 
     public String getApp() {
@@ -398,6 +415,30 @@ public class InternalService {
       }
     }
 
+    public String getRequestId() {
+      return this.requestId;
+    }
+
+    public getLoad_args setRequestId(String requestId) {
+      this.requestId = requestId;
+      return this;
+    }
+
+    public void unsetRequestId() {
+      this.requestId = null;
+    }
+
+    /** Returns true if field requestId is set (has been assigned a value) and false otherwise */
+    public boolean isSetRequestId() {
+      return this.requestId != null;
+    }
+
+    public void setRequestIdIsSet(boolean value) {
+      if (!value) {
+        this.requestId = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case APP:
@@ -408,6 +449,14 @@ public class InternalService {
         }
         break;
 
+      case REQUEST_ID:
+        if (value == null) {
+          unsetRequestId();
+        } else {
+          setRequestId((String)value);
+        }
+        break;
+
       }
     }
 
@@ -415,6 +464,9 @@ public class InternalService {
       switch (field) {
       case APP:
         return getApp();
+
+      case REQUEST_ID:
+        return getRequestId();
 
       }
       throw new IllegalStateException();
@@ -429,6 +481,8 @@ public class InternalService {
       switch (field) {
       case APP:
         return isSetApp();
+      case REQUEST_ID:
+        return isSetRequestId();
       }
       throw new IllegalStateException();
     }
@@ -452,6 +506,15 @@ public class InternalService {
         if (!(this_present_app && that_present_app))
           return false;
         if (!this.app.equals(that.app))
+          return false;
+      }
+
+      boolean this_present_requestId = true && this.isSetRequestId();
+      boolean that_present_requestId = true && that.isSetRequestId();
+      if (this_present_requestId || that_present_requestId) {
+        if (!(this_present_requestId && that_present_requestId))
+          return false;
+        if (!this.requestId.equals(that.requestId))
           return false;
       }
 
@@ -481,6 +544,16 @@ public class InternalService {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetRequestId()).compareTo(typedOther.isSetRequestId());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRequestId()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.requestId, typedOther.requestId);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -506,6 +579,14 @@ public class InternalService {
         sb.append("null");
       } else {
         sb.append(this.app);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("requestId:");
+      if (this.requestId == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.requestId);
       }
       first = false;
       sb.append(")");
@@ -558,6 +639,14 @@ public class InternalService {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
+            case 2: // REQUEST_ID
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.requestId = iprot.readString();
+                struct.setRequestIdIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -576,6 +665,11 @@ public class InternalService {
         if (struct.app != null) {
           oprot.writeFieldBegin(APP_FIELD_DESC);
           oprot.writeString(struct.app);
+          oprot.writeFieldEnd();
+        }
+        if (struct.requestId != null) {
+          oprot.writeFieldBegin(REQUEST_ID_FIELD_DESC);
+          oprot.writeString(struct.requestId);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -599,19 +693,29 @@ public class InternalService {
         if (struct.isSetApp()) {
           optionals.set(0);
         }
-        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetRequestId()) {
+          optionals.set(1);
+        }
+        oprot.writeBitSet(optionals, 2);
         if (struct.isSetApp()) {
           oprot.writeString(struct.app);
+        }
+        if (struct.isSetRequestId()) {
+          oprot.writeString(struct.requestId);
         }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, getLoad_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(1);
+        BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           struct.app = iprot.readString();
           struct.setAppIsSet(true);
+        }
+        if (incoming.get(1)) {
+          struct.requestId = iprot.readString();
+          struct.setRequestIdIsSet(true);
         }
       }
     }

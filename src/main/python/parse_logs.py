@@ -17,6 +17,55 @@ import stats
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 
+class Probe:
+    def __init__(self, request_id, address):
+        self.request_id = request_id
+        self.address = address
+        self.launch_time = INVALID_TIME
+        self.received_time = INVALID_TIME
+        self.completion_time = INVALID_TIME
+        
+    def set_launch_time(self, time):
+        if self.launch_time != INVALID_TIME:
+            self.logger.warn(("Probe for request %s on machine %s launched "
+                              "twice; expect it to only launch once") %
+                             self.request_id, self.address)
+        self.launch_time = time
+        
+    def set_received_time(self, time):
+        if self.received_time != INVALID_TIME:
+            self.logger.warn(("Probe for request %s on machine %s received "
+                              "twice; expect it to only be received once") %
+                             self.request_id, self.address)
+        self.received_time = time
+        
+    def set_completion_time(self, time):
+        if self.completion_time != INVALID_TIME:
+            self.logger.warn(("Probe for request %s on machine %s completed "
+                              "twice; expect it to only launch once") %
+                             self.request_id, self.address)
+        self.completion_time = time
+        
+    def complete(self):
+        """ Returns whether there's complete log information for this probe."""
+        return (self.launch_time != INVALID_TIME and
+                self.received_time != INVALID_TIME and
+                self.completion_time != INVALID_TIME)
+        
+    def get_clock_skew(self):
+        """ Returns the clock skew of the probed machine.
+        
+        Returns the number of milliseconds by which the probed machine is ahead
+        of the probing machine.  The caller should verify that complete
+        information is available for this probe before calling this function.
+        
+        Ignores processing time at the node monitor, which we assume to be
+        small.
+        """
+        expected_received_time = (self.launch_time + self.completion_time) / 2.
+        return self.received_time - expected_received_time
+        
+
 class Task:
     """ Class to store information about a task.
     
@@ -30,6 +79,11 @@ class Task:
         self.scheduler_launch_time = INVALID_TIME
         self.node_monitor_launch_time = INVALID_TIME
         self.completion_time = INVALID_TIME
+        # Estimate of the millis by which the machine this task ran on is
+        # ahead of the node the task was scheduled from.
+        self.clock_skew = INVALID_TIME_DELTA
+        # Address of the machine that the task ran on.
+        self.address = ""
         self.id = id
         
     def set_scheduler_launch_time(self, time):
@@ -38,11 +92,12 @@ class Task:
                               "task to only launch once") % id)
         self.scheduler_launch_time = time
         
-    def set_node_monitor_launch_time(self, time):
+    def set_node_monitor_launch_time(self, address, time):
         if self.node_monitor_launch_time != INVALID_TIME:
-            self.logger.warn(("Task %s launched at node monitor twice; "
-                              "expect task to only launch once") % id)
+            self.logger.warn(("Task %s launched at %s twice; expect task to "
+                              "only launch once") % (id, address))
         self.node_monitor_launch_time = time
+        self.address = address
         
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
@@ -57,13 +112,15 @@ class Task:
         ensure that complete information is available for this task before
         calling this function.
         """
-        return self.node_monitor_launch_time - self.scheduler_launch_time
+        return (self.node_monitor_launch_time - self.clock_skew -
+                self.scheduler_launch_time)
         
     def complete(self):
         """ Returns whether we have complete information on this task. """
         return (self.scheduler_launch_time != INVALID_TIME and
                 self.node_monitor_launch_time != INVALID_TIME and
-                self.completion_time != INVALID_TIME)
+                self.completion_time != INVALID_TIME and
+                self.clock_skew != INVALID_TIME_DELTA)
 
 class Request:
     def __init__(self, id):
@@ -71,6 +128,8 @@ class Request:
         self.__num_tasks = 0
         self.__arrival_time = INVALID_TIME
         self.__tasks = {}
+        # Map of machine addresses to probes.
+        self.__probes = {}
         self.logger = logging.getLogger("Request")
         
     def set_num_tasks(self, num_tasks):
@@ -79,19 +138,45 @@ class Request:
     def set_arrival_time(self, time):
         self.__arrival_time = time
         
+    def add_probe_launch(self, address, time):
+        probe = self.__get_probe(address)
+        probe.set_launch_time(time)
+        
+    def add_probe_received(self, address, time):
+        probe = self.__get_probe(address)
+        probe.set_received_time(time)
+        
+    def add_probe_completion(self, address, time):
+        probe = self.__get_probe(address)
+        probe.set_completion_time(time)
+        
     def add_scheduler_task_launch(self, task_id, launch_time):
         task = self.__get_task(task_id)
         task.set_scheduler_launch_time(launch_time)
         
-    def add_node_monitor_task_launch(self, task_id, launch_time):
+    def add_node_monitor_task_launch(self, address, task_id, launch_time):
         task = self.__get_task(task_id)
-        task.set_node_monitor_launch_time(launch_time)
+        task.set_node_monitor_launch_time(address, launch_time)
         
     def add_task_completion(self, task_id, completion_time):
-        # We might see a task completion before a task launch, depending on the order
-        # that we read log files in.
+        # We might see a task completion before a task launch, depending on the
+        # order that we read log files in.
         task = self.__get_task(task_id)
         task.set_completion_time(completion_time)
+        
+    def set_clock_skews(self):
+        """ Sets the clock skews for all tasks. """
+        for task in self.__tasks.values():
+            if task.address not in self.__probes:
+                self.logger.warn(("No probe information for request %s, "
+                                  "machine %s") % (self.__id, task.address))
+                continue
+            probe = self.__probes[task.address]
+            if not probe.complete():
+                self.logger.warn(("Probe information for request %s, machine "
+                                  "%s incomplete") % (self.__id, task.address))
+            else:
+                task.clock_skew = probe.get_clock_skew()
         
     def network_delays(self):
         """ Returns a list of delays for all __tasks with delay information. """
@@ -118,8 +203,18 @@ class Request:
                 self.logger.debug(("Task %s in request %s missing completion "
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
-            assert task.completion_time >= self.__arrival_time
-            completion_time = max(completion_time, task.completion_time)
+            # Here we compare two event times: the completion time, as observed
+            # the the node monitor, minus the clock skew; and the job arrival
+            # time, as observed by the scheduler.  If the adjusted completion
+            # time is before the arrival time, we know we've made an error in
+            # calculating the clock skew.clock_skew
+            adjusted_completion_time = task.completion_time - task.clock_skew
+            if adjusted_completion_time < self.__arrival_time:
+                self.logger.warn(("Task %s in request %s has estimated "
+                                  "completion time before arrival time, "
+                                  "indicating inaccuracy in clock skew "
+                                  "computation.") % (task_id, self.__id))
+            completion_time = max(completion_time, adjusted_completion_time)
         return completion_time - self.__arrival_time
         
     def complete(self):
@@ -145,6 +240,16 @@ class Request:
         if task_id not in self.__tasks:
             self.__tasks[task_id] = Task(task_id)
         return self.__tasks[task_id]
+    
+    def __get_probe(self, address):
+        """ Gets the probe from the map of __probes.
+        
+        Creates a new probe if the probe with the given address doesn't already
+        exist.
+        """
+        if address not in self.__probes:
+            self.__probes[address] = Probe(self.__id, address)
+        return self.__probes[address]
 
 class LogParser:
     """ Helps extract job information from log files.
@@ -163,7 +268,8 @@ class LogParser:
     def parse_file(self, filename):
         file = open(filename, "r")
         for line in file:
-            items = line.split("\t")
+            # Strip off the newline at the end of the line.
+            items = line[:-1].split("\t")
             if len(items) != 3:
                 self.logger.warn(("Ignoring log message '%s' with unexpected "
                                   "number of items (expected 3; found %d)") %
@@ -177,12 +283,22 @@ class LogParser:
             if audit_event_params[0] == "arrived":
                 self.__add_request_arrival(audit_event_params[1],
                                            audit_event_params[2], time)
+            elif audit_event_params[0] == "probe_launch":
+                request = self.__get_request(audit_event_params[1])
+                request.add_probe_launch(audit_event_params[2], time)
+            elif audit_event_params[0] == "probe_received":
+                request = self.__get_request(audit_event_params[1])
+                request.add_probe_received(audit_event_params[2], time)
+            elif audit_event_params[0] == "probe_completion":
+                request = self.__get_request(audit_event_params[1])
+                request.add_probe_completion(audit_event_params[2], time)
             elif audit_event_params[0] == "scheduler_launch":
                 self.__add_scheduler_task_launch(audit_event_params[1],
                                                  audit_event_params[2], time)
             elif audit_event_params[0] == "nodemonitor_launch":
                 self.__add_node_monitor_task_launch(audit_event_params[1],
                                                     audit_event_params[2],
+                                                    audit_event_params[3],
                                                     time)
             elif audit_event_params[0] == "task_completion":
                 self.__add_task_completion(audit_event_params[1],
@@ -195,6 +311,7 @@ class LogParser:
         # Network delay for each task.
         network_delays = []
         for request in self.__requests.values():
+            request.set_clock_skews()
             network_delays.extend(request.network_delays())
 
             response_time = request.response_time()
@@ -250,9 +367,10 @@ class LogParser:
         request = self.__get_request(request_id)
         request.add_scheduler_task_launch(task_id, time)
         
-    def __add_node_monitor_task_launch(self, request_id, task_id, time):
+    def __add_node_monitor_task_launch(self, request_id, address, task_id,
+                                       time):
         request = self.__get_request(request_id)
-        request.add_node_monitor_task_launch(task_id, time)
+        request.add_node_monitor_task_launch(address, task_id, time)
         
     def __add_task_completion(self, request_id, task_id, time):
         request = self.__get_request(request_id)

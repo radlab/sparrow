@@ -24,9 +24,8 @@ public class RandomTaskPlacer implements TaskPlacer {
   
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
-      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, 
-      TAsyncClientManager clientManager)
-      throws IOException {
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, 
+      TAsyncClientManager clientManager) throws IOException {
     Collection<TaskPlacementResponse> out = new HashSet<TaskPlacementResponse>();
     
     ArrayList<InetSocketAddress> orderedNodes = new ArrayList<InetSocketAddress>(nodes);
