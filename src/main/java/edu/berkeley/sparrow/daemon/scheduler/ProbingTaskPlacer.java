@@ -80,6 +80,9 @@ public class ProbingTaskPlacer implements TaskPlacer {
     @Override
     public void onComplete(getLoad_call response) {
       LOG.debug("Received load response from node " + socket);
+      
+      // TODO: Include the port, as well as the address, in the log message, so this
+      // works properly when multiple daemons are running on the same machine.
       AUDIT_LOG.info(Logging.auditEventString("probe_completion", requestId,
                                               socket.getAddress().getHostAddress()));
       try {

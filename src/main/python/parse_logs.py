@@ -58,6 +58,9 @@ class Probe:
         Returns the number of milliseconds by which the probed machine is ahead
         of the probing machine.  The caller should verify that complete
         information is available for this probe before calling this function.
+        
+        Ignores processing time at the node monitor, which we assume to be
+        small.
         """
         expected_received_time = (self.launch_time + self.completion_time) / 2.
         return self.received_time - expected_received_time
@@ -200,13 +203,15 @@ class Request:
                 self.logger.debug(("Task %s in request %s missing completion "
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
-            normalized_completion_time = task.completion_time - task.clock_skew
-            if normalized_completion_time < self.__arrival_time:
-                self.logger.warn(("Task %s in request %s has normalized "
+            # Estimate the completion time on the scheduling machine's clock,
+            # and make sure this time is after the arrival time.
+            estimated_completion_time = task.completion_time - task.clock_skew
+            if estimated_completion_time < self.__arrival_time:
+                self.logger.warn(("Task %s in request %s has estimated "
                                   "completion time before arrival time, "
                                   "indicating inaccuracy in clock skew "
                                   "computation.") % (task_id, self.__id))
-            completion_time = max(completion_time, normalized_completion_time)
+            completion_time = max(completion_time, estimated_completion_time)
         return completion_time - self.__arrival_time
         
     def complete(self):

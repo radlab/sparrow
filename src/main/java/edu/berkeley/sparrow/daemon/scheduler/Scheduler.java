@@ -173,6 +173,9 @@ public class Scheduler {
    * 
    * This should only be called once for each request (it will return a different
    * identifier if called a second time).
+   * 
+   * TODO: Include the port number, so this works when there are multiple schedulers
+   * running on a single machine (as there will be when we do large scale testing).
    */
   private String getRequestId() {
     /* The request id is a string that includes the IP address of this scheduler followed
