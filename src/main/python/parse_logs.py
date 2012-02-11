@@ -203,15 +203,18 @@ class Request:
                 self.logger.debug(("Task %s in request %s missing completion "
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
-            # Estimate the completion time on the scheduling machine's clock,
-            # and make sure this time is after the arrival time.
-            estimated_completion_time = task.completion_time - task.clock_skew
-            if estimated_completion_time < self.__arrival_time:
+            # Here we compare two event times: the completion time, as observed
+            # the the node monitor, minus the clock skew; and the job arrival
+            # time, as observed by the scheduler.  If the adjusted completion
+            # time is before the arrival time, we know we've made an error in
+            # calculating the clock skew.clock_skew
+            adjusted_completion_time = task.completion_time - task.clock_skew
+            if adjusted_completion_time < self.__arrival_time:
                 self.logger.warn(("Task %s in request %s has estimated "
                                   "completion time before arrival time, "
                                   "indicating inaccuracy in clock skew "
                                   "computation.") % (task_id, self.__id))
-            completion_time = max(completion_time, estimated_completion_time)
+            completion_time = max(completion_time, adjusted_completion_time)
         return completion_time - self.__arrival_time
         
     def complete(self):
