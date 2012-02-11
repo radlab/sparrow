@@ -14,7 +14,7 @@ def parse_args():
     "\n\n<action> can be: launch, deploy, start, stop, start-proto, stop-proto, command")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
-  parser.add_option("-a", "--ami", default="ami-83c717ea",
+  parser.add_option("-a", "--ami", default="ami-a74393ce",
       help="Amazon Machine Image ID to use")
   parser.add_option("-t", "--instance-type", default="m1.large",
       help="Type of instance to launch (default: m1.large). " +
