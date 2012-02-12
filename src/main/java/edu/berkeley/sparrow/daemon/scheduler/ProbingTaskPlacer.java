@@ -38,24 +38,6 @@ public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(TaskPlacer.class);
   
   /**
-   * A comparator for (node, resource vector) pairs, based on the resource vector.
-   */
-  private class NodeComparator implements Comparator<
-      Entry<InetSocketAddress, TResourceVector>> {
-    @Override
-    public int compare(Entry<InetSocketAddress, TResourceVector> e1, 
-        Entry<InetSocketAddress, TResourceVector> e2) {
-      // NOTE: right now we just compare based on memory. This is a simplification, since
-      // resource vectors are actually multi-dimensional.
-      long m1 = e1.getValue().memory;
-      long m2 = e2.getValue().memory;
-      if (m1 > m2) { return 1; }
-      if (m1 < m2) { return -1; }
-      return 0;
-    }
-  }
-  
-  /**
    * This acts as a callback for the asynchronous Thrift interface.
    */
   private class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
@@ -159,30 +141,21 @@ public class ProbingTaskPlacer implements TaskPlacer {
     }
 
     // Sort nodes by resource usage
-    List<Entry<InetSocketAddress, TResourceVector>> results = 
-        new ArrayList<Entry<InetSocketAddress, TResourceVector>>(loads.entrySet());
-    Collections.sort(results, new NodeComparator());
-    Collections.reverse(results);
+    MinCPUAssignmentPolicy assigner = new MinCPUAssignmentPolicy();
+    Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
     
-    ArrayList<TaskPlacementResponse> out = new ArrayList<TaskPlacementResponse>();
-    
-    int i = 0;
-    for (TTaskSpec task : tasks) {
-      Entry<InetSocketAddress, TResourceVector> entry = results.get(i++ % results.size());
-      
-      TaskPlacementResponse place = new TaskPlacementResponse(
-          task, entry.getKey(), Optional.of(clients.get(entry.getKey())),
-          Optional.of(transports.get(entry.getKey())));
-      out.add(place);
+    for (TaskPlacementResponse resp : out) {
+      resp.setTransport(transports.get(resp.getNodeAddr()));
+      resp.setClient(clients.get(resp.getNodeAddr()));
+      transports.remove(resp.getNodeAddr());
     }
     
     // Close out any sockets related to nodes we aren't going to use
     // TODO: really we need to change the way that thrift handles are re-used,
     // and have a pool of thrift handles that is shared between the Scheduler and
     // this class. The pool should be periodically cleaned up based on LRU.
-    for (;i < results.size(); i++) {
-      InetSocketAddress addr = results.get(i).getKey();
-      transports.get(addr).close();
+    for (TTransport transport : transports.values()) {
+      transport.close();
     }
     return out;
   }
