@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 def parse_args():
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start, stop, start-proto, stop-proto, command")
+    "\n\n<action> can be: launch, deploy, start, stop, start-proto, stop-proto, command, collect-logs, destroy")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-a74393ce",
@@ -33,6 +33,8 @@ def parse_args():
       help="Number of seconds to wait for cluster nodes to boot (default: 0)")
   parser.add_option("-g", "--branch", default="master",
       help="Which git branch to checkout")
+  parser.add_option("-d", "--log-dir", default="/tmp/",
+      help="Local directory into which log files are copied")
   (opts, args) = parser.parse_args()
   if len(args) < 1:
     parser.print_help()
@@ -64,6 +66,43 @@ def scp(host, opts, local_file, dest_file):
       "scp -q -o StrictHostKeyChecking=no -i %s '%s' 'root@%s:%s'" %
       (opts.identity_file, local_file, host, dest_file), shell=True)
 
+# Copy a file from a given host through scp, throwing an exception if scp fails
+def scp_from(host, opts, dest_file, local_file):
+  subprocess.check_call(
+      "scp -q -o StrictHostKeyChecking=no -i %s 'root@%s:%s' '%s'" %
+      (opts.identity_file, host, dest_file, local_file), shell=True)
+
+# Parallel version of scp_from()
+def scp_from_all(hosts, opts, dest_file, local_file):
+  commands = []
+  for host in hosts:
+    commands.append(
+      "scp -q -o StrictHostKeyChecking=no -i %s 'root@%s:%s' '%s'" %
+      (opts.identity_file, host, dest_file, local_file))
+  parallel_commands(commands, 0)
+    
+
+# Execute a sequence of commands in parallel, raising an exception if 
+# more than tolerable_failures of them fail
+def parallel_commands(commands, tolerable_failures):
+  processes = {} # popen object --> command string
+  failures = []
+  for c in commands:
+    p = subprocess.Popen(c, shell=True, stdout = subprocess.PIPE, 
+                         stderr = subprocess.PIPE, stdin=subprocess.PIPE)
+    processes[p] = c
+  for p in processes.keys():
+    (stdout, stderr) = p.communicate()
+    if p.poll() != 0:
+      failures.append((stdout, stderr, processes[p]))
+
+  if len(failures) > tolerable_failures:
+    out = "Parallel commands failed:\n"
+    for (stdout, stderr, cmd) in failures:
+      out = out + "command:\n%s\nstdout\n%sstderr\n%s\n" %  \
+        (cmd, stdout, stderr)
+    raise Exception(out)
+
 # Run a command on a host through ssh, throwing an exception if ssh fails
 def ssh(host, opts, command):
   subprocess.check_call(
@@ -71,10 +110,13 @@ def ssh(host, opts, command):
       (opts.identity_file, host, command), shell=True)
 
 # Run a command on multiple hosts through ssh, throwing an exception on failure
-def ssh_all(hosts, opts, commands):
-  for h in hosts:
-    print h
-    ssh(h, opts, commands)
+def ssh_all(hosts, opts, command):
+  commands = []
+  for host in hosts:
+    cmd = "ssh -t -o StrictHostKeyChecking=no -i %s root@%s '%s'" % \
+      (opts.identity_file, host, command)
+    commands.append(cmd)
+  parallel_commands(commands, 0)
 
 # Launch a cluster and return instances launched
 def launch_cluster(conn, opts):
@@ -250,14 +292,39 @@ def start_proto(frontends, backends, opts):
 
 # Start the prototype backends/frontends
 def stop_proto(frontends, backends, opts):
-  print "Stopping Proto backends..."
-  ssh_all([be.public_dns_name for be in backends], opts,
-         "chmod 755 /root/stop_proto_backend.sh;" +
-         "/root/stop_proto_backend.sh")
   print "Stopping Proto frontends..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
           "chmod 755 /root/stop_proto_frontend.sh;" +
           "/root/stop_proto_frontend.sh")
+  print "Stopping Proto backends..."
+  ssh_all([be.public_dns_name for be in backends], opts,
+         "chmod 755 /root/stop_proto_backend.sh;" +
+         "/root/stop_proto_backend.sh")
+
+# Collect logs from all machines
+def collect_logs(frontends, backends, opts):
+  scp_from_all([fe.public_dns_name for fe in frontends], opts,
+    "/root/*.log", opts.log_dir)
+  scp_from_all([be.public_dns_name for be in backends], opts,
+    "/root/*.log", opts.log_dir)
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "rm -f /root/*.log")
+  ssh_all([be.public_dns_name for be in backends], opts,
+          "rm -f /root/*.log")
+
+# Tear down a cluster
+def destroy_cluster(frontends, backends, opts):
+  response = raw_input("Are you sure you want to destroy the cluster " +
+    "?\nALL DATA ON ALL NODES WILL BE LOST!!\n" +
+    "Destroy cluster (y/N): ")
+
+  if response == "y":
+    print "Terminating frontends"
+    for fe in frontends:
+      fe.terminate()
+    print "Terminating backends"
+    for be in backends:
+      be.terminate()   
 
 # Execute a shell command on all machines
 def execute_command(frontends, backends, opts, cmd):
@@ -310,6 +377,13 @@ def main():
   if action == "stop-proto":
     print "Stopping proto application..."
     stop_proto(frontends, backends, opts)
+
+  if action == "collect-logs":
+    print "Collecting logs..."
+    collect_logs(frontends, backends, opts)
+
+  if action == "destroy":
+    destroy_cluster(frontends, backends, opts)
 
 if __name__ == "__main__":
   main()
