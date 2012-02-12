@@ -31,19 +31,19 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 /**
  * A prototype Sparrow backend. 
  * 
- * This backed is capable of performing a number of benchmark tasks, each representing 
+ * This backend is capable of performing a number of benchmark tasks, each representing 
  * distinct resource consumption profiles. It initiates a thrift server with a bounded
- * size thread pool (of at most {@link WORKER_THREADS} threads). To makes sure that
+ * size thread pool (of at most {@code WORKER_THREADS} threads). To makes sure that
  * we never queue tasks, we additionally spawn a new thread each time a task is launched.
  * In the future, we will have launchTask() directly execute the task and rely on queuing
  * in the underlying thread pool to queue if task launches exceed capacity.
  */
 public class ProtoBackend implements BackendService.Iface {
-  /* Benchmark which, on each iteration, runs 1 million random floating point
-   * multiplications.*/
+  /** Benchmark which, on each iteration, runs 1 million random floating point
+   *  multiplications.*/
   public static int BENCHMARK_TYPE_FP_CPU = 1;
-  /* Benchmark which allocates a heap buffer of 200 million bytes, then on each iteration
-   * accesses 1 million contiguous bytes of the buffer, starting at a random offset.*/
+  /** Benchmark which allocates a heap buffer of 200 million bytes, then on each iteration
+   *  accesses 1 million contiguous bytes of the buffer, starting at a random offset.*/
   public static int BENCHMARK_TYPE_RANDOM_MEMACCESS = 2;
   // NOTE: we do not use an enum for the above because it is not possible to serialize
   // an enum with our current simple serialization technique. 
@@ -52,8 +52,10 @@ public class ProtoBackend implements BackendService.Iface {
   
   /**
    * This is just how many threads can concurrently be answering function calls
-   * from the NM. Each task is launched in its own from one of these threads. If more
-   * tasks arrive than this number, they are queued.
+   * from the NM. Each task is launched in its own from one of these threads. If tasks
+   * launches arrive fast enough that all worker threads are concurrently executing
+   * a task, this will queue. We currently launch new threads for each task to prevent
+   * this from happening. 
    */
   private static final int WORKER_THREADS = 8;
   private static final String APP_ID = "testApp";
@@ -133,16 +135,20 @@ public class ProtoBackend implements BackendService.Iface {
       Random r = new Random();
 
       if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
+        // 2 hundred million byte buffer
         int buffSize = 1000 * 1000 * 200;
-        byte[] buff = new byte[buffSize]; 
+        byte[] buff = new byte[buffSize];
+        // scan 1 million bytes at a time
         int runLength = 1000 * 1000;
         // We keep a running result here and print it out so that the JVM doesn't
         // optimize all this computation away.
         byte result = 1;
         for (int i = 0; i < benchmarkIterations; i++) {
+          // On each iteration, start at a random index, and scan runLength contiguous
+          // bytes, potentially wrapping if we hit the end of the buffer.
           int start = r.nextInt(buff.length);
           for (int j = 0; j < runLength; j++) {
-            result = (byte) (result | buff[(start + j) % (buff.length - 1)]);
+            result = (byte) (result ^ buff[(start + j) % (buff.length - 1)]);
           }
         }
         LOG.debug("Benchmark result " + result);
@@ -152,6 +158,7 @@ public class ProtoBackend implements BackendService.Iface {
         // optimize all this computation away.
         float result = r.nextFloat();
         for (int i = 0; i < benchmarkIterations * opsPerIteration; i++) {
+          // On each iteration, perform a floating point mulitplication
           float x = r.nextFloat();
           float y = r.nextFloat();
           result += (x * y);

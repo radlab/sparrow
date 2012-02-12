@@ -60,14 +60,14 @@ public class ProtoFrontend {
     }
   }
   
-  public static List<TTaskSpec> generateJob(int numTasks, int banchmarkId, 
-      int banchmarkIterations) {
+  public static List<TTaskSpec> generateJob(int numTasks, int benchmarkId, 
+      int benchmarkIterations) {
     TResourceVector resources = TResources.createResourceVector(300, 1);
     
     // Pack task parameters
     ByteBuffer message = ByteBuffer.allocate(8);
-    message.putInt(banchmarkId);
-    message.putInt(banchmarkIterations);
+    message.putInt(benchmarkId);
+    message.putInt(benchmarkIterations);
     
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
     for (int taskId = 0; taskId < numTasks; taskId++) {
