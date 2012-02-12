@@ -17,6 +17,11 @@ import org.apache.thrift.transport.TTransportException;
 public class TServers {
   private final static Logger LOG = Logger.getLogger(TServers.class);
 
+  /**
+   * Launch a multi-threaded Thrift server with the given {@code processor}. Note that 
+   * internally this creates an expanding thread pool of at most {@code threads} threads,
+   * and requests are queued whenever that thread pool is saturated.
+   */
   public static void launchThreadedThriftServer(int port, int threads,
       TProcessor processor) throws IOException {
     LOG.info("Staring async thrift server of type: " + processor.getClass().toString());
