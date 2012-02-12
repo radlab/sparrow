@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -28,18 +29,33 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
- * A prototype Sparrow backend. This backend executes tasks assuming the task message
- * has a single integer conveying amount of time to sleep in ms. Each task executes
- * in a new thread, and uses all of the resources estimated in the scheduling request.
+ * A prototype Sparrow backend. 
+ * 
+ * This backed is capable of performing a number of benchmark tasks, each representing 
+ * distinct resource consumption profiles. It initiates a thrift server with a bounded
+ * size thread pool (of at most {@link WORKER_THREADS} threads). To makes sure that
+ * we never queue tasks, we additionally spawn a new thread each time a task is launched.
+ * In the future, we will have launchTask() directly execute the task and rely on queuing
+ * in the underlying thread pool to queue if task launches exceed capacity.
  */
 public class ProtoBackend implements BackendService.Iface {
+  /* Benchmark which, on each iteration, runs 1 million random floating point
+   * multiplications.*/
+  public static int BENCHMARK_TYPE_FP_CPU = 1;
+  /* Benchmark which allocates a heap buffer of 200 million bytes, then on each iteration
+   * accesses 1 million contiguous bytes of the buffer, starting at a random offset.*/
+  public static int BENCHMARK_TYPE_RANDOM_MEMACCESS = 2;
+  // NOTE: we do not use an enum for the above because it is not possible to serialize
+  // an enum with our current simple serialization technique. 
+  
   private static final int LISTEN_PORT = 54321;
   
   /**
    * This is just how many threads can concurrently be answering function calls
-   * from the NM. Each task is launched in its own from one of these threads.
+   * from the NM. Each task is launched in its own from one of these threads. If more
+   * tasks arrive than this number, they are queued.
    */
-  private static final int WORKER_THREADS = 2;
+  private static final int WORKER_THREADS = 8;
   private static final String APP_ID = "testApp";
   
   /** We assume we are speaking to local Node Manager. */
@@ -72,14 +88,16 @@ public class ProtoBackend implements BackendService.Iface {
    * the NodeMonitor when it launches and again when it finishes.
    */
   private class TaskRunnable implements Runnable {
-    private int sleepMs;
+    private int benchmarkId;
+    private int benchmarkIterations;
     private TResourceVector taskResources;
     private String requestId;
     private String taskId;
     
-    public TaskRunnable(String requestId, String taskId, int sleepMs,
+    public TaskRunnable(String requestId, String taskId, ByteBuffer message,
         TResourceVector taskResources) {
-      this.sleepMs = sleepMs;
+      this.benchmarkId = message.getInt();
+      this.benchmarkIterations = message.getInt();
       this.taskResources = taskResources;
       this.requestId = requestId;
       this.taskId = taskId;
@@ -112,12 +130,36 @@ public class ProtoBackend implements BackendService.Iface {
         }
       }
  
-      // Sleep
-      try {
-        Thread.sleep(sleepMs);
-      } catch (InterruptedException e) {
+      Random r = new Random();
+
+      if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
+        int buffSize = 1000 * 1000 * 200;
+        byte[] buff = new byte[buffSize]; 
+        int runLength = 1000 * 1000;
+        // We keep a running result here and print it out so that the JVM doesn't
+        // optimize all this computation away.
+        byte result = 1;
+        for (int i = 0; i < benchmarkIterations; i++) {
+          int start = r.nextInt(buff.length);
+          for (int j = 0; j < runLength; j++) {
+            result = (byte) (result | buff[(start + j) % (buff.length - 1)]);
+          }
+        }
+        LOG.debug("Benchmark result " + result);
+      } else if (benchmarkId == BENCHMARK_TYPE_FP_CPU) {
+        int opsPerIteration = 1000 * 1000;
+        // We keep a running result here and print it out so that the JVM doesn't
+        // optimize all this computation away.
+        float result = r.nextFloat();
+        for (int i = 0; i < benchmarkIterations * opsPerIteration; i++) {
+          float x = r.nextFloat();
+          float y = r.nextFloat();
+          result += (x * y);
+        }
+        LOG.debug("Benchmark result " + result);
+      } else {
+        LOG.error("Received unrecognized benchmark type");
       }
-      LOG.debug("Task finished");
       // Log task finish before updating bookkeeping, in case bookkeeping ends up being
       // expensive.
       AUDIT_LOG.info(Logging.auditEventString("task_completion", this.requestId,
@@ -163,10 +205,9 @@ public class ProtoBackend implements BackendService.Iface {
   @Override
   public void launchTask(ByteBuffer message, String requestId, String taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
-    int sleepDuration = message.getInt();
     // Note we ignore user here
     new Thread(new TaskRunnable(
-        requestId, taskId, sleepDuration, estimatedResources)).start();
+        requestId, taskId, message, estimatedResources)).start();
   }
   
   public static void main(String[] args) throws IOException, TException {

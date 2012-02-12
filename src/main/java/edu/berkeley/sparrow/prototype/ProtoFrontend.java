@@ -27,9 +27,12 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  * Frontend for the prototype implementation.
  */
 public class ProtoFrontend {
-  public static final double DEFAULT_JOB_ARRIVAL_RATE_S = 500;   // Jobs/second
+  public static final double DEFAULT_JOB_ARRIVAL_RATE_S = 10; // Jobs/second
   public static final int DEFAULT_TASKS_PER_JOB = 1;          // Tasks/job
-  public static final int DEFAULT_TASK_DURATION_MS = 100;     // Task duration
+  
+  // Type of benchmark to run, see ProtoBackend static constant for benchmark types
+  public static final int DEFAULT_TASK_BENCHMARK = ProtoBackend.BENCHMARK_TYPE_FP_CPU;         
+  public static final int DEFAULT_BENCHMARK_ITERATIONS = 10;  // # of benchmark iterations
   
   private static final Logger LOG = Logger.getLogger(ProtoFrontend.class);
 
@@ -57,17 +60,20 @@ public class ProtoFrontend {
     }
   }
   
-  public static List<TTaskSpec> generateJob(int numTasks, int taskDurationMs) {
-    TResourceVector resources = TResources.createResourceVector(100, 1);
+  public static List<TTaskSpec> generateJob(int numTasks, int banchmarkId, 
+      int banchmarkIterations) {
+    TResourceVector resources = TResources.createResourceVector(300, 1);
     
-    // Duration of tasks (each task is the same)
-    byte[] message = ByteBuffer.allocate(4).putInt(taskDurationMs).array();
-
+    // Pack task parameters
+    ByteBuffer message = ByteBuffer.allocate(8);
+    message.putInt(banchmarkId);
+    message.putInt(banchmarkIterations);
+    
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
     for (int taskId = 0; taskId < numTasks; taskId++) {
       TTaskSpec spec = new TTaskSpec();
       spec.setTaskID(Integer.toString(taskId));
-      spec.setMessage(message);
+      spec.setMessage(message.array());
       spec.setEstimatedResources(resources);
       out.add(spec);
     }
@@ -102,7 +108,9 @@ public class ProtoFrontend {
       Random r = new Random();
       double lambda = conf.getDouble("job.arrival.rate.s", DEFAULT_JOB_ARRIVAL_RATE_S);
       int tasksPerJob = conf.getInt("tasks.per.job", DEFAULT_TASKS_PER_JOB);
-      int taskLenMs = conf.getInt("tasks.duration.ms", DEFAULT_TASK_DURATION_MS);
+      int benchmarkIterations = conf.getInt("tasks.bemnchmark.iterations", 
+          DEFAULT_BENCHMARK_ITERATIONS);
+      int benchmarkId = conf.getInt("tasks.benchmark.id", DEFAULT_TASK_BENCHMARK);
       
       SparrowFrontendClient client = new SparrowFrontendClient();
       client.initialize(new InetSocketAddress("localhost", 
@@ -113,8 +121,9 @@ public class ProtoFrontend {
         // Lambda is the arrival rate in S, so we need to multiply the result here by
         // 1000 to convert to ms.
         Thread.sleep((long) (generateInterarrivalDelay(r, lambda) * 1000));
-        new Thread(
-            new JobLaunchRunnable(generateJob(tasksPerJob, taskLenMs), client)).start();
+        Runnable runnable =  new JobLaunchRunnable(
+            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), client);
+        new Thread(runnable).start();
       }
     }
     catch (Exception e) {
