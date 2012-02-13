@@ -99,8 +99,14 @@ public class Scheduler {
     LOG.debug(Logging.functionCall(req));
     
     String requestId = getRequestId();
+    // Logging the address here is somewhat redundant, since all of the
+    // messages in this particularly log file come from the same address.
+    // However, it simplifies the process of aggregating the logs, and will
+    // also be useful when we support multiple daemons running on a single
+    // machine.
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
-                                            req.getTasks().size()));
+                                            req.getTasks().size(),
+                                            address.getHostAddress()));
     Collection<TaskPlacementResponse> placement = null;
     try {
       placement = getJobPlacementResp(req, requestId);
