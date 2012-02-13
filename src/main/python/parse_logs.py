@@ -27,21 +27,21 @@ class Probe:
         
     def set_launch_time(self, time):
         if self.launch_time != INVALID_TIME:
-            self.logger.warn(("Probe for request %s on machine %s launched "
+            self.__logger.warn(("Probe for request %s on machine %s launched "
                               "twice; expect it to only launch once") %
                              self.request_id, self.address)
         self.launch_time = time
         
     def set_received_time(self, time):
         if self.received_time != INVALID_TIME:
-            self.logger.warn(("Probe for request %s on machine %s received "
+            self.__logger.warn(("Probe for request %s on machine %s received "
                               "twice; expect it to only be received once") %
                              self.request_id, self.address)
         self.received_time = time
         
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
-            self.logger.warn(("Probe for request %s on machine %s completed "
+            self.__logger.warn(("Probe for request %s on machine %s completed "
                               "twice; expect it to only launch once") %
                              self.request_id, self.address)
         self.completion_time = time
@@ -75,7 +75,7 @@ class Task:
     implementations, these times should only differ by the network latency.
     """
     def __init__(self, id):
-        self.logger = logging.getLogger("Task")
+        self.__logger = logging.getLogger("Task")
         self.scheduler_launch_time = INVALID_TIME
         self.node_monitor_launch_time = INVALID_TIME
         self.completion_time = INVALID_TIME
@@ -88,20 +88,20 @@ class Task:
         
     def set_scheduler_launch_time(self, time):
         if self.scheduler_launch_time != INVALID_TIME:
-            self.logger.warn(("Task %s launched at scheduler twice; expect "
+            self.__logger.warn(("Task %s launched at scheduler twice; expect "
                               "task to only launch once") % id)
         self.scheduler_launch_time = time
         
     def set_node_monitor_launch_time(self, address, time):
         if self.node_monitor_launch_time != INVALID_TIME:
-            self.logger.warn(("Task %s launched at %s twice; expect task to "
+            self.__logger.warn(("Task %s launched at %s twice; expect task to "
                               "only launch once") % (id, address))
         self.node_monitor_launch_time = time
         self.address = address
         
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
-            self.logger.warn(("Task %s completed twice; "
+            self.__logger.warn(("Task %s completed twice; "
                               "expect task to only complete once") % id)
         self.completion_time = time
         
@@ -135,13 +135,14 @@ class Request:
         self.__tasks = {}
         # Map of machine addresses to probes.
         self.__probes = {}
-        self.logger = logging.getLogger("Request")
+        # Address of the scheduler that received the request (and placed it).
+        self.__scheduler_address = ""
+        self.__logger = logging.getLogger("Request")
         
-    def set_num_tasks(self, num_tasks):
-        self.__num_tasks = num_tasks
-        
-    def set_arrival_time(self, time):
+    def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
+        self.__num_tasks = num_tasks
+        self.__scheduler_address = address
         
     def add_probe_launch(self, address, time):
         probe = self.__get_probe(address)
@@ -173,15 +174,32 @@ class Request:
         """ Sets the clock skews for all tasks. """
         for task in self.__tasks.values():
             if task.address not in self.__probes:
-                self.logger.warn(("No probe information for request %s, "
+                self.__logger.warn(("No probe information for request %s, "
                                   "machine %s") % (self.__id, task.address))
                 continue
             probe = self.__probes[task.address]
             if not probe.complete():
-                self.logger.warn(("Probe information for request %s, machine "
+                self.__logger.warn(("Probe information for request %s, machine "
                                   "%s incomplete") % (self.__id, task.address))
             else:
                 task.clock_skew = probe.get_clock_skew()
+                
+    def arrival_time(self):
+        """ Returns the time at which the task arrived at the scheduler. """
+        return self.__arrival_time
+                
+    def scheduler_address(self):
+        return self.__scheduler_address
+                
+    def clock_skews(self):
+        """ Returns a map of machines to clock skews.
+        
+        Clock skews are given relative to the scheduler.
+        """
+        clock_skews = {}
+        for address, probe in self.__probes.items():
+            clock_skews[address] = probe.get_clock_skew()
+        return clock_skews
         
     def network_delays(self):
         """ Returns a list of delays for all __tasks with delay information. """
@@ -209,12 +227,12 @@ class Request:
         was launched).
         """
         if self.__arrival_time == INVALID_TIME:
-            self.logger.debug("Request %s missing arrival time" % self.__id)
+            self.__logger.debug("Request %s missing arrival time" % self.__id)
             return -1
         completion_time = self.__arrival_time
         for task_id, task in self.__tasks.items():
             if task.completion_time == INVALID_TIME:
-                self.logger.debug(("Task %s in request %s missing completion "
+                self.__logger.debug(("Task %s in request %s missing completion "
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
             # Here we compare two event times: the completion time, as observed
@@ -224,7 +242,7 @@ class Request:
             # calculating the clock skew.clock_skew
             adjusted_completion_time = task.completion_time - task.clock_skew
             if adjusted_completion_time < self.__arrival_time:
-                self.logger.warn(("Task %s in request %s has estimated "
+                self.__logger.warn(("Task %s in request %s has estimated "
                                   "completion time before arrival time, "
                                   "indicating inaccuracy in clock skew "
                                   "computation.") % (task_id, self.__id))
@@ -277,7 +295,7 @@ class LogParser:
 
     def __init__(self):
         self.__requests = {}
-        self.logger = logging.getLogger("LogParser")
+        self.__logger = logging.getLogger("LogParser")
         
     def parse_file(self, filename):
         file = open(filename, "r")
@@ -285,7 +303,7 @@ class LogParser:
             # Strip off the newline at the end of the line.
             items = line[:-1].split("\t")
             if len(items) != 3:
-                self.logger.warn(("Ignoring log message '%s' with unexpected "
+                self.__logger.warn(("Ignoring log message '%s' with unexpected "
                                   "number of items (expected 3; found %d)") %
                                  (line, len(items)))
                 continue
@@ -295,8 +313,9 @@ class LogParser:
             
             audit_event_params = items[self.AUDIT_EVENT_INDEX].split(":")
             if audit_event_params[0] == "arrived":
-                self.__add_request_arrival(audit_event_params[1],
-                                           audit_event_params[2], time)
+                request = self.__get_request(audit_event_params[1])
+                request.add_arrival(time, audit_event_params[2],
+                                    audit_event_params[3])
             elif audit_event_params[0] == "probe_launch":
                 request = self.__get_request(audit_event_params[1])
                 request.add_probe_launch(audit_event_params[2], time)
@@ -325,14 +344,32 @@ class LogParser:
         # Network/processing delay for each task.
         network_delays = []
         processing_times = []
+        # Store clock skews as a map of pairs of addresses to a list of
+        # (clock skew, time) pairs. Store addresses in tuple in increasing
+        # order, so that we get the clock skew calculated in both directions.
+        clock_skews = {}
         for request in self.__requests.values():
             request.set_clock_skews()
+            scheduler_address = request.scheduler_address()
+            for address, probe_skew in request.clock_skews().items():
+                if address > scheduler_address:
+                    address_pair = (scheduler_address, address)
+                    skew = probe_skew
+                else:
+                    address_pair = (address, scheduler_address)
+                    skew = -probe_skew
+                if address_pair not in clock_skews:
+                    clock_skews[address_pair] = []
+                clock_skews[address_pair].append((skew,
+                                                  request.arrival_time()))
+
             network_delays.extend(request.network_delays())
             processing_times.extend(request.processing_times())
             response_time = request.response_time()
             if response_time != INVALID_TIME_DELTA:
                 response_times.append(response_time)
-            
+        
+        # Output data for response time and network delay CDFs.
         results_filename = "%s_results.data" % file_prefix
         file = open(results_filename, "w")
         file.write("%ile\tResponseTime\tNetworkDelay\tProcessingTime\n")
@@ -352,6 +389,44 @@ class LogParser:
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
+        
+        # Output data about clock skews.  Currently this writes a different
+        # file for each pair of machines; we may want to change this when
+        # we do larger experiments.
+        skew_filenames = []
+        for address_pair, skews in clock_skews.items():
+            skews.sort(key=lambda x: x[0])
+            filename = "%s_%s_%s_skew.data" % (file_prefix, address_pair[0],
+                                               address_pair[1])
+            skew_filenames.append(filename)
+            file = open(filename, "w")
+            stride = max(1, len(skews) / num_data_points)
+            for i, (skew, time) in enumerate(skews[::stride]):
+                percentile = (i + 1) * stride * 1.0 / len(skews)
+                file.write("%f\t%d\t%d\n" % (percentile, skew, time))
+        self.plot_skew_cdf(skew_filenames, file_prefix)
+    
+    def plot_skew_cdf(self, skew_filenames, file_prefix):
+        gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")
+        gnuplot_file.write("set terminal postscript color\n")
+        gnuplot_file.write("set output '%s_skew_cdf.ps'\n" %
+                           file_prefix)
+        gnuplot_file.write("set xlabel 'Clock Skew (ms)'\n")
+        gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
+        gnuplot_file.write("set y2label 'Arrival Time (ms)'\n")
+        gnuplot_file.write("set yrange [0:1]\n")
+        gnuplot_file.write("set ytics nomirror\n")
+        gnuplot_file.write("set y2tics\n")
+        gnuplot_file.write("plot ")
+        for i, results_filename in enumerate(skew_filenames):
+            if i > 0:
+                gunplot_file.write(",\\\n")
+            gnuplot_file.write(("'%s' using 2:1 lw 4 with lp axis "
+                                "x1y1,\\\n") % results_filename)
+            gnuplot_file.write("'%s' using 2:3 with p axis x1y2" %
+                               results_filename)
+        gnuplot_file.close()
+        
         
     def plot_response_time_cdf(self, results_filename, file_prefix):
         gnuplot_file = open("%s_response_time_cdf.gp" % file_prefix, "w")
@@ -375,11 +450,6 @@ class LogParser:
         if request_id not in self.__requests:
             self.__requests[request_id] = Request(request_id)
         return self.__requests[request_id]
-        
-    def __add_request_arrival(self, request_id, num_tasks, time):
-        request = self.__get_request(request_id)
-        request.set_num_tasks(num_tasks)
-        request.set_arrival_time(time)
         
     def __add_scheduler_task_launch(self, request_id, task_id, time):
         request = self.__get_request(request_id)
