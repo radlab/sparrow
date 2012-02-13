@@ -36,6 +36,14 @@ public interface TaskPlacer {
     public InetSocketAddress getNodeAddr() { return this.nodeAddr; }
     public Optional<InternalService.AsyncClient> getClient() { return this.client; }
     public Optional<TTransport> getTransport() { return this.transport; }
+    
+    public void setTransport(TTransport transport) {
+      this.transport = Optional.of(transport);
+    }
+    
+    public void setClient(InternalService.AsyncClient client) {
+      this.client = Optional.of(client);
+    }
   }
   
   /**
