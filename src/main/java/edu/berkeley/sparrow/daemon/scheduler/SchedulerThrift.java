@@ -19,7 +19,7 @@ import edu.berkeley.sparrow.thrift.TTaskPlacement;
  */
 public class SchedulerThrift implements SchedulerService.Iface {
   // Defaults if not specified by configuration
-  public final static int DEFAULT_SCHEDULER_THRIFT_PORT = 12345;
+  public final static int DEFAULT_SCHEDULER_THRIFT_PORT = 20503;
   private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 2;
   
   private Scheduler scheduler = new Scheduler();
