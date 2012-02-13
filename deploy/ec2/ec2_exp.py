@@ -39,7 +39,7 @@ def parse_args():
       help="Number of tasks to launch for each job in prototype")
   parser.add_option("-c", "--benchmark-id", type="int", default=1,
       help="Which benchmark to run")
-  parser.add_option("-d", "--benchmark-iterations", type="int", default=10,
+  parser.add_option("-e", "--benchmark-iterations", type="int", default=10,
       help="Iterations of benchmark to run")
 
   (opts, args) = parser.parse_args()
@@ -229,9 +229,9 @@ def deploy_cluster(frontends, backends, opts):
                                  for i in backends]),
     "arrival_lambda": "%s" % opts.arrival_rate,
     "git_branch": "%s" % opts.branch,
-    "benchmark_iterations": "%s" % benchmark_iterations,
-    "benchmark_id": "%s" % benchmark_id,
-    "tasks_per_job": "%s" % tasks_per_job
+    "benchmark_iterations": "%s" % opts.benchmark_iterations,
+    "benchmark_id": "%s" % opts.benchmark_id,
+    "tasks_per_job": "%s" % opts.tasks_per_job
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
