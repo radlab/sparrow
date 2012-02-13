@@ -35,6 +35,13 @@ def parse_args():
       help="Which git branch to checkout")
   parser.add_option("-d", "--log-dir", default="/tmp/",
       help="Local directory into which log files are copied")
+  parser.add_option("-n", "--tasks-per-job", type="int", default=1,
+      help="Number of tasks to launch for each job in prototype")
+  parser.add_option("-c", "--benchmark-id", type="int", default=1,
+      help="Which benchmark to run")
+  parser.add_option("-d", "--benchmark-iterations", type="int", default=10,
+      help="Iterations of benchmark to run")
+
   (opts, args) = parser.parse_args()
   if len(args) < 1:
     parser.print_help()
@@ -221,7 +228,10 @@ def deploy_cluster(frontends, backends, opts):
     "backend_list": "\n".join(["%s" % i.public_dns_name \
                                  for i in backends]),
     "arrival_lambda": "%s" % opts.arrival_rate,
-    "git_branch": "%s" % opts.branch
+    "git_branch": "%s" % opts.branch,
+    "benchmark_iterations": "%s" % benchmark_iterations,
+    "benchmark_id": "%s" % benchmark_id,
+    "tasks_per_job": "%s" % tasks_per_job
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':

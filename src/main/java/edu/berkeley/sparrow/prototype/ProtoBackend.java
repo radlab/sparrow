@@ -8,6 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -48,7 +54,7 @@ public class ProtoBackend implements BackendService.Iface {
   // NOTE: we do not use an enum for the above because it is not possible to serialize
   // an enum with our current simple serialization technique. 
   
-  private static final int LISTEN_PORT = 54321;
+  private static final int DEFAULT_LISTEN_PORT = 20504;
   
   /**
    * This is just how many threads can concurrently be answering function calls
@@ -62,7 +68,7 @@ public class ProtoBackend implements BackendService.Iface {
   
   /** We assume we are speaking to local Node Manager. */
   private static final String NM_HOST = "localhost";
-  private static final int NM_PORT = NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT;
+  private static int NM_PORT;
   
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
@@ -218,6 +224,30 @@ public class ProtoBackend implements BackendService.Iface {
   }
   
   public static void main(String[] args) throws IOException, TException {
+    OptionParser parser = new OptionParser();
+    parser.accepts("c", "configuration file").
+      withRequiredArg().ofType(String.class);
+    parser.accepts("help", "print help statement");
+    OptionSet options = parser.parse(args);
+    
+    if (options.has("help")) {
+      parser.printHelpOn(System.out);
+      System.exit(-1);
+    }
+    
+    // Logger configuration: log to the console
+    BasicConfigurator.configure();
+    LOG.setLevel(Level.DEBUG);
+    
+    Configuration conf = new PropertiesConfiguration();
+    
+    if (options.has("c")) {
+      String configFile = (String) options.valueOf("c");
+      try {
+        conf = new PropertiesConfiguration(configFile);
+      } catch (ConfigurationException e) {}
+    }
+    
     // Logger configuration: log to the console
     BasicConfigurator.configure();
     LOG.setLevel(Level.DEBUG);
@@ -228,9 +258,11 @@ public class ProtoBackend implements BackendService.Iface {
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(new ProtoBackend());
    
-    TServers.launchThreadedThriftServer(LISTEN_PORT, WORKER_THREADS, processor);
+    int listenPort = conf.getInt("listen_port", DEFAULT_LISTEN_PORT);
+    NM_PORT = conf.getInt("node_monitor_port", NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT);
+    TServers.launchThreadedThriftServer(listenPort, WORKER_THREADS, processor);
     
     // Register server
-    createNMClient().registerBackend(APP_ID, "localhost:" + LISTEN_PORT);
+    createNMClient().registerBackend(APP_ID, "localhost:" + listenPort);
   }
 }

@@ -88,12 +88,12 @@ public class ProtoFrontend {
   public static void main(String[] args) {
     try {
       OptionParser parser = new OptionParser();
-      parser.accepts("c", "configuration file (required)").
+      parser.accepts("c", "configuration file").
         withRequiredArg().ofType(String.class);
       parser.accepts("help", "print help statement");
       OptionSet options = parser.parse(args);
       
-      if (options.has("help") || !options.has("c")) {
+      if (options.has("help")) {
         parser.printHelpOn(System.out);
         System.exit(-1);
       }
@@ -101,20 +101,25 @@ public class ProtoFrontend {
       // Logger configuration: log to the console
       BasicConfigurator.configure();
       LOG.setLevel(Level.DEBUG);
-          
-      String configFile = (String) options.valueOf("c");
-      Configuration conf = new PropertiesConfiguration(configFile);
+      
+      Configuration conf = new PropertiesConfiguration();
+      
+      if (options.has("c")) {
+        String configFile = (String) options.valueOf("c");
+        conf = new PropertiesConfiguration(configFile);
+      }
       
       Random r = new Random();
-      double lambda = conf.getDouble("job.arrival.rate.s", DEFAULT_JOB_ARRIVAL_RATE_S);
-      int tasksPerJob = conf.getInt("tasks.per.job", DEFAULT_TASKS_PER_JOB);
-      int benchmarkIterations = conf.getInt("tasks.bemnchmark.iterations", 
+      double lambda = conf.getDouble("job_arrival_rate_s", DEFAULT_JOB_ARRIVAL_RATE_S);
+      int tasksPerJob = conf.getInt("tasks_per_job", DEFAULT_TASKS_PER_JOB);
+      int benchmarkIterations = conf.getInt("benchmark.iterations", 
           DEFAULT_BENCHMARK_ITERATIONS);
-      int benchmarkId = conf.getInt("tasks.benchmark.id", DEFAULT_TASK_BENCHMARK);
+      int benchmarkId = conf.getInt("benchmark.id", DEFAULT_TASK_BENCHMARK);
       
       SparrowFrontendClient client = new SparrowFrontendClient();
-      client.initialize(new InetSocketAddress("localhost", 
-          SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT), "testApp");
+      int schedulerPort = conf.getInt("scheduler_port", 
+          SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
+      client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
       
       // Loop and generate tasks launches
       while (true) {
