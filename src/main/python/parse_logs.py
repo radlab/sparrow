@@ -114,7 +114,12 @@ class Task:
         """
         return (self.node_monitor_launch_time - self.clock_skew -
                 self.scheduler_launch_time)
-        
+
+    def processing_time(self):    
+        """ Returns the processing time (time executing on backend)."""
+
+        return (self.completion_time - self.node_monitor_launch_time)
+    
     def complete(self):
         """ Returns whether we have complete information on this task. """
         return (self.scheduler_launch_time != INVALID_TIME and
@@ -186,6 +191,15 @@ class Request:
                 network_delays.append(task.network_delay())
         return network_delays
     
+    def processing_times(self):
+        """ Returns a list of processing times for all __tasks with
+            complete information. """
+        processing_times = []
+        for task in self.__tasks.values():
+            if task.complete():
+                processing_times.append(task.processing_time())
+        return processing_times
+
     def response_time(self):
         """ Returns the time from when the task arrived to when it completed.
         
@@ -308,29 +322,33 @@ class LogParser:
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
         response_times = []
-        # Network delay for each task.
+        # Network/processing delay for each task.
         network_delays = []
+        processing_times = []
         for request in self.__requests.values():
             request.set_clock_skews()
             network_delays.extend(request.network_delays())
-
+            processing_times.extend(request.processing_times())
             response_time = request.response_time()
             if response_time != INVALID_TIME_DELTA:
                 response_times.append(response_time)
             
         results_filename = "%s_results.data" % file_prefix
         file = open(results_filename, "w")
-        file.write("%ile\tResponseTime\tNetworkDelay\n")
+        file.write("%ile\tResponseTime\tNetworkDelay\tProcessingTime\n")
         num_data_points = 100
         response_times.sort()
         network_delays.sort()
+        processing_times.sort()
         response_stride = max(1, len(response_times) / num_data_points)
         network_stride = max(1, len(network_delays) / num_data_points)
-        for i, (response_time, network_delay) in enumerate(
+        processing_stride = max(1, len(processing_times) / num_data_points)
+        for i, (response_time, network_delay, processing_time) in enumerate(
                 zip(response_times[::response_stride],
-                    network_delays[::network_stride])):
+                    network_delays[::network_stride],
+                    processing_times[::processing_stride])):
             percentile = (i + 1) * response_stride * 1.0 / len(response_times)
-            file.write("%f\t%d\t%d\n" % (percentile, response_time, network_delay))
+            file.write("%f\t%d\t%d\t%d\n" % (percentile, response_time, network_delay, processing_time))
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
