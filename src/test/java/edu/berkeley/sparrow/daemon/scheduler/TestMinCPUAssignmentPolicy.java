@@ -17,7 +17,7 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 public class TestMinCPUAssignmentPolicy {  
   @Test
   public void testBasicAssignment() {
-    AssignmentPolicy policy = new MinCPUAssignmentPolicy();
+    AssignmentPolicy policy = new MinCpuAssignmentPolicy();
     
     // Create two task requests
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
@@ -56,17 +56,19 @@ public class TestMinCPUAssignmentPolicy {
     Collection<TaskPlacementResponse> out = policy.assignTasks(tasks, usage);
     
     assertEquals(2, out.size());
-    // We expect tasks 1 and 2 to be assigned to nodes 1 and 2
+    // We expect tasks 1 and 2 to collectively be assigned to nodes 1 and 2. Since this 
+    // allows for two possible assignments, we effectively check that we are in 
+    // one of those cases.
     boolean seenTaskOne = false;
     boolean seenTaskTwo = false;
     boolean seenNodeOne = false;
     boolean seenNodeTwo = false;
     
     for (TaskPlacementResponse resp : out) {
-      if (resp.getNodeAddr().equals(new InetSocketAddress(1))) { seenNodeOne = true; }
-      if (resp.getNodeAddr().equals(new InetSocketAddress(2))) { seenNodeTwo = true; }
-      if (resp.getTaskSpec().taskID == "1") { seenTaskOne = true; }
-      if (resp.getTaskSpec().taskID == "2") { seenTaskTwo = true; }
+      if (resp.getNodeAddr().equals(socket1)) { seenNodeOne = true; }
+      if (resp.getNodeAddr().equals(socket2)) { seenNodeTwo = true; }
+      if (resp.getTaskSpec().taskID.equals("1")) { seenTaskOne = true; }
+      if (resp.getTaskSpec().taskID.equals("2")) { seenTaskTwo = true; }
     }
     
     assertTrue(seenTaskOne);
@@ -77,7 +79,7 @@ public class TestMinCPUAssignmentPolicy {
   
   @Test
   public void testFewerMachinesThanNodes() {
-    AssignmentPolicy policy = new MinCPUAssignmentPolicy();
+    AssignmentPolicy policy = new MinCpuAssignmentPolicy();
     
     // Create three task requests
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();

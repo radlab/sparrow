@@ -2,14 +2,9 @@ package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.log4j.Logger;
@@ -21,8 +16,6 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
 import org.apache.thrift.transport.TTransport;
-
-import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.thrift.InternalService;
@@ -141,7 +134,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
     }
 
     // Sort nodes by resource usage
-    MinCPUAssignmentPolicy assigner = new MinCPUAssignmentPolicy();
+    MinCpuAssignmentPolicy assigner = new MinCpuAssignmentPolicy();
     Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
     
     for (TaskPlacementResponse resp : out) {
