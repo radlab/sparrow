@@ -39,15 +39,22 @@ public class ProtoFrontend {
   /** A runnable which Spawns a new thread to launch a scheduling request. */
   private static class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
+    private int schedulerPort;
     private SparrowFrontendClient client;
     
-    public JobLaunchRunnable(List<TTaskSpec> request, SparrowFrontendClient client) {
+    public JobLaunchRunnable(List<TTaskSpec> request, int schedulerPort) {
       this.request = request;
-      this.client = client;
+      this.schedulerPort = schedulerPort;
     }
     
     @Override
     public void run() {
+      this.client = new SparrowFrontendClient();
+      try {
+        client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
+      } catch (TException e) {
+        LOG.error(e);
+      }
       TUserGroupInfo user = new TUserGroupInfo();
       user.setUser("*");
       user.setGroup("*");
@@ -57,6 +64,7 @@ public class ProtoFrontend {
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);
       }
+      client.close();
     }
   }
   
@@ -120,14 +128,26 @@ public class ProtoFrontend {
       int schedulerPort = conf.getInt("scheduler_port", 
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
       client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
-      
+      long lastLaunch = System.currentTimeMillis();
+      long loopFinish = 0;
       // Loop and generate tasks launches
       while (true) {
+        long loopStart = System.currentTimeMillis();
+        System.out.println(loopStart - loopFinish);
         // Lambda is the arrival rate in S, so we need to multiply the result here by
         // 1000 to convert to ms.
-        Thread.sleep((long) (generateInterarrivalDelay(r, lambda) * 1000));
+        long delay = (long) (generateInterarrivalDelay(r, lambda) * 1000);
+        System.out.println("Delay " + delay);
+        long curLaunch = lastLaunch + delay;
+        long toWait = Math.max(0,  curLaunch - System.currentTimeMillis());       
+        lastLaunch = curLaunch;
+        if (toWait == 0) {
+          LOG.warn("Generated workload not keeping up with real time.");
+        }
+        Thread.sleep(toWait);
+        loopFinish = System.currentTimeMillis();
         Runnable runnable =  new JobLaunchRunnable(
-            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), client);
+            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), schedulerPort);
         new Thread(runnable).start();
       }
     }
