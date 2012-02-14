@@ -10,7 +10,7 @@ fi;
 cd /tmp/
 
 if [ ! -d "sparrow" ]; then
-  git clone git://github.com/radlab/sparrow.git -b log_collection
+  git clone git://github.com/radlab/sparrow.git -b {{git_branch}}
 fi;
 
 cd sparrow
