@@ -218,13 +218,17 @@ class Request:
                 processing_times.append(task.processing_time())
         return processing_times
 
-    def response_time(self):
+    def response_time(self, incorporate_skew=False):
         """ Returns the time from when the task arrived to when it completed.
         
         Returns -1 if we don't have completion information on the task.  Note
         that we may have information about when the task completed, but not
         complete information about the task (e.g. we don't know when the task
         was launched).
+        
+        Arguments:
+            incorporate_skew: Boolean specifying whether to incorporate the
+                perceived skew in the response time.
         """
         if self.__arrival_time == INVALID_TIME:
             self.__logger.debug("Request %s missing arrival time" % self.__id)
@@ -235,18 +239,20 @@ class Request:
                 self.__logger.debug(("Task %s in request %s missing completion "
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
-            # Here we compare two event times: the completion time, as observed
-            # the the node monitor, minus the clock skew; and the job arrival
-            # time, as observed by the scheduler.  If the adjusted completion
-            # time is before the arrival time, we know we've made an error in
-            # calculating the clock skew.clock_skew
-            adjusted_completion_time = task.completion_time - task.clock_skew
-            if adjusted_completion_time < self.__arrival_time:
-                self.__logger.warn(("Task %s in request %s has estimated "
-                                  "completion time before arrival time, "
-                                  "indicating inaccuracy in clock skew "
-                                  "computation.") % (task_id, self.__id))
-            completion_time = max(completion_time, adjusted_completion_time)
+            task_completion_time = task.completion_time
+            if incorporate_skew:
+                task_completion_time -= task.clock_skew
+                # Here we compare two event times: the completion time, as
+                # observed the the node monitor, minus the clock skew; and the
+                # job arrival time, as observed by the scheduler.  If the
+                # adjusted completion time is before the arrival time, we know
+                # we've made an error in calculating the clock skew.clock_skew
+                if task_completion_time < self.__arrival_time:
+                    self.__logger.warn(("Task %s in request %s has estimated "
+                                        "completion time before arrival time, "
+                                        "indicating inaccuracy in clock skew "
+                                        "computation.") % (task_id, self.__id))
+            completion_time = max(completion_time, task_completion_time)
         return completion_time - self.__arrival_time
         
     def complete(self):
