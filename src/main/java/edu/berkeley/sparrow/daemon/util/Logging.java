@@ -62,6 +62,6 @@ public class Logging {
    */
   public static String functionCall(Object ... params) {
     String name = Thread.currentThread().getStackTrace()[2].getMethodName();
-    return name + ": [" + paramJoiner.join(params) + "]";
+    return name + ": [" + paramJoiner.join(params) + "]" + System.currentTimeMillis();
   }
 }

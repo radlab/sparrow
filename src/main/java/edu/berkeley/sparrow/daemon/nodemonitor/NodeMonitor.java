@@ -10,6 +10,9 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -38,6 +41,8 @@ public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
+  public static long startTime = System.currentTimeMillis();
+  public static AtomicInteger tasksLaunched = new AtomicInteger(1);
   
   private static NodeMonitorState state;
   private HashMap<String, Map<TUserGroupInfo, TResourceVector>> appLoads = 
@@ -45,8 +50,8 @@ public class NodeMonitor {
   
   // Cache of thrift clients to backends. Keep in mind, the use of a given client
   // should be synchronized.
-  private HashMap<String, BackendService.Client> backendClients =
-      new HashMap<String, BackendService.Client>();
+  private HashMap<String, BlockingQueue<BackendService.Client>> backendClients =
+      new HashMap<String, BlockingQueue<BackendService.Client>>();
   private TResourceVector capacity;
   private InetAddress address;
 
@@ -92,6 +97,7 @@ public class NodeMonitor {
   /**
    * Registers the backend with assumed 0 load, and returns true if successful.
    * Returns false if the backend was already registered.
+   * @throws InterruptedException 
    */
   public boolean registerBackend(String appId, InetSocketAddress nmAddr, 
       InetSocketAddress backendAddr) {
@@ -100,17 +106,26 @@ public class NodeMonitor {
       LOG.warn("Attempt to re-register app " + appId);
       return false;
     }
- 
     appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
-    TTransport tr = new TFramedTransport(
-        new TSocket(backendAddr.getHostName(), backendAddr.getPort()));
-    try {
-      tr.open();
-    } catch (TTransportException e) {
-      e.printStackTrace(); // TODO handle
+    
+    BlockingQueue<BackendService.Client> clients = new 
+        LinkedBlockingDeque<BackendService.Client>();
+    for (int i = 0; i < 100; i++) {
+        TTransport tr = new TFramedTransport(
+            new TSocket(backendAddr.getHostName(), backendAddr.getPort()));
+      try {
+        tr.open();
+      } catch (TTransportException e) {
+        e.printStackTrace(); // TODO handle
+      }
+      TProtocol proto = new TBinaryProtocol(tr);
+      try {
+        clients.put(new BackendService.Client(proto));
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted creating thrift clients", e);
+      }
     }
-    TProtocol proto = new TBinaryProtocol(tr);
-    backendClients.put(appId, new BackendService.Client(proto));
+    backendClients.put(appId, clients);
     return state.registerBackend(appId, nmAddr);
   }
 
@@ -169,19 +184,30 @@ public class NodeMonitor {
       String taskId, TUserGroupInfo user, TResourceVector estimatedResources)
           throws TException {
     LOG.debug(Logging.functionCall(app, message, requestId, taskId, user,
-                                   estimatedResources));
+                                 estimatedResources));
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch", requestId,
                                             address.getHostAddress(), taskId));
     if (!backendClients.containsKey(app)) {
       LOG.warn("Requested task launch for unknown app: " + app);
       return false;
     }
-    BackendService.Client client = backendClients.get(app);
     
-    synchronized(client) {
-      client.launchTask(message, requestId, taskId, user, estimatedResources);
+    BackendService.Client client = null;
+    try {
+      client = backendClients.get(app).take();
+    } catch (InterruptedException e) {
+      LOG.error(e);
     }
     
+    client.launchTask(message, requestId, taskId, user, estimatedResources);
+    
+    try {
+      backendClients.get(app).put(client);
+    } catch (InterruptedException e) {
+      LOG.error(e);
+    }
+    int launched = tasksLaunched.addAndGet(1);
+    LOG.debug(((double) launched * 1000.0 / (System.currentTimeMillis() - startTime)));
     LOG.debug("Launched task " + taskId + " for app " + app);
     return true;
   }

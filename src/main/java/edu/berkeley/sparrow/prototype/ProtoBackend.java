@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -54,6 +55,9 @@ public class ProtoBackend implements BackendService.Iface {
   // NOTE: we do not use an enum for the above because it is not possible to serialize
   // an enum with our current simple serialization technique. 
   
+  public static AtomicInteger numTasks = new AtomicInteger(0);
+  public static long startTime = System.currentTimeMillis();
+  
   private static final int DEFAULT_LISTEN_PORT = 20504;
   
   /**
@@ -63,7 +67,7 @@ public class ProtoBackend implements BackendService.Iface {
    * a task, this will queue. We currently launch new threads for each task to prevent
    * this from happening. 
    */
-  private static final int WORKER_THREADS = 8;
+  private static final int WORKER_THREADS = 100;
   private static final String APP_ID = "testApp";
   
   /** We assume we are speaking to local Node Manager. */
@@ -114,7 +118,6 @@ public class ProtoBackend implements BackendService.Iface {
     @Override
     public void run() {
       NodeMonitorService.Client client = createNMClient();
-      
       ArrayList<String> tasksCopy = null;
       
       // Update bookkeeping for task start
@@ -138,6 +141,9 @@ public class ProtoBackend implements BackendService.Iface {
         }
       }
  
+      int tasks = numTasks.addAndGet(1);
+      System.out.println(((double) tasks) * 1000 / (System.currentTimeMillis() - startTime));
+      
       Random r = new Random();
 
       if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
@@ -195,7 +201,7 @@ public class ProtoBackend implements BackendService.Iface {
         e.printStackTrace();
       }
       client.getInputProtocol().getTransport().close();
-      client.getOutputProtocol().getTransport().close(); 
+      client.getOutputProtocol().getTransport().close();
     }
   }
   

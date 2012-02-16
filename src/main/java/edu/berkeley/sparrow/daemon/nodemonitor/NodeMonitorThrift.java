@@ -30,7 +30,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   public final static int DEFAULT_NM_THRIFT_PORT = 20501;
   public final static int DEFAULT_NM_THRIFT_THREADS = 2;
   public final static int DEFAULT_INTERNAL_THRIFT_PORT = 20502;
-  public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 2;
+  public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 100;
  
   private NodeMonitor nodeMonitor = new NodeMonitor();
   // The socket addr (ip:port) where we listen for requests from other Sparrow daemons.
