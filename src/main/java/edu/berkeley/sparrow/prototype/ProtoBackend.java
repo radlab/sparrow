@@ -139,40 +139,8 @@ public class ProtoBackend implements BackendService.Iface {
       }
  
       Random r = new Random();
-
-      if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
-        // 2 hundred million byte buffer
-        int buffSize = 1000 * 1000 * 200;
-        byte[] buff = new byte[buffSize];
-        // scan 1 million bytes at a time
-        int runLength = 1000 * 1000;
-        // We keep a running result here and print it out so that the JVM doesn't
-        // optimize all this computation away.
-        byte result = 1;
-        for (int i = 0; i < benchmarkIterations; i++) {
-          // On each iteration, start at a random index, and scan runLength contiguous
-          // bytes, potentially wrapping if we hit the end of the buffer.
-          int start = r.nextInt(buff.length);
-          for (int j = 0; j < runLength; j++) {
-            result = (byte) (result ^ buff[(start + j) % (buff.length - 1)]);
-          }
-        }
-        LOG.debug("Benchmark result " + result);
-      } else if (benchmarkId == BENCHMARK_TYPE_FP_CPU) {
-        int opsPerIteration = 1000 * 1000;
-        // We keep a running result here and print it out so that the JVM doesn't
-        // optimize all this computation away.
-        float result = r.nextFloat();
-        for (int i = 0; i < benchmarkIterations * opsPerIteration; i++) {
-          // On each iteration, perform a floating point mulitplication
-          float x = r.nextFloat();
-          float y = r.nextFloat();
-          result += (x * y);
-        }
-        LOG.debug("Benchmark result " + result);
-      } else {
-        LOG.error("Received unrecognized benchmark type");
-      }
+      runBenchmark(benchmarkId, benchmarkIterations, r);
+      
       // Log task finish before updating bookkeeping, in case bookkeeping ends up being
       // expensive.
       AUDIT_LOG.info(Logging.auditEventString("task_completion", this.requestId,
@@ -197,6 +165,61 @@ public class ProtoBackend implements BackendService.Iface {
       client.getInputProtocol().getTransport().close();
       client.getOutputProtocol().getTransport().close(); 
     }
+  }
+  
+  /**
+   * Run the benchmark identified by {@code benchmarkId} for {@code iterations}
+   * iterations using random generator {@code r}. Return true if benchmark is recognized
+   * and false otherwise. 
+   */
+  public static boolean runBenchmark(int benchmarkId, int iterations, Random r) {
+    if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
+      runRandomMemAcessBenchmark(iterations, r);
+    } else if (benchmarkId == BENCHMARK_TYPE_FP_CPU) {
+     runFloatingPointBenchmark(iterations, r);
+    } else {
+      LOG.error("Received unrecognized benchmark type");
+      return false;
+    }
+    return true;
+  }
+  
+  /** Benchmark which, on each iteration, runs 1 million random floating point
+   *  multiplications.*/
+  public static void runFloatingPointBenchmark(int iterations, Random r) {
+    int opsPerIteration = 1000 * 1000;
+    // We keep a running result here and print it out so that the JVM doesn't
+    // optimize all this computation away.
+    float result = r.nextFloat();
+    for (int i = 0; i < iterations * opsPerIteration; i++) {
+      // On each iteration, perform a floating point mulitplication
+      float x = r.nextFloat();
+      float y = r.nextFloat();
+      result += (x * y);
+    }
+    LOG.debug("Benchmark result " + result);
+  }
+  
+  /** Benchmark which allocates a heap buffer of 200 million bytes, then on each iteration
+   *  accesses 1 million contiguous bytes of the buffer, starting at a random offset.*/
+  public static void runRandomMemAcessBenchmark(int iterations, Random r) {
+    // 2 hundred million byte buffer
+    int buffSize = 1000 * 1000 * 200;
+    byte[] buff = new byte[buffSize];
+    // scan 1 million bytes at a time
+    int runLength = 1000 * 1000;
+    // We keep a running result here and print it out so that the JVM doesn't
+    // optimize all this computation away.
+    byte result = 1;
+    for (int i = 0; i < iterations; i++) {
+      // On each iteration, start at a random index, and scan runLength contiguous
+      // bytes, potentially wrapping if we hit the end of the buffer.
+      int start = r.nextInt(buff.length);
+      for (int j = 0; j < runLength; j++) {
+        result = (byte) (result ^ buff[(start + j) % (buff.length - 1)]);
+      }
+    }
+    LOG.debug("Benchmark result " + result);
   }
   
   private TUserGroupInfo user; // We force all tasks to be run by same user
