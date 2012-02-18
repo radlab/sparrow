@@ -42,32 +42,31 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
    * 
    * This spawns 2 multi-threaded thrift servers, one exposing the app-facing
    * agent service and the other exposing the internal-facing agent service,
-   * and listens for requests to both servers.
+   * and listens for requests to both servers. We require explicit specification of the
+   * ports for these respective interfaces, since they cannot always be determined from
+   * within this class under certain configurations (e.g. a config file specifies
+   * multiple NodeMonitor's). 
    */
-  public void initialize(Configuration conf) throws IOException {
+  public void initialize(Configuration conf, int nmPort, int iPort) throws IOException {
     nodeMonitor.initialize(conf);
 
     // Setup application-facing agent service.
     NodeMonitorService.Processor<NodeMonitorService.Iface> processor = 
         new NodeMonitorService.Processor<NodeMonitorService.Iface>(this);
 
-    int port = conf.getInt(SparrowConf.NM_THRIFT_PORT, 
-        DEFAULT_NM_THRIFT_PORT);
     int threads = conf.getInt(SparrowConf.NM_THRIFT_THREADS, 
         DEFAULT_NM_THRIFT_THREADS);
-    TServers.launchThreadedThriftServer(port, threads, processor);
+    TServers.launchThreadedThriftServer(nmPort, threads, processor);
 
     // Setup internal-facing agent service.
     InternalService.Processor<InternalService.Iface> internalProcessor =
         new InternalService.Processor<InternalService.Iface>(this);
-    int internalPort = conf.getInt(SparrowConf.INTERNAL_THRIFT_PORT,
-        DEFAULT_INTERNAL_THRIFT_PORT);
     int internalThreads = conf.getInt(
         SparrowConf.INTERNAL_THRIFT_THREADS,
         DEFAULT_INTERNAL_THRIFT_THREADS);
-    TServers.launchThreadedThriftServer(internalPort, internalThreads, internalProcessor);
+    TServers.launchThreadedThriftServer(iPort, internalThreads, internalProcessor);
     
-    internalAddr = new InetSocketAddress(InetAddress.getLocalHost(),internalPort);
+    internalAddr = new InetSocketAddress(InetAddress.getLocalHost(),iPort);
   }
   
   @Override

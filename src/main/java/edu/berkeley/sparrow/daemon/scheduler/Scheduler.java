@@ -73,7 +73,7 @@ public class Scheduler {
   }
   
   SchedulerState state;
-  TaskPlacer placer = new ProbingTaskPlacer();
+  TaskPlacer placer;
 
   public void initialize(Configuration conf) throws IOException {
     address = InetAddress.getLocalHost();
@@ -81,8 +81,10 @@ public class Scheduler {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
+      placer = new RandomTaskPlacer();
     } else if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
+      placer = new ProbingTaskPlacer();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }

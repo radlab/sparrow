@@ -49,6 +49,7 @@ public class NodeMonitor {
       new HashMap<String, BackendService.Client>();
   private TResourceVector capacity;
   private InetAddress address;
+  private Configuration conf;
 
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
@@ -62,6 +63,7 @@ public class NodeMonitor {
     state.initialize(conf);
     capacity = new TResourceVector();
     address = InetAddress.getLocalHost();
+    this.conf = conf;
     
     // Interrogate system resources. We may want to put this in another class, and note
     // that currently this will only work on Linux machines (otherwise will use default).
@@ -102,15 +104,20 @@ public class NodeMonitor {
     }
  
     appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
-    TTransport tr = new TFramedTransport(
-        new TSocket(backendAddr.getHostName(), backendAddr.getPort()));
-    try {
-      tr.open();
-    } catch (TTransportException e) {
-      e.printStackTrace(); // TODO handle
+    
+    // NOTE: for now we do not require backends to export scheduling interface under
+    // standalone mode.
+    if (!conf.getString(SparrowConf.DEPLYOMENT_MODE).equals("standalone")) {
+      TTransport tr = new TFramedTransport(
+          new TSocket(backendAddr.getHostName(), backendAddr.getPort()));
+      try {
+        tr.open();
+      } catch (TTransportException e) {
+        e.printStackTrace(); // TODO handle
+      }
+      TProtocol proto = new TBinaryProtocol(tr);
+      backendClients.put(appId, new BackendService.Client(proto));
     }
-    TProtocol proto = new TBinaryProtocol(tr);
-    backendClients.put(appId, new BackendService.Client(proto));
     return state.registerBackend(appId, nmAddr);
   }
 
