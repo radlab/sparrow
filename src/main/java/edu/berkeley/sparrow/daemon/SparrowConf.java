@@ -16,10 +16,18 @@ public class SparrowConf {
   public final static String SCHEDULER_STATE_THRIFT_PORT = "scheduler.state.thrift.port";
   public final static String SCHEDULER_STATE_THRIFT_THREADS =
       "scheduler.state.thrift.threads";
-  public final static String NM_THRIFT_PORT = "agent.thrift.port";
+  
+  /* List of ports corresponding to node monitors (backend interface) this daemon is 
+   * supposed to run. In most deployment scenarios this will consist of a single port, 
+   * or will be left unspecified in favor of the default port. */
+  public final static String NM_THRIFT_PORTS = "agent.thrift.ports";
+  
+  /* List of ports corresponding to node monitors (internal interface) this daemon is 
+   * supposed to run. In most deployment scenarios this will consist of a single port, 
+   * or will be left unspecified in favor of the default port. */
+  public final static String INTERNAL_THRIFT_PORTS = "internal_agent.thrift.ports";
+  
   public final static String NM_THRIFT_THREADS = "agent.thrift.threads";
-  public final static String INTERNAL_THRIFT_PORT =
-      "internal_agent.thrift.port";
   public final static String INTERNAL_THRIFT_THREADS =
       "internal_agent.thrift.threads";
   

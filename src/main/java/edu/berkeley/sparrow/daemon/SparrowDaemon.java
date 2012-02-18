@@ -4,6 +4,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
@@ -22,19 +23,38 @@ public class SparrowDaemon {
   // Eventually, we'll want to change this to something higher than debug.
   public final static Level DEFAULT_LOG_LEVEL = Level.DEBUG;
   
-  private SchedulerThrift scheduler;
-  private NodeMonitorThrift nodeMonitor;
-  
   public void initialize(Configuration conf) throws Exception {
     Level logLevel = Level.toLevel(conf.getString(SparrowConf.LOG_LEVEL, ""),
         DEFAULT_LOG_LEVEL);
     Logger.getRootLogger().setLevel(logLevel);
 
-    // Start thrift daemons for scheduler and nodemonitor services
-    scheduler = new SchedulerThrift();
+    // Start as many node monitors as specified in config
+    String[] nmPorts = conf.getStringArray(SparrowConf.NM_THRIFT_PORTS);
+    String[] inPorts = conf.getStringArray(SparrowConf.INTERNAL_THRIFT_PORTS);
+    
+    if (nmPorts.length != inPorts.length) {
+      throw new ConfigurationException(SparrowConf.NM_THRIFT_PORTS + " and " +
+        SparrowConf.INTERNAL_THRIFT_PORTS + " not of equal length");
+    }
+    if (nmPorts.length > 1 && 
+        (!conf.getString(SparrowConf.DEPLYOMENT_MODE, "").equals("standalone"))) {
+      throw new ConfigurationException("Mutliple NodeMonitors only allowed " +
+      		"in standalone deployment");
+    }
+    if (nmPorts.length == 0) { 
+      (new NodeMonitorThrift()).initialize(conf, 
+          NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT, 
+          NodeMonitorThrift.DEFAULT_INTERNAL_THRIFT_PORT);
+    }
+    else {
+      for (int i = 0; i < nmPorts.length; i++) {
+        (new NodeMonitorThrift()).initialize(conf, 
+            Integer.parseInt(nmPorts[i]), Integer.parseInt(inPorts[i]));
+      }
+    }
+    
+    SchedulerThrift scheduler = new SchedulerThrift();
     scheduler.initialize(conf);
-    nodeMonitor = new NodeMonitorThrift();
-    nodeMonitor.initialize(conf);
   }
   
   public static void main(String[] args) throws Exception {
