@@ -45,9 +45,10 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
    * and listens for requests to both servers. We require explicit specification of the
    * ports for these respective interfaces, since they cannot always be determined from
    * within this class under certain configurations (e.g. a config file specifies
-   * multiple NodeMonitor's). 
+   * multiple NodeMonitors). 
    */
-  public void initialize(Configuration conf, int nmPort, int iPort) throws IOException {
+  public void initialize(Configuration conf, int nmPort, int internalPort) 
+      throws IOException {
     nodeMonitor.initialize(conf);
 
     // Setup application-facing agent service.
@@ -64,9 +65,9 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
     int internalThreads = conf.getInt(
         SparrowConf.INTERNAL_THRIFT_THREADS,
         DEFAULT_INTERNAL_THRIFT_THREADS);
-    TServers.launchThreadedThriftServer(iPort, internalThreads, internalProcessor);
+    TServers.launchThreadedThriftServer(internalPort, internalThreads, internalProcessor);
     
-    internalAddr = new InetSocketAddress(InetAddress.getLocalHost(),iPort);
+    internalAddr = new InetSocketAddress(InetAddress.getLocalHost(), internalPort);
   }
   
   @Override
