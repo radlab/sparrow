@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -35,28 +36,41 @@ public class ProtoFrontend {
   public static final int DEFAULT_BENCHMARK_ITERATIONS = 10;  // # of benchmark iterations
   
   private static final Logger LOG = Logger.getLogger(ProtoFrontend.class);
+  public final static long startTime = System.currentTimeMillis();
+  public static AtomicInteger tasksLaunched = new AtomicInteger(0);
 
   /** A runnable which Spawns a new thread to launch a scheduling request. */
   private static class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
+    private int schedulerPort;
     private SparrowFrontendClient client;
     
-    public JobLaunchRunnable(List<TTaskSpec> request, SparrowFrontendClient client) {
+    public JobLaunchRunnable(List<TTaskSpec> request, int schedulerPort) {
       this.request = request;
-      this.client = client;
+      this.schedulerPort = schedulerPort;
     }
     
     @Override
     public void run() {
+      long start = System.currentTimeMillis();
+      client = new SparrowFrontendClient();
+      try {
+        client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
+      } catch (TException e) {
+        LOG.fatal(e);
+      }
       TUserGroupInfo user = new TUserGroupInfo();
       user.setUser("*");
       user.setGroup("*");
       try {
         client.submitJob("testApp", request, user);
-        LOG.debug("Submitted job");
+        LOG.debug("Submitted job: " + request);
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);
       }
+      client.close();
+      long end = System.currentTimeMillis();
+      LOG.debug("Scheduling request duration " + (end - start));
     }
   }
   
@@ -72,7 +86,7 @@ public class ProtoFrontend {
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
     for (int taskId = 0; taskId < numTasks; taskId++) {
       TTaskSpec spec = new TTaskSpec();
-      spec.setTaskID(Integer.toString(taskId));
+      spec.setTaskID(Integer.toString((new Random().nextInt())));
       spec.setMessage(message.array());
       spec.setEstimatedResources(resources);
       out.add(spec);
@@ -120,15 +134,40 @@ public class ProtoFrontend {
       int schedulerPort = conf.getInt("scheduler_port", 
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
       client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
+      long lastLaunch = System.currentTimeMillis();
       
-      // Loop and generate tasks launches
+      /* This is a little tricky. 
+       * 
+       * We want to generate inter-arrival delays according to the arrival rate specified.
+       * The simplest option would be to generate an arrival delay and then sleep() for it
+       * before launching each task. This has in issue, however: sleep() might wait 
+       * several ms longer than we ask it to. When task arrival rates get really fast, 
+       * i.e. one task every 10 ms, sleeping an additional few ms will mean we launch 
+       * tasks at a much lower rate than requested.
+       * 
+       * Instead, we keep track of task launches in a way that does not depend on how long
+       * sleep() actually takes. We still might have tasks launch slightly after their
+       * scheduled launch time, but we will not systematically "fall behind" due to
+       * compounding time lost during sleep()'s;
+       */
       while (true) {
         // Lambda is the arrival rate in S, so we need to multiply the result here by
         // 1000 to convert to ms.
-        Thread.sleep((long) (generateInterarrivalDelay(r, lambda) * 1000));
+        long delay = (long) (generateInterarrivalDelay(r, lambda) * 1000);
+        long curLaunch = lastLaunch + delay;
+        long toWait = Math.max(0,  curLaunch - System.currentTimeMillis());       
+        lastLaunch = curLaunch;
+        if (toWait == 0) {
+          LOG.warn("Lanching task after start time in generated workload.");
+        }
+        Thread.sleep(toWait);
         Runnable runnable =  new JobLaunchRunnable(
-            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), client);
+            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), schedulerPort);
         new Thread(runnable).start();
+        int launched = tasksLaunched.addAndGet(1);
+        double launchRate = (double) launched * 1000.0 / 
+            (System.currentTimeMillis() - startTime);
+        LOG.debug("Aggregate launch rate: " + launchRate);
       }
     }
     catch (Exception e) {

@@ -99,6 +99,7 @@ public class Scheduler {
 
   public boolean submitJob(TSchedulingRequest req) throws TException {
     LOG.debug(Logging.functionCall(req));
+    long start = System.currentTimeMillis();
     
     String requestId = getRequestId();
     // Logging the address here is somewhat redundant, since all of the
@@ -116,6 +117,7 @@ public class Scheduler {
       e.printStackTrace();
       return false;
     }
+    long probeFinish = System.currentTimeMillis();
     
     // Launch tasks.
     CountDownLatch latch = new CountDownLatch(placement.size());
@@ -137,7 +139,9 @@ public class Scheduler {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-    LOG.debug("All tasks launched, returning");
+    long end = System.currentTimeMillis();
+    LOG.debug("All tasks launched, returning. Total time: " + (end - start) + 
+        "Probe time: " + (probeFinish - start));
     return true;
   }
 
