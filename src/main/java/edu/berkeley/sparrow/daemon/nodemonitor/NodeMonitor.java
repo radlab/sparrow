@@ -43,7 +43,7 @@ public class NodeMonitor {
       new HashMap<String, Map<TUserGroupInfo, TResourceVector>>();
   
   /** Cache of thrift clients pools for each backends. It is expected that clients
-   *  are removed from the pool when in use.*/
+   *  are removed from the pool when in use. */
   private HashMap<String, BlockingQueue<BackendService.Client>> backendClients =
       new HashMap<String, BlockingQueue<BackendService.Client>>();
   private TResourceVector capacity;
@@ -191,7 +191,7 @@ public class NodeMonitor {
     try {
       client = backendClients.get(app).take();
     } catch (InterruptedException e) {
-      LOG.error(e);
+      LOG.fatal(e);
     }
     
     client.launchTask(message, requestId, taskId, user, estimatedResources);
@@ -199,7 +199,7 @@ public class NodeMonitor {
     try {
       backendClients.get(app).put(client);
     } catch (InterruptedException e) {
-      LOG.error(e);
+      LOG.fatal(e);
     }
     LOG.debug("Launched task " + taskId + " for app " + app);
     return true;

@@ -51,11 +51,12 @@ public class ProtoBackend implements BackendService.Iface {
   // NOTE: we do not use an enum for the above because it is not possible to serialize
   // an enum with our current simple serialization technique. 
   
-  /** Used to track the rate of task launches. This is helpful for diagnosing unwanted
-   * queuing in various parts of the system (i.e. if we notice the backend is launching
-   * fewer tasks than we expect based on the frontend task launch rate)*/
+  /** Tracks the total number of tasks launched since execution began. Updated on
+   * each task launch. This is helpful for diagnosing unwanted queuing in various parts 
+   * of the system (i.e. if we notice the backend is launching fewer tasks than we expect 
+   * based on the frontend task launch rate). */
   public static AtomicInteger numTasks = new AtomicInteger(0);
-  public final static long startTime = System.currentTimeMillis();
+  public static long startTime = -1;
   
   private static final int DEFAULT_LISTEN_PORT = 20504;
   
@@ -99,11 +100,14 @@ public class ProtoBackend implements BackendService.Iface {
     
     @Override
     public void run() {
+      if (startTime == -1) {
+        startTime = System.currentTimeMillis();
+      }
       NodeMonitorService.Client client = null;
       try {
         client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
       } catch (IOException e) {
-        LOG.error("Error creating NM client", e);
+        LOG.fatal("Error creating NM client", e);
       }
       ArrayList<String> tasksCopy = null;
       

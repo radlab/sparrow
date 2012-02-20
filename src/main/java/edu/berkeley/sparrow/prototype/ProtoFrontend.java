@@ -57,7 +57,7 @@ public class ProtoFrontend {
       try {
         client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
       } catch (TException e) {
-        LOG.error(e);
+        LOG.fatal(e);
       }
       TUserGroupInfo user = new TUserGroupInfo();
       user.setUser("*");
@@ -151,7 +151,6 @@ public class ProtoFrontend {
        * compounding time lost during sleep()'s;
        */
       while (true) {
-        System.out.println("Threads: " + Thread.activeCount());
         // Lambda is the arrival rate in S, so we need to multiply the result here by
         // 1000 to convert to ms.
         long delay = (long) (generateInterarrivalDelay(r, lambda) * 1000);
