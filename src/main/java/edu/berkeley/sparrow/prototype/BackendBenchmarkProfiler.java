@@ -50,7 +50,7 @@ public class BackendBenchmarkProfiler {
   private static class BenchmarkRunnable implements Runnable {
     private HashMap<Long, List<Long>> runTimes;
     private HashMap<Long, List<Long>> waitTimes;
-    private long created;
+    private long timeCreated;
     private long bucketGranularity;
 
     /**
@@ -63,7 +63,7 @@ public class BackendBenchmarkProfiler {
         HashMap<Long, List<Long>> waitTimes, long granularity) {
       this.runTimes = runTimes;
       this.waitTimes = waitTimes;
-      created = System.currentTimeMillis();
+      timeCreated = System.currentTimeMillis();
       bucketGranularity = granularity;
     }
     
@@ -73,18 +73,18 @@ public class BackendBenchmarkProfiler {
       Random r = new Random();
       ProtoBackend.runBenchmark(benchmarkId, benchmarkIterations, r);
       long end = System.currentTimeMillis();
-      long timeIndex = created - (created % bucketGranularity);
+      long timeIndex = timeCreated - (timeCreated % bucketGranularity);
       synchronized(runTimes) {
         if (!runTimes.containsKey((timeIndex))) {
           runTimes.put(timeIndex, new LinkedList<Long>());
         }
-        runTimes.get(timeIndex).add(end - created);
+        runTimes.get(timeIndex).add(end - timeCreated);
       }      
       synchronized(waitTimes) {
         if (!waitTimes.containsKey((timeIndex))) {
           waitTimes.put(timeIndex, new LinkedList<Long>());
         }
-        waitTimes.get(timeIndex).add(start - created);
+        waitTimes.get(timeIndex).add(start - timeCreated);
       }      
     }
   }
@@ -212,7 +212,7 @@ public class BackendBenchmarkProfiler {
       DescriptiveStatistics first = bucketStats.get(times.get(0));
       DescriptiveStatistics last = bucketStats.get(times.get(times.size() - 1));
       double increase = last.getPercentile(50) / first.getPercentile(50);
-      // A simple heuristic, if the average runtime went up by five from the first to 
+      // A simple heuristic, if the median runtime went up by five from the first to 
       // last complete bucket, we assume we are seeing unbounded growth
       if (increase > 5.0) {
         throw new RuntimeException("Queue not in steady state: " + last.getMean() 
