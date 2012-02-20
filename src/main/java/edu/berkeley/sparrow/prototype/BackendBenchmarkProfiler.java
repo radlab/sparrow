@@ -8,7 +8,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -31,13 +33,24 @@ import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 public class BackendBenchmarkProfiler {
   public static final int DEFAULT_BENCHMARK_ITERATIONS = 4;
   public static final int DEFAULT_BENCHMARK_ID = 1;
+  public static final int DEFAULT_BUCKET_SIZE_S = 2;
+  public static final int DEFAULT_TRAIL_LENGTH_S = 60;
+  public static final double DEFAULT_START_RATE = 10;
+  public static final double DEFAULT_END_RATE = 30;
+  public static final double DEFAULT_RATE_STEP = 2;
   
   public static int benchmarkIterations = DEFAULT_BENCHMARK_ITERATIONS;
   public static int benchmarkId = DEFAULT_BENCHMARK_ID;
+  public static int bucketSizeS = DEFAULT_BUCKET_SIZE_S;
+  public static int trialLengthS = DEFAULT_TRAIL_LENGTH_S;
+  public static double startRate = DEFAULT_START_RATE;
+  public static double endRate = DEFAULT_END_RATE;
+  public static double rateStep = DEFAULT_RATE_STEP;
   
   private static class BenchmarkRunnable implements Runnable {
     private HashMap<Long, List<Long>> runTimes;
-    private long start;
+    private HashMap<Long, List<Long>> waitTimes;
+    private long timeCreated;
     private long bucketGranularity;
 
     /**
@@ -46,23 +59,32 @@ public class BackendBenchmarkProfiler {
      * as the difference between when the runnable is instantiated and when it finishes
      * the benchmark loop and exists. This might include queueing in the executor.  
      */
-    private BenchmarkRunnable(HashMap<Long, List<Long>> runTimes, long granularity) {
+    private BenchmarkRunnable(HashMap<Long, List<Long>> runTimes, 
+        HashMap<Long, List<Long>> waitTimes, long granularity) {
       this.runTimes = runTimes;
-      start = System.currentTimeMillis();
+      this.waitTimes = waitTimes;
+      timeCreated = System.currentTimeMillis();
       bucketGranularity = granularity;
     }
     
     @Override
     public void run() {
+      long start = System.currentTimeMillis();
       Random r = new Random();
       ProtoBackend.runBenchmark(benchmarkId, benchmarkIterations, r);
       long end = System.currentTimeMillis();
-      long timeIndex = start - (start % bucketGranularity);
+      long timeIndex = timeCreated - (timeCreated % bucketGranularity);
       synchronized(runTimes) {
         if (!runTimes.containsKey((timeIndex))) {
           runTimes.put(timeIndex, new LinkedList<Long>());
         }
-        runTimes.get(timeIndex).add(end - start);
+        runTimes.get(timeIndex).add(end - timeCreated);
+      }      
+      synchronized(waitTimes) {
+        if (!waitTimes.containsKey((timeIndex))) {
+          waitTimes.put(timeIndex, new LinkedList<Long>());
+        }
+        waitTimes.get(timeIndex).add(start - timeCreated);
       }      
     }
   }
@@ -93,17 +115,24 @@ public class BackendBenchmarkProfiler {
    * unbounded fashion (i.e. infinite queuing is occuring) a {@link RuntimeException} 
    * is thrown.
    */
-  public static DescriptiveStatistics runExperiment(double arrivalRate, int corePoolSize,
-      int maxPoolSize, long bucketSize, long durationMs) {
+  public static void runExperiment(double arrivalRate, int corePoolSize,
+      int maxPoolSize, long bucketSize, long durationMs, DescriptiveStatistics runTimes,
+      DescriptiveStatistics waitTimes) {
     long startTime = System.currentTimeMillis();
     long keepAliveTime = 10;
     Random r = new Random();
-    BlockingQueue<Runnable> runQueue = new LinkedBlockingDeque<Runnable>();
-    ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
+    BlockingQueue<Runnable> runQueue = new LinkedBlockingQueue<Runnable>();
+    ExecutorService threadPool = new ThreadPoolExecutor(
         corePoolSize, maxPoolSize, keepAliveTime, TimeUnit.MILLISECONDS, runQueue);
+    if (maxPoolSize == Integer.MAX_VALUE) {
+      threadPool = Executors.newCachedThreadPool();
+    }
     
     // run times indexed by bucketing interval
-    HashMap<Long, List<Long>> runTimes = 
+    HashMap<Long, List<Long>> bucketedRunTimes = 
+        new HashMap<Long, List<Long>>();
+    // wait times indexed by bucketing interval
+    HashMap<Long, List<Long>> bucketedWaitTimes = 
         new HashMap<Long, List<Long>>();
     
     /*
@@ -142,7 +171,7 @@ public class BackendBenchmarkProfiler {
           System.exit(1);
         }
       }
-      threadPool.submit((new BenchmarkRunnable(runTimes, bucketSize)));
+      threadPool.submit((new BenchmarkRunnable(bucketedRunTimes, bucketedWaitTimes, bucketSize)));
       if (System.currentTimeMillis() > startTime + durationMs) {
         break;
       }
@@ -154,7 +183,7 @@ public class BackendBenchmarkProfiler {
       System.err.println("Unexpected interruption!");
       System.exit(1);
     }
-    List<Long> times = new ArrayList<Long>(runTimes.keySet());
+    List<Long> times = new ArrayList<Long>(bucketedRunTimes.keySet());
     Collections.sort(times);
     HashMap<Long, DescriptiveStatistics> bucketStats = new HashMap<Long, 
         DescriptiveStatistics>();
@@ -164,29 +193,32 @@ public class BackendBenchmarkProfiler {
     times.remove(0);
     times.remove(times.size() - 1);
     
-    DescriptiveStatistics allStats = new DescriptiveStatistics();
     for(Long time : times) {
       DescriptiveStatistics stats = new DescriptiveStatistics();
-      List<Long> list = runTimes.get(time);
+      List<Long> list = bucketedRunTimes.get(time);
       for (Long l : list) {
         stats.addValue(l);
-        allStats.addValue(l);
+        runTimes.addValue(l);
       }
       bucketStats.put(time, stats);
+      
+      List<Long> waitList = bucketedWaitTimes.get(time);
+      for (Long l : waitList) {
+        waitTimes.addValue(l);
+      }
     }
     int size = bucketStats.size();
     if (size >= 2) {
       DescriptiveStatistics first = bucketStats.get(times.get(0));
       DescriptiveStatistics last = bucketStats.get(times.get(times.size() - 1));
-      double increase = last.getMean() / first.getMean();
-      // A simple heuristic, if the average runtime went up by ten from the first to 
+      double increase = last.getPercentile(50) / first.getPercentile(50);
+      // A simple heuristic, if the median runtime went up by five from the first to 
       // last complete bucket, we assume we are seeing unbounded growth
-      if (increase > 10.0) {
+      if (increase > 5.0) {
         throw new RuntimeException("Queue not in steady state: " + last.getMean() 
             + " vs " + first.getMean());
       }
     }
-    return allStats;
   }
   
   /**
@@ -204,6 +236,16 @@ public class BackendBenchmarkProfiler {
     withRequiredArg().ofType(Integer.class);
     parser.accepts("i", "number of benchmark iterations to run").
       withRequiredArg().ofType(Integer.class);
+    parser.accepts("s", "bucket size in seconds").
+      withRequiredArg().ofType(Integer.class);
+    parser.accepts("d", " experiment duration in seconds").
+      withRequiredArg().ofType(Integer.class);
+    parser.accepts("r", "initial rate of task launches").
+      withRequiredArg().ofType(Double.class);
+    parser.accepts("f", "final rate of task launches").
+      withRequiredArg().ofType(Double.class);
+    parser.accepts("k", "step size of increased rates").
+      withRequiredArg().ofType(Double.class);
     
     OptionSet options = parser.parse(args);
     
@@ -217,31 +259,57 @@ public class BackendBenchmarkProfiler {
     if (options.has("i")) {
       benchmarkIterations = (Integer) options.valueOf("i");
     }
+    if (options.has("s")) {
+      bucketSizeS = (Integer) options.valueOf("s");
+    }
+    if (options.has("d")) {
+      trialLengthS = (Integer) options.valueOf("d");
+    }
+    if (options.has("r")) {
+      startRate = (Double) options.valueOf("r");
+    }
+    if (options.has("f")) {
+      endRate = (Double) options.valueOf("f");
+    }
+    if (options.has("k")) {
+      rateStep = (Double) options.valueOf("k");
+    }
     
     // Run the benchmark a few times to let JIT kick in
-    runExperiment(10.0, coreThreadPoolSize, coreThreadPoolSize, 1 * 1000, 30 * 1000);
-    runExperiment(10.0, coreThreadPoolSize, coreThreadPoolSize, 1 * 1000, 30 * 1000);
-    for (double i = 1; i < 100.0; i = i + 2) {
+    int bucketSizeMs = bucketSizeS * 1000;
+    int trialLengthMs = trialLengthS * 1000;
+    runExperiment(15.0, coreThreadPoolSize, coreThreadPoolSize, bucketSizeMs, 
+       trialLengthMs, new DescriptiveStatistics(), new DescriptiveStatistics());
+    runExperiment(15.0, coreThreadPoolSize, coreThreadPoolSize, bucketSizeMs, 
+        trialLengthMs, new DescriptiveStatistics(), new DescriptiveStatistics());
+
+    for (double i = startRate; i <= endRate; i = i + rateStep) {
       try {
-        DescriptiveStatistics result = runExperiment(i, coreThreadPoolSize, 
-            coreThreadPoolSize, 1 * 1000, 30 * 1000);
-        System.out.println(i + " " + result.getMean() + " " +
-            (result.getMean() - result.getStandardDeviation()) + " " +
-            (result.getMean() + result.getStandardDeviation()));
+        DescriptiveStatistics runTimes = new DescriptiveStatistics();
+        DescriptiveStatistics waitTimes = new DescriptiveStatistics();
+        runExperiment(i, coreThreadPoolSize, coreThreadPoolSize, bucketSizeMs, 
+            trialLengthMs, runTimes, waitTimes);
+        System.out.println(i + " run " + runTimes.getPercentile(50.0) + " " +
+            runTimes.getPercentile(95) + " " + runTimes.getPercentile(99));
+        System.out.println(i + " wait " + waitTimes.getPercentile(50.0) + " " +
+            waitTimes.getPercentile(95) + " " + waitTimes.getPercentile(99));
       }
       catch (RuntimeException e) {
         System.out.println(e);
         break;
       }
     }
-    
-    for (double i = 1; i < 100.0; i = i + 2) {
+
+    for (double i = startRate; i <= endRate; i = i + rateStep) {
       try {
-        DescriptiveStatistics result = runExperiment(i, coreThreadPoolSize, 
-            Integer.MAX_VALUE, 1 * 1000, 30 * 1000);
-        System.out.println(i + " " + result.getMean() + " " +
-            (result.getMean() - result.getStandardDeviation()) + " " +
-            (result.getMean() + result.getStandardDeviation()));
+        DescriptiveStatistics runTimes = new DescriptiveStatistics();
+        DescriptiveStatistics waitTimes = new DescriptiveStatistics();
+        runExperiment(i, coreThreadPoolSize, Integer.MAX_VALUE, bucketSizeMs, 
+            trialLengthMs, runTimes, waitTimes);
+        System.out.println(i + " run " + runTimes.getPercentile(50.0) + " " +
+            runTimes.getPercentile(95) + " " + runTimes.getPercentile(99));
+        System.out.println(i + " wait " + waitTimes.getPercentile(50.0) + " " +
+            waitTimes.getPercentile(95) + " " + waitTimes.getPercentile(99));
       }
       catch (RuntimeException e) {
         System.out.println(e);
