@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -18,19 +19,15 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.Client;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -54,6 +51,12 @@ public class ProtoBackend implements BackendService.Iface {
   // NOTE: we do not use an enum for the above because it is not possible to serialize
   // an enum with our current simple serialization technique. 
   
+  /** Used to track the rate of task launches. This is helpful for diagnosing unwanted
+   * queuing in various parts of the system (i.e. if we notice the backend is launching
+   * fewer tasks than we expect based on the frontend task launch rate)*/
+  public static AtomicInteger numTasks = new AtomicInteger(0);
+  public final static long startTime = System.currentTimeMillis();
+  
   private static final int DEFAULT_LISTEN_PORT = 20504;
   
   /**
@@ -72,24 +75,7 @@ public class ProtoBackend implements BackendService.Iface {
   
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
-  
-  /**
-   * Create a thrift client connection to the Node Monitor.
-   */
-  private static NodeMonitorService.Client createNMClient() {
-    TTransport tr = new TFramedTransport(
-        new TSocket(ProtoBackend.NM_HOST, ProtoBackend.NM_PORT));
-    try {
-      tr.open();
-    } catch (TTransportException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-    TProtocol proto = new TBinaryProtocol(tr);
-    NodeMonitorService.Client client = new NodeMonitorService.Client(proto);
-    return client;
-  }
-  
+    
   /**
    * Thread spawned for each task. It runs for a given amount of time (and adds
    * its resources to the total resources for that time) then stops. It updates
@@ -113,8 +99,12 @@ public class ProtoBackend implements BackendService.Iface {
     
     @Override
     public void run() {
-      NodeMonitorService.Client client = createNMClient();
-      
+      NodeMonitorService.Client client = null;
+      try {
+        client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
+      } catch (IOException e) {
+        LOG.error("Error creating NM client", e);
+      }
       ArrayList<String> tasksCopy = null;
       
       // Update bookkeeping for task start
@@ -138,6 +128,11 @@ public class ProtoBackend implements BackendService.Iface {
         }
       }
  
+      int tasks = numTasks.addAndGet(1);
+      double taskRate = ((double) tasks) * 1000 / 
+          (System.currentTimeMillis() - startTime);
+      LOG.debug("Aggregate task rate: " + taskRate);
+      
       Random r = new Random();
       runBenchmark(benchmarkId, benchmarkIterations, r);
       
@@ -163,7 +158,7 @@ public class ProtoBackend implements BackendService.Iface {
         e.printStackTrace();
       }
       client.getInputProtocol().getTransport().close();
-      client.getOutputProtocol().getTransport().close(); 
+      client.getOutputProtocol().getTransport().close();
     }
   }
   
@@ -286,6 +281,7 @@ public class ProtoBackend implements BackendService.Iface {
     TServers.launchThreadedThriftServer(listenPort, WORKER_THREADS, processor);
     
     // Register server
-    createNMClient().registerBackend(APP_ID, "localhost:" + listenPort);
+    Client client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
+    client.registerBackend(APP_ID, "localhost:" + listenPort);
   }
 }

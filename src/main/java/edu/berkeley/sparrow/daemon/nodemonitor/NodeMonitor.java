@@ -10,19 +10,16 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -38,15 +35,17 @@ public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
+  /** How many blocking thrift clients to make for each registered backend. */ 
+  public final static int CLIENT_POOL_SIZE = 10;
   
   private static NodeMonitorState state;
   private HashMap<String, Map<TUserGroupInfo, TResourceVector>> appLoads = 
       new HashMap<String, Map<TUserGroupInfo, TResourceVector>>();
   
-  // Cache of thrift clients to backends. Keep in mind, the use of a given client
-  // should be synchronized.
-  private HashMap<String, BackendService.Client> backendClients =
-      new HashMap<String, BackendService.Client>();
+  /** Cache of thrift clients pools for each backends. It is expected that clients
+   *  are removed from the pool when in use.*/
+  private HashMap<String, BlockingQueue<BackendService.Client>> backendClients =
+      new HashMap<String, BlockingQueue<BackendService.Client>>();
   private TResourceVector capacity;
   private InetAddress address;
   private Configuration conf;
@@ -102,21 +101,25 @@ public class NodeMonitor {
       LOG.warn("Attempt to re-register app " + appId);
       return false;
     }
- 
     appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
     
     // NOTE: for now we do not require backends to export scheduling interface under
     // standalone mode.
     if (!conf.getString(SparrowConf.DEPLYOMENT_MODE).equals("standalone")) {
-      TTransport tr = new TFramedTransport(
-          new TSocket(backendAddr.getHostName(), backendAddr.getPort()));
+    BlockingQueue<BackendService.Client> clients = new 
+        LinkedBlockingDeque<BackendService.Client>();
+    for (int i = 0; i < CLIENT_POOL_SIZE; i++) {
       try {
-        tr.open();
-      } catch (TTransportException e) {
-        e.printStackTrace(); // TODO handle
+        clients.put(TClients.createBlockingBackendClient(
+            backendAddr.getHostName(), backendAddr.getPort()));
+      } catch (InterruptedException e) {
+        LOG.error("Interrupted creating thrift clients", e);
+      } catch (IOException e) {
+        LOG.error("Error creating thrift client", e);
       }
-      TProtocol proto = new TBinaryProtocol(tr);
-      backendClients.put(appId, new BackendService.Client(proto));
+    }
+    backendClients.put(appId, clients);
+
     }
     return state.registerBackend(appId, nmAddr);
   }
@@ -183,12 +186,21 @@ public class NodeMonitor {
       LOG.warn("Requested task launch for unknown app: " + app);
       return false;
     }
-    BackendService.Client client = backendClients.get(app);
     
-    synchronized(client) {
-      client.launchTask(message, requestId, taskId, user, estimatedResources);
+    BackendService.Client client = null;
+    try {
+      client = backendClients.get(app).take();
+    } catch (InterruptedException e) {
+      LOG.error(e);
     }
     
+    client.launchTask(message, requestId, taskId, user, estimatedResources);
+    
+    try {
+      backendClients.get(app).put(client);
+    } catch (InterruptedException e) {
+      LOG.error(e);
+    }
     LOG.debug("Launched task " + taskId + " for app " + app);
     return true;
   }
