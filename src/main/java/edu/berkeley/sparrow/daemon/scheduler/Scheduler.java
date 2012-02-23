@@ -90,6 +90,7 @@ public class Scheduler {
     }
     
     state.initialize(conf);
+    placer.initialize(conf);
   }
   
   public boolean registerFrontEnd(String appId) {

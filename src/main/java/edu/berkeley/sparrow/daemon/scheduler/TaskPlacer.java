@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.async.TAsyncClientManager;
 import org.apache.thrift.transport.TTransport;
 
@@ -45,6 +46,9 @@ public interface TaskPlacer {
       this.client = Optional.of(client);
     }
   }
+  
+  /** Initialize this TaskPlacer. */
+  void initialize(Configuration conf);
   
   /**
    * Given a list of {@link NodeMonitor} network addresses and a list of
