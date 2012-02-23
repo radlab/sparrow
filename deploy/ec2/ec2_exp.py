@@ -39,7 +39,7 @@ def parse_args():
       help="Number of tasks to launch for each job in prototype")
   parser.add_option("-c", "--benchmark-id", type="int", default=1,
       help="Which benchmark to run")
-  parser.add_option("-e", "--benchmark-iterations", type="int", default=10,
+  parser.add_option("-e", "--benchmark-iterations", type="int", default=4,
       help="Iterations of benchmark to run")
 
   (opts, args) = parser.parse_args()
