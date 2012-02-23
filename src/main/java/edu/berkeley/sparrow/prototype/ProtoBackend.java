@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import joptsimple.OptionParser;
@@ -67,7 +69,8 @@ public class ProtoBackend implements BackendService.Iface {
    * a task, this will queue. We currently launch new threads for each task to prevent
    * this from happening. 
    */
-  private static final int WORKER_THREADS = 8;
+  private static final int THRIFT_WORKER_THREADS = 4;
+  private static final int TASK_WORKER_THREADS = 4;
   private static final String APP_ID = "testApp";
   
   /** We assume we are speaking to local Node Manager. */
@@ -76,6 +79,8 @@ public class ProtoBackend implements BackendService.Iface {
   
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
+  private static final ExecutorService executor = 
+      Executors.newFixedThreadPool(TASK_WORKER_THREADS);
     
   /**
    * Thread spawned for each task. It runs for a given amount of time (and adds
@@ -100,6 +105,8 @@ public class ProtoBackend implements BackendService.Iface {
     
     @Override
     public void run() {
+      AUDIT_LOG.info(Logging.auditEventString("task_start", this.requestId,
+          this.taskId, this.benchmarkId, this.benchmarkIterations, Thread.activeCount()));
       if (startTime == -1) {
         startTime = System.currentTimeMillis();
       }
@@ -109,28 +116,7 @@ public class ProtoBackend implements BackendService.Iface {
       } catch (IOException e) {
         LOG.fatal("Error creating NM client", e);
       }
-      ArrayList<String> tasksCopy = null;
-      
-      // Update bookkeeping for task start
-      synchronized(resourceUsage) {
-        TResources.addTo(resourceUsage, taskResources);
-      }
-      
-      HashMap<TUserGroupInfo, TResourceVector> out = 
-          new HashMap<TUserGroupInfo, TResourceVector>();
-      
-      synchronized(ongoingTasks) {
-        ongoingTasks.add(this.taskId);
-        tasksCopy = new ArrayList<String>(ongoingTasks); 
-        
-        // Inform NM of resource usage
-        out.put(user, resourceUsage);
-        try {
-          client.updateResourceUsage(ProtoBackend.APP_ID, out, ongoingTasks);
-        } catch (TException e) {
-          e.printStackTrace();
-        }
-      }
+
  
       int tasks = numTasks.addAndGet(1);
       double taskRate = ((double) tasks) * 1000 / 
@@ -149,11 +135,14 @@ public class ProtoBackend implements BackendService.Iface {
       synchronized(resourceUsage) {
         TResources.subtractFrom(resourceUsage, taskResources);
       }
+      ArrayList<String> tasksCopy = null;
       synchronized(ongoingTasks) {
         ongoingTasks.remove(this.taskId);
         tasksCopy = new ArrayList<String>(ongoingTasks);
       }
       
+      HashMap<TUserGroupInfo, TResourceVector> out = 
+          new HashMap<TUserGroupInfo, TResourceVector>();
       // Inform NM of resource usage
       out.put(user, resourceUsage);
       try {
@@ -240,9 +229,19 @@ public class ProtoBackend implements BackendService.Iface {
   @Override
   public void launchTask(ByteBuffer message, String requestId, String taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
+    // We want to add accounting for task start here, even though the task is actually
+    // queued. Note that this won't be propagaed to the node monitor until another task
+    // finishes.
+    synchronized(resourceUsage) {
+      TResources.addTo(resourceUsage, estimatedResources);
+    }
+    synchronized(ongoingTasks) {
+      ongoingTasks.add(taskId);
+    }
+    
     // Note we ignore user here
-    new Thread(new TaskRunnable(
-        requestId, taskId, message, estimatedResources)).start();
+    executor.submit(new TaskRunnable(
+        requestId, taskId, message, estimatedResources));
   }
   
   public static void main(String[] args) throws IOException, TException {
@@ -282,7 +281,7 @@ public class ProtoBackend implements BackendService.Iface {
    
     int listenPort = conf.getInt("listen_port", DEFAULT_LISTEN_PORT);
     NM_PORT = conf.getInt("node_monitor_port", NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT);
-    TServers.launchThreadedThriftServer(listenPort, WORKER_THREADS, processor);
+    TServers.launchThreadedThriftServer(listenPort, THRIFT_WORKER_THREADS, processor);
     
     // Register server
     Client client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
