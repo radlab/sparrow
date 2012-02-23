@@ -11,11 +11,35 @@ TODO(kay): Add functionality to make response time vs. utilization graph.
 import logging
 import os
 import sys
-
+import math
+import functools
 import stats
 
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
+
+""" from http://code.activestate.com/
+         recipes/511478-finding-the-percentile-of-the-values/ """
+def get_percentile(N, percent, key=lambda x:x):
+    """
+    Find the percentile of a list of values.
+
+    @parameter N - is a list of values. Note N MUST BE already sorted.
+    @parameter percent - a float value from 0.0 to 1.0.
+    @parameter key - optional key function to compute value from each element of N.
+
+    @return - the percentile of the values
+    """
+    if not N:
+        return None
+    k = (len(N)-1) * percent
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return key(N[int(k)])
+    d0 = key(N[int(f)]) * (c-k)
+    d1 = key(N[int(c)]) * (k-f)
+    return d0+d1
 
 class Probe:
     def __init__(self, request_id, address):
@@ -24,26 +48,27 @@ class Probe:
         self.launch_time = INVALID_TIME
         self.received_time = INVALID_TIME
         self.completion_time = INVALID_TIME
-        
+        self.__logger = logging.getLogger("Probe")
+
     def set_launch_time(self, time):
         if self.launch_time != INVALID_TIME:
             self.__logger.warn(("Probe for request %s on machine %s launched "
                               "twice; expect it to only launch once") %
-                             self.request_id, self.address)
+                              (self.request_id, self.address))
         self.launch_time = time
         
     def set_received_time(self, time):
         if self.received_time != INVALID_TIME:
             self.__logger.warn(("Probe for request %s on machine %s received "
                               "twice; expect it to only be received once") %
-                             self.request_id, self.address)
+                             (self.request_id, self.address))
         self.received_time = time
         
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
             self.__logger.warn(("Probe for request %s on machine %s completed "
                               "twice; expect it to only launch once") %
-                             self.request_id, self.address)
+                             (self.request_id, self.address))
         self.completion_time = time
         
     def complete(self):
@@ -127,8 +152,6 @@ class Task:
 
     def queued_time(self):
         """ Returns the time spent waiting to launch on the backend. """
-        if (self.backend_start_time - self.node_monitor_launch_time) > 10:
-          print self.id
         return (self.backend_start_time - self.node_monitor_launch_time) 
 
     def processing_time(self):    
@@ -417,23 +440,21 @@ class LogParser:
         # Output data for response time and network delay CDFs.
         results_filename = "%s_results.data" % file_prefix
         file = open(results_filename, "w")
-        file.write("%ile\tResponseTime\tNetworkDelay\tProcessingTime\n")
+        file.write("%ile\tResponseTime\tNetworkDelay\tProcessingTime\tQueuedTime\n")
         num_data_points = 100
         response_times.sort()
         network_delays.sort()
         processing_times.sort()
         queue_times.sort()
-        response_stride = max(1, len(response_times) / num_data_points)
-        network_stride = max(1, len(network_delays) / num_data_points)
-        processing_stride = max(1, len(processing_times) / num_data_points)
-        queue_stride = max(1, len(queue_times) / num_data_points)
-        for i, (response_time, network_delay, processing_time, queue_time) in enumerate(
-                zip(response_times[::response_stride],
-                    network_delays[::network_stride],
-                    processing_times[::processing_stride],
-                    queue_times[::queue_stride])):
-            percentile = (i + 1) * response_stride * 1.0 / len(response_times)
-            file.write("%f\t%d\t%d\t%d\t%d\n" % (percentile, response_time, network_delay, processing_time, queue_time))
+
+        for i in range(100):
+            i = float(i) / 100
+            file.write("%f\t%d\t%d\t%d\t%d\n" % (i, 
+                get_percentile(response_times, i),
+                get_percentile(network_delays, i),
+                get_percentile(processing_times, i),
+                get_percentile(queue_times, i)))
+
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
@@ -454,6 +475,12 @@ class LogParser:
                 file.write("%f\t%d\t%d\n" % (percentile, skew, time))
         self.plot_skew_cdf(skew_filenames, file_prefix)
     
+        summary_file = open("%s_resp_summary" % file_prefix, 'w')
+        summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
+                                         get_percentile(response_times, .95),
+                                         get_percentile(response_times, .99)))
+        summary_file.close() 
+
     def plot_skew_cdf(self, skew_filenames, file_prefix):
         gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")
         gnuplot_file.write("set terminal postscript color\n")
@@ -531,6 +558,7 @@ def main(argv):
         kv = arg.split("=")
         if kv[0] == PARAMS[0]:
             log_dir = kv[1]
+            dirs = os.walk(log_dir)
             unqualified_log_files = filter(lambda x: "sparrow_audit" in x,
                                            os.listdir(log_dir))
             log_files = [os.path.join(log_dir, filename) for \

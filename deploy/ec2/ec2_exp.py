@@ -19,7 +19,7 @@ def parse_args():
   parser.add_option("-t", "--instance-type", default="m1.large",
       help="Type of instance to launch (default: m1.large). " +
            "WARNING: must be 64 bit, thus small instances won't work")
-  parser.add_option("-l", "--arrival-rate", type="int", default=100,
+  parser.add_option("-l", "--arrival-rate", type="float", default=100,
       help = "Arrival rate of jobs in proto frontends (jobs/s)")
   parser.add_option("-k", "--key-pair",
       help="Key pair to use on instances")
@@ -41,6 +41,10 @@ def parse_args():
       help="Which benchmark to run")
   parser.add_option("-e", "--benchmark-iterations", type="int", default=4,
       help="Iterations of benchmark to run")
+  parser.add_option("-p", "--probe-ratio", type="float", default=1.05,
+      help="Probe ratio")
+  parser.add_option("-y", "--kill-delay", type="int", default=1,
+      help="Time to wait between killing backends and frontends")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1:
@@ -79,14 +83,13 @@ def scp_from(host, opts, dest_file, local_file):
       "scp -q -o StrictHostKeyChecking=no -i %s 'root@%s:%s' '%s'" %
       (opts.identity_file, host, dest_file, local_file), shell=True)
 
-# Parallel version of scp_from()
-def scp_from_all(hosts, opts, dest_file, local_file):
+def rsync_from_all(hosts, opts, dest_pattern, local_dir, errors=0):
   commands = []
   for host in hosts:
-    commands.append(
-      "scp -q -o StrictHostKeyChecking=no -i %s 'root@%s:%s' '%s'" %
-      (opts.identity_file, host, dest_file, local_file))
-  parallel_commands(commands, 0)
+    cmd = "rsync -rv -e 'ssh -o StrictHostKeyChecking=no -i %s' root@%s: --include=\"%s\" --exclude=\"*\" %s" % (
+      opts.identity_file, host, dest_pattern, local_dir)
+    commands.append(cmd)
+  parallel_commands(commands, errors)
     
 
 # Execute a sequence of commands in parallel, raising an exception if 
@@ -231,7 +234,8 @@ def deploy_cluster(frontends, backends, opts):
     "git_branch": "%s" % opts.branch,
     "benchmark_iterations": "%s" % opts.benchmark_iterations,
     "benchmark_id": "%s" % opts.benchmark_id,
-    "tasks_per_job": "%s" % opts.tasks_per_job
+    "tasks_per_job": "%s" % opts.tasks_per_job,
+    "probe_ratio": "%s" % opts.probe_ratio,
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
@@ -306,6 +310,7 @@ def stop_proto(frontends, backends, opts):
   ssh_all([fe.public_dns_name for fe in frontends], opts,
           "chmod 755 /root/stop_proto_frontend.sh;" +
           "/root/stop_proto_frontend.sh")
+  time.sleep(opts.kill_delay)
   print "Stopping Proto backends..."
   ssh_all([be.public_dns_name for be in backends], opts,
          "chmod 755 /root/stop_proto_backend.sh;" +
@@ -313,14 +318,14 @@ def stop_proto(frontends, backends, opts):
 
 # Collect logs from all machines
 def collect_logs(frontends, backends, opts):
-  scp_from_all([fe.public_dns_name for fe in frontends], opts,
-    "/root/*.log", opts.log_dir)
-  scp_from_all([be.public_dns_name for be in backends], opts,
-    "/root/*.log", opts.log_dir)
+  rsync_from_all([fe.public_dns_name for fe in frontends], opts,
+    "*.log", opts.log_dir, len(frontends))
+  rsync_from_all([be.public_dns_name for be in backends], opts,
+    "*.log", opts.log_dir, len(backends))
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "rm -f /root/*.log")
+          "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
   ssh_all([be.public_dns_name for be in backends], opts,
-          "rm -f /root/*.log")
+          "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
 
 # Tear down a cluster
 def destroy_cluster(frontends, backends, opts):
