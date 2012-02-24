@@ -2,11 +2,15 @@ package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -17,6 +21,7 @@ import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
 import org.apache.thrift.transport.TTransport;
 
+import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
@@ -29,6 +34,9 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(TaskPlacer.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(TaskPlacer.class);
+   
+  /** See {@link SparrowConf.PROBE_MULTIPLIER} */
+  private double probeRatio;
   
   /**
    * This acts as a callback for the asynchronous Thrift interface.
@@ -88,6 +96,13 @@ public class ProbingTaskPlacer implements TaskPlacer {
     }
   }
   
+
+  @Override
+  public void initialize(Configuration conf) {
+    probeRatio = conf.getDouble(SparrowConf.PROBE_RATIO, 
+        SparrowConf.DEFAULT_PROBE_MULTIPLIER);
+  }
+  
   @Override
   public Collection<TaskPlacer.TaskPlacementResponse> placeTasks(String appId,
       String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
@@ -105,9 +120,19 @@ public class ProbingTaskPlacer implements TaskPlacer {
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
     // per-task information to decide when to return.
-    CountDownLatch latch = new CountDownLatch(nodes.size());
+    int probesToLaunch = (int) Math.ceil(probeRatio * tasks.size());
+    probesToLaunch = Math.min(probesToLaunch, nodes.size());
+    LOG.debug("Launching " + probesToLaunch + " probes");
+
+    // Right now we wait for all probes to return, in the future we might add a timeout
+    CountDownLatch latch = new CountDownLatch(probesToLaunch);
+    List<InetSocketAddress> nodeList = new ArrayList<InetSocketAddress>(nodes);
     
-    for (InetSocketAddress node : nodes) {
+    // Get a random subset of nodes by shuffling list
+    Collections.shuffle(nodeList);
+    nodeList = nodeList.subList(0, probesToLaunch);
+    
+    for (InetSocketAddress node : nodeList) {
       TNonblockingTransport nbTr = new TNonblockingSocket(
           node.getHostName(), node.getPort());
       TProtocolFactory factory = new TBinaryProtocol.Factory();
@@ -133,7 +158,6 @@ public class ProbingTaskPlacer implements TaskPlacer {
       e.printStackTrace();
     }
 
-    // Sort nodes by resource usage
     MinCpuAssignmentPolicy assigner = new MinCpuAssignmentPolicy();
     Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
     

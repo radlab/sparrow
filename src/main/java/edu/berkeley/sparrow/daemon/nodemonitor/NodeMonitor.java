@@ -180,7 +180,7 @@ public class NodeMonitor {
           throws TException {
     LOG.debug(Logging.functionCall(app, message, requestId, taskId, user,
                                    estimatedResources));
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch", requestId,
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_start", requestId,
                                             address.getHostAddress(), taskId));
     if (!backendClients.containsKey(app)) {
       LOG.warn("Requested task launch for unknown app: " + app);
@@ -193,14 +193,18 @@ public class NodeMonitor {
     } catch (InterruptedException e) {
       LOG.fatal(e);
     }
-    
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_call_start", requestId,
+        address.getHostAddress(), taskId));
     client.launchTask(message, requestId, taskId, user, estimatedResources);
-    
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_call_finish", requestId,
+        address.getHostAddress(), taskId));
     try {
       backendClients.get(app).put(client);
     } catch (InterruptedException e) {
       LOG.fatal(e);
     }
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_finish", requestId,
+        address.getHostAddress(), taskId));
     LOG.debug("Launched task " + taskId + " for app " + app);
     return true;
   }

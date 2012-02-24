@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.async.TAsyncClientManager;
 import org.apache.thrift.transport.TTransport;
 
@@ -43,5 +44,9 @@ public class RandomTaskPlacer implements TaskPlacer {
       out.add(response);
     }
     return out;
+  }
+
+  @Override
+  public void initialize(Configuration conf) {
   }
 }

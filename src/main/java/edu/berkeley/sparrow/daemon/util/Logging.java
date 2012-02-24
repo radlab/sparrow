@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.util;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Level;
@@ -11,7 +12,7 @@ import com.google.common.base.Joiner;
 
 public class Logging {
   public final static String AUDIT_LOGGER_NAME = "audit";
-  public final static String AUDIT_LOG_FILENAME_FORMAT = "sparrow_audit.%d.log";
+  public final static String AUDIT_LOG_FILENAME_FORMAT = "sparrow_audit.%d.%d.log";
   public final static String AUDIT_LOG_FORMAT = "%c\t%m%n";
   
   private static Joiner paramJoiner = Joiner.on(",");
@@ -29,7 +30,8 @@ public class Logging {
     PatternLayout layout = new PatternLayout(AUDIT_LOG_FORMAT);
     // This assumes that no other daemon will be started within 1 millisecond.
     String filename = String.format(AUDIT_LOG_FILENAME_FORMAT,
-                                    System.currentTimeMillis());
+                                    System.currentTimeMillis(),
+                                    new Random().nextInt(Integer.MAX_VALUE));
     FileAppender fileAppender = new FileAppender(layout, filename);
     Logger auditLogger = Logger.getLogger(Logging.AUDIT_LOGGER_NAME);
     auditLogger.addAppender(fileAppender);
