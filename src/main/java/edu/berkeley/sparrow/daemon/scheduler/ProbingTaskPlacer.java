@@ -36,7 +36,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(TaskPlacer.class);
    
   /** See {@link SparrowConf.PROBE_MULTIPLIER} */
-  private double probeFactor;
+  private double probeRatio;
   
   /**
    * This acts as a callback for the asynchronous Thrift interface.
@@ -99,7 +99,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
   @Override
   public void initialize(Configuration conf) {
-    probeFactor = conf.getDouble(SparrowConf.PROBE_MULTIPLIER, 
+    probeRatio = conf.getDouble(SparrowConf.PROBE_RATIO, 
         SparrowConf.DEFAULT_PROBE_MULTIPLIER);
   }
   
@@ -120,7 +120,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
     // per-task information to decide when to return.
-    int probesToLaunch = (int) Math.ceil(probeFactor * tasks.size());
+    int probesToLaunch = (int) Math.ceil(probeRatio * tasks.size());
     probesToLaunch = Math.min(probesToLaunch, nodes.size());
     LOG.debug("Launching " + probesToLaunch + " probes");
 

@@ -35,7 +35,7 @@ public class SparrowConf {
   public final static String DEPLYOMENT_MODE = "deployment.mode";
   
   /** The ratio of probes used in a scheduling decision to tasks. */
-  public final static String PROBE_MULTIPLIER = "probe.multiplier";
+  public final static String PROBE_RATIO = "probe.ratio";
   public final static double DEFAULT_PROBE_MULTIPLIER = 1.05;
   
   // Parameters for static operation (least usable system tests).

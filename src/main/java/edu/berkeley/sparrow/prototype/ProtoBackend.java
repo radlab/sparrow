@@ -230,7 +230,7 @@ public class ProtoBackend implements BackendService.Iface {
   public void launchTask(ByteBuffer message, String requestId, String taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
     // We want to add accounting for task start here, even though the task is actually
-    // queued. Note that this won't be propagaed to the node monitor until another task
+    // queued. Note that this won't be propagated to the node monitor until another task
     // finishes.
     synchronized(resourceUsage) {
       TResources.addTo(resourceUsage, estimatedResources);

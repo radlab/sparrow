@@ -8,11 +8,11 @@ get as much info as possible out of them.
 
 TODO(kay): Add functionality to make response time vs. utilization graph.
 """
+import functools
 import logging
+import math
 import os
 import sys
-import math
-import functools
 import stats
 
 INVALID_TIME = 0
@@ -21,14 +21,14 @@ INVALID_TIME_DELTA = -sys.maxint - 1
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
 def get_percentile(N, percent, key=lambda x:x):
-    """
-    Find the percentile of a list of values.
+    """ Find the percentile of a list of values.
 
-    @parameter N - is a list of values. Note N MUST BE already sorted.
-    @parameter percent - a float value from 0.0 to 1.0.
-    @parameter key - optional key function to compute value from each element of N.
+    Args:
+      percent: a float value from 0.0 to 1.0.
+      key: optional key function to compute value from each element of N.
 
-    @return - the percentile of the values
+    Returns:
+      The percentile of the values
     """
     if not N:
         return None
@@ -100,7 +100,7 @@ class Task:
     def __init__(self, id):
         self.__logger = logging.getLogger("Task")
 
-        # When the scheduler (resident with the frontend) launced the task
+        # When the scheduler (resident with the frontend) launched the task
         self.scheduler_launch_time = INVALID_TIME 
         # When the node monitor (resident with the backend) launched the task
         self.node_monitor_launch_time = INVALID_TIME
@@ -163,7 +163,7 @@ class Task:
         return (self.scheduler_launch_time != INVALID_TIME and
                 self.node_monitor_launch_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME and
-                self.backend_start_time and
+                self.backend_start_time != INVALID_TIME and
                 self.clock_skew != INVALID_TIME_DELTA)
 
 class Request:
@@ -203,7 +203,7 @@ class Request:
         task = self.__get_task(task_id)
         task.set_node_monitor_launch_time(address, launch_time)
 
-    def add_backend_task_start(self, address, task_id, start_time):
+    def add_backend_task_start(self, task_id, start_time):
         task = self.__get_task(task_id)
         task.set_backend_start_time(start_time)
         
@@ -253,8 +253,7 @@ class Request:
         return network_delays
     
     def processing_times(self):
-        """ Returns a list of processing times for all __tasks with
-            complete information. """
+        """ Returns a list of processing times for complete __tasks. """
         processing_times = []
         for task in self.__tasks.values():
             if task.complete():
@@ -262,8 +261,7 @@ class Request:
         return processing_times
 
     def queue_times(self):
-        """ Returns a list of queue times for all __tasks with complete
-            information """
+        """ Returns a list of queue times for all complete __tasks. """
         queue_times = []
         for task in self.__tasks.values():
             if task.complete():
@@ -401,7 +399,7 @@ class LogParser:
             elif audit_event_params[0] == "task_start":
                 self.__add_backend_task_start(audit_event_params[1],
                                               audit_event_params[2],
-                                              audit_event_params[2], time)
+                                              time)
                 
     def output_results(self, file_prefix):
         # Response time is the time from when the job arrived at a scheduler
@@ -475,7 +473,7 @@ class LogParser:
                 file.write("%f\t%d\t%d\n" % (percentile, skew, time))
         self.plot_skew_cdf(skew_filenames, file_prefix)
     
-        summary_file = open("%s_resp_summary" % file_prefix, 'w')
+        summary_file = open("%s_response_time_summary" % file_prefix, 'w')
         summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
                                          get_percentile(response_times, .95),
                                          get_percentile(response_times, .99)))
@@ -535,9 +533,9 @@ class LogParser:
         request = self.__get_request(request_id)
         request.add_node_monitor_task_launch(address, task_id, time)
 
-    def __add_backend_task_start(self, request_id, address, task_id, time):
+    def __add_backend_task_start(self, request_id, task_id, time):
         request = self.__get_request(request_id)
-        request.add_backend_task_start(address, task_id, time)        
+        request.add_backend_task_start(task_id, time)        
 
     def __add_task_completion(self, request_id, task_id, time):
         request = self.__get_request(request_id)
@@ -558,7 +556,6 @@ def main(argv):
         kv = arg.split("=")
         if kv[0] == PARAMS[0]:
             log_dir = kv[1]
-            dirs = os.walk(log_dir)
             unqualified_log_files = filter(lambda x: "sparrow_audit" in x,
                                            os.listdir(log_dir))
             log_files = [os.path.join(log_dir, filename) for \
