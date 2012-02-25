@@ -1,5 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.configuration.Configuration;
@@ -9,8 +10,9 @@ public interface NodeMonitorState {
   /**
    * Initialize state storage. This should open connections to any external
    * services if required.
+   * @throws IOException 
    */
-  public void initialize(Configuration conf);
+  public void initialize(Configuration conf) throws IOException;
   
   /**
    * Register a backend identified by {@code appId} which can be reached via

@@ -58,3 +58,10 @@ service SchedulerStateStoreService {
   void updateNodeState(1: map<string, types.TNodeState> snapshot);
 }
 
+service StateStoreService {
+  # Register a scheduler with the given socket address (IP: Port)
+  void registerScheduler(1: string schedulerAddress);
+
+  # Register a node monitor with the given socket address (IP: Port)
+  void registerNodeMonitor(1: string nodeMonitorAddress);
+}

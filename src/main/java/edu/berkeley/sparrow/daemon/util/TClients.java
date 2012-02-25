@@ -8,10 +8,12 @@ import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+import org.mortbay.log.Log;
 
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
+import edu.berkeley.sparrow.thrift.StateStoreService;
 
 /**
  * Helper functions for creating Thrift clients for various Sparrow interfaces.
@@ -24,6 +26,7 @@ public class TClients {
     try {
       tr.open();
     } catch (TTransportException e) {
+      Log.warn("Error creating node monitor client to " + host + ":" + port);
       throw new IOException(e);
     }
     TProtocol proto = new TBinaryProtocol(tr);
@@ -38,6 +41,7 @@ public class TClients {
     try {
       tr.open();
     } catch (TTransportException e) {
+      Log.warn("Error creating scheduler client to " + host + ":" + port);
       throw new IOException(e);
     }
     TProtocol proto = new TBinaryProtocol(tr);
@@ -52,10 +56,26 @@ public class TClients {
     try {
       tr.open();
     } catch (TTransportException e) {
+      Log.warn("Error creating backend client to " + host + ":" + port);
       throw new IOException(e);
     }
     TProtocol proto = new TBinaryProtocol(tr);
     BackendService.Client client = new BackendService.Client(proto);
+    return client;
+  }
+  
+  public static StateStoreService.Client createBlockingStateStoreClient(
+      String host, int port) throws IOException {
+    TTransport tr = new TFramedTransport(
+        new TSocket(host, port));
+    try {
+      tr.open();
+    } catch (TTransportException e) {
+      Log.warn("Error creating state store client to " + host + ":" + port);
+      throw new IOException(e);
+    }
+    TProtocol proto = new TBinaryProtocol(tr);
+    StateStoreService.Client client = new StateStoreService.Client(proto);
     return client;
   }
 }

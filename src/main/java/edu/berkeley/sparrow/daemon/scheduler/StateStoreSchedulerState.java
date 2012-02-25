@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -16,9 +17,11 @@ import com.google.common.base.Optional;
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
+import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
+import edu.berkeley.sparrow.thrift.StateStoreService;
 import edu.berkeley.sparrow.thrift.TNodeState;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 
@@ -28,7 +31,7 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
  */
 public class StateStoreSchedulerState implements SchedulerState, 
                                                  SchedulerStateStoreService.Iface {
-  public static int DEFAULT_SCHEDULER_STATE_THRIFT_PORT = 20503;
+  public static int DEFAULT_SCHEDULER_STATE_THRIFT_PORT = 20504;
   public static int DEFAULT_SCHEDULER_STATE_THRIFT_THREADS = 2;
   
   private final static Logger LOG = Logger.getLogger(StateStoreSchedulerState.class);
@@ -37,10 +40,26 @@ public class StateStoreSchedulerState implements SchedulerState,
   
   @Override
   public void initialize(Configuration conf) throws IOException {
-    SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface> processor = 
-        new SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface>(this);
+    String stateStoreHost = conf.getString(SparrowConf.STATE_STORE_HOST, 
+        SparrowConf.DEFAULT_STATE_STORE_HOST);
+    int stateStorePort = conf.getInt(SparrowConf.STATE_STORE_PORT,
+        SparrowConf.DEFAULT_STATE_STORE_PORT);
+    StateStoreService.Client client = TClients.createBlockingStateStoreClient(
+        stateStoreHost, stateStorePort);
     int port = conf.getInt(SparrowConf.SCHEDULER_STATE_THRIFT_PORT, 
         DEFAULT_SCHEDULER_STATE_THRIFT_PORT);
+    /* TODO: It's not clear whether this will always give us the right hostname.
+     *       We might want to add a configuration option to set the hostname to use.*/ 
+    String hostname = InetAddress.getLocalHost().getHostName();
+    try {
+      client.registerScheduler(hostname + ":" + port);
+    } catch (TException e) {
+      LOG.fatal("Error registering scheduler with state store");
+      throw new IOException(e);
+    }
+    LOG.info("Registered with state store at " + stateStoreHost + ":" + stateStorePort);
+    SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface> processor = 
+        new SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface>(this);
     int threads = conf.getInt(SparrowConf.SCHEDULER_STATE_THRIFT_THREADS, 
         DEFAULT_SCHEDULER_STATE_THRIFT_THREADS);
 

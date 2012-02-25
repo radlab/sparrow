@@ -34,6 +34,14 @@ public class SparrowConf {
   // Values: "production", "standalone", "configbased"
   public final static String DEPLYOMENT_MODE = "deployment.mode";
   
+  /** Hostname of the state store. */
+  public final static String STATE_STORE_HOST = "state_store.host";
+  public final static String DEFAULT_STATE_STORE_HOST = "localhost";
+  
+  /** Port of the state store. */
+  public final static String STATE_STORE_PORT = "state_store.port";
+  public final static int DEFAULT_STATE_STORE_PORT = 20506;
+  
   /** The ratio of probes used in a scheduling decision to tasks. */
   public final static String PROBE_RATIO = "probe.ratio";
   public final static double DEFAULT_PROBE_MULTIPLIER = 1.05;
