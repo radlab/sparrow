@@ -1,6 +1,0 @@
-@namespace("edu.berkeley.sparrow.avro")
-protocol SparrowDaemon {
-  import idl "sparrow_types.avdl";
-  boolean submitTask(bytes message);
-
-}
