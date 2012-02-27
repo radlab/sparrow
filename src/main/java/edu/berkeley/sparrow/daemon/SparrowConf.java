@@ -33,6 +33,7 @@ public class SparrowConf {
   
   // Values: "production", "standalone", "configbased"
   public final static String DEPLYOMENT_MODE = "deployment.mode";
+  public final static String DEFAULT_DEPLOYMENT_MODE = "production";
   
   /** Hostname of the state store. */
   public final static String STATE_STORE_HOST = "state_store.host";

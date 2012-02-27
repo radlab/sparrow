@@ -21,12 +21,12 @@ public class NonDurableSchedulerState implements StateStoreState {
 
   @Override
   public List<InetSocketAddress> getInitialSchedulers() {
-    return schedulers;
+    return new ArrayList<InetSocketAddress>();
   }
 
   @Override
   public List<InetSocketAddress> getInitialNodeMonitors() {
-    return nodeMonitors;
+    return new ArrayList<InetSocketAddress>();
   }
 
   @Override

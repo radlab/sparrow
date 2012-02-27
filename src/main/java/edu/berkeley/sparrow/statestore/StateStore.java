@@ -176,7 +176,8 @@ public class StateStore implements StateStoreService.Iface {
     schedulerManager = new TAsyncClientManager();
     
     state = null;
-    String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "none");
+    String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, 
+        SparrowConf.DEFAULT_DEPLOYMENT_MODE);
     if (mode.equals("configbased")) {
       state = new ConfigStateStoreState();
     } else if (mode.equals("standalone")) {
@@ -184,7 +185,7 @@ public class StateStore implements StateStoreService.Iface {
     } else if (mode.equals("production")) {
       state = new NonDurableSchedulerState();
     } else {
-      throw new RuntimeException("Unsupported deployment mode: " + mode);
+      LOG.fatal("Unsupported deployment mode: " + mode);
     }
     state.initialize(conf);
     

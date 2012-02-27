@@ -10,7 +10,7 @@ import org.apache.commons.configuration.Configuration;
    * A class for storing coordinating information used by the {@link StateStore}.
    * 
    * The state store is primarily responsible for:
-   *   1) Querying NodeMonitor's for information
+   *   1) Querying NodeMonitors for information
    *   2) Pushing that information to Schedulers
    *   
    * This class mocks out tracking of the schedulers and node monitors. This is helpful
