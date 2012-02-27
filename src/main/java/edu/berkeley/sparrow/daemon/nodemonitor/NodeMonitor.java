@@ -56,10 +56,16 @@ public class NodeMonitor {
       state = new StandaloneNodeMonitorState();
     } else if (mode.equals("configbased")) {
       state = new ConfigNodeMonitorState();
-    }  else {
+    } else if (mode.equals("production")) {
+      state = new StateStoreNodeMonitorState();
+    } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
-    state.initialize(conf);
+    try {
+      state.initialize(conf);
+    } catch (IOException e) {
+      LOG.fatal("Error initializing node monitor state.", e);
+    }
     capacity = new TResourceVector();
     address = InetAddress.getLocalHost();
     this.conf = conf;

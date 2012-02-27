@@ -22,12 +22,17 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
 
+import com.google.common.base.Optional;
+
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService.AsyncClient.updateNodeState_call;
+import edu.berkeley.sparrow.thrift.StateStoreService;
 import edu.berkeley.sparrow.thrift.TNodeState;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 
@@ -41,7 +46,7 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
  * NOTE: currently this is only a stub implementation and does not live up to the above
  *       doc-string
  */
-public class StateStore {
+public class StateStore implements StateStoreService.Iface {
   private static enum EventType { QUERY, UPDATE };
   private static final Logger LOG = Logger.getLogger(StateStore.class);
 
@@ -109,8 +114,8 @@ public class StateStore {
       LOG.warn("Error receiving node monitor status: " + node, e);
       // Thrift clients can never be used again once an error has occurred
       internalClients.remove(node);
-      addEvent(new Event(System.currentTimeMillis() + NODE_MANAGER_DELAY_MS,
-          node, EventType.QUERY));
+      state.signalInactiveNodeMonitor(node);
+      LOG.warn("Error polling node monitor, removing from list: " + node);
     }
   }
   
@@ -132,11 +137,11 @@ public class StateStore {
     
     @Override
     public void onError(Exception e) {
-      LOG.warn("Error updaing loads on scheduler: " + node, e);
+      LOG.warn("Error updating loads on scheduler: " + node, e);
       // Thrift clients can never be used again once an error has occurred
       schedulerClients.remove(node);
-      addEvent(new Event(System.currentTimeMillis() + SCHEDULER_DELAY_MS,
-          node, EventType.UPDATE));
+      state.signalInactiveScheduler(node);
+      LOG.warn("Error updating scheduler, removing from list: " + node);
     }
   }
   
@@ -169,22 +174,40 @@ public class StateStore {
  
     internalManager = new TAsyncClientManager();
     schedulerManager = new TAsyncClientManager();
-    this.state = new ConfigStateStoreState();
+    
+    state = null;
+    String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, 
+        SparrowConf.DEFAULT_DEPLOYMENT_MODE);
+    if (mode.equals("configbased")) {
+      state = new ConfigStateStoreState();
+    } else if (mode.equals("standalone")) {
+      state = new NonDurableSchedulerState();
+    } else if (mode.equals("production")) {
+      state = new NonDurableSchedulerState();
+    } else {
+      LOG.fatal("Unsupported deployment mode: " + mode);
+    }
     state.initialize(conf);
     
-    // Bootstrap the event queue with queries to all node monitors we know about
-    // TODO: It's not clear how this will work when the set of node monitors and
-    // schedulers is changing.
-    for (InetSocketAddress monitor : state.getNodeMonitors()) {
+    // Bootstrap the event queue with queries to all node monitors we initially know
+    // about.
+    for (InetSocketAddress monitor : state.getInitialNodeMonitors()) {
       events.add(new Event(0, monitor, EventType.QUERY));
     }
     
     // After 3 seconds (to let updates accumulate) start informing schedulers
-    for (InetSocketAddress scheduler : state.getSchedulers()) {
+    for (InetSocketAddress scheduler : state.getInitialSchedulers()) {
       events.add(
           new Event(System.currentTimeMillis() + 3 * 1000, scheduler, EventType.UPDATE));
     }
+    int port = conf.getInt(SparrowConf.STATE_STORE_PORT,
+        SparrowConf.DEFAULT_STATE_STORE_PORT);
+    StateStoreService.Processor<StateStoreService.Iface> processor = 
+        new StateStoreService.Processor<StateStoreService.Iface>(this);
+    TServers.launchThreadedThriftServer(port, 2, processor);
+  }
     
+  public void run() {
     // Main event loop, we rely on a BlockingPriorityQueue to drive this, with some
     // extra code to make sure we don't actually poll() the queue unless the earliest
     // event actually needs to be handled. We could look into a DelayQueue for this,
@@ -192,19 +215,14 @@ public class StateStore {
     while (true) {
       // Make sure the event queue has something which demands processing before we
       // proceed.
-      synchronized (events) {
-        Event event = events.peek();
-        if (event == null || !eventInPast(event)) {
-          try {
-            Thread.sleep(10); // Sorta ugly
-          } catch (InterruptedException e) { }
-          continue;
-        }
+      Event event = events.peek();
+      if (event == null || !eventInPast(event)) {
+        try {
+          Thread.sleep(10); // Sorta ugly
+        } catch (InterruptedException e) { }
+        continue;
       }
-      Event event = null;
-      synchronized (events) {
-        event = events.poll();
-      }
+      event = events.poll();
       if (!eventInPast(event)) { 
         // This should never happen
         throw new RuntimeException("Signaled for future event");
@@ -235,11 +253,9 @@ public class StateStore {
     }
   }
   
-  /** Add an event to the event queue. */
+  /** Add an event to the event queue. This is thread safe. */
   private void addEvent(Event event) {
-    synchronized (events) {
-     events.add(event);
-    }
+   events.add(event); // BlockingQueue has built in concurrency control
   }
   
   /**
@@ -300,5 +316,40 @@ public class StateStore {
     Configuration conf = new PropertiesConfiguration(configFile);
     StateStore stateStore = new StateStore();
     stateStore.initialize(conf);
+    stateStore.run();
+  }
+
+  @Override
+  public void registerScheduler(String schedulerAddress) throws TException {
+    synchronized (state) {
+      Optional<InetSocketAddress> addr = Serialization.strToSocket(schedulerAddress);
+      if (addr.isPresent()) {
+        state.signalActiveScheduer(addr.get());
+        Event e = new Event(System.currentTimeMillis() + 3000, 
+            addr.get(), EventType.UPDATE);
+        events.add(e);
+        LOG.info("Registered scheduler with address: " + schedulerAddress);
+      } else {
+        LOG.warn("Got scheduler registration with malformed " +
+        		"address: " + schedulerAddress);
+      }
+    }
+  }
+
+  @Override
+  public void registerNodeMonitor(String nodeMonitorAddress) throws TException {
+    synchronized (state) {
+      Optional<InetSocketAddress> addr = Serialization.strToSocket(nodeMonitorAddress);
+      if (addr.isPresent()) {
+        state.signalActiveNodeMonitor(addr.get());
+        Event e = new Event(System.currentTimeMillis() + 3000, addr.get(), 
+            EventType.QUERY);
+        events.add(e);
+        LOG.info("Registered node monitor with address: " + nodeMonitorAddress);
+      } else {
+        LOG.warn("Got node monitor registration with malformed " +
+            "address: " + nodeMonitorAddress);
+      }
+    }
   }
 }

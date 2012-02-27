@@ -85,6 +85,9 @@ public class Scheduler {
     } else if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
       placer = new ProbingTaskPlacer();
+    } else if (mode.equals("production")) {
+      state = new StateStoreSchedulerState();
+      placer = new ProbingTaskPlacer();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
