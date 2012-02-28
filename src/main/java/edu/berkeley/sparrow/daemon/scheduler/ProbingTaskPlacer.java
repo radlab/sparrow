@@ -35,8 +35,10 @@ public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(TaskPlacer.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(TaskPlacer.class);
    
-  /** See {@link SparrowConf.PROBE_MULTIPLIER} */
-  private double probeRatio;
+  /** See {@link SparrowConf.PROBE_SEND_RATIO} */
+  private double probeSendRatio;
+  /** See {@link SparrowConf.PROBE_REQUIRE_RATIO} */
+  private double probeRequireRatio;
   
   /**
    * This acts as a callback for the asynchronous Thrift interface.
@@ -99,8 +101,14 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
   @Override
   public void initialize(Configuration conf) {
-    probeRatio = conf.getDouble(SparrowConf.PROBE_RATIO, 
-        SparrowConf.DEFAULT_PROBE_MULTIPLIER);
+    probeSendRatio = conf.getDouble(SparrowConf.PROBE_SEND_RATIO, 
+        SparrowConf.DEFAULT_PROBE_SEND_RATIO);
+    probeRequireRatio = conf.getDouble(SparrowConf.PROBE_REQUIRE_RATIO, 
+        SparrowConf.DEFAULT_STATE_STORE_PORT);
+    if (probeRequireRatio > probeSendRatio) {
+      LOG.fatal(SparrowConf.PROBE_REQUIRE_RATIO + " cannot be greater than " + 
+        SparrowConf.PROBE_SEND_RATIO);
+    }
   }
   
   @Override
@@ -117,15 +125,19 @@ public class ProbingTaskPlacer implements TaskPlacer {
     Map<InetSocketAddress, TTransport> transports = 
         new HashMap<InetSocketAddress, TTransport>();
     
+    int probesToLaunch = (int) Math.ceil(probeSendRatio * tasks.size());
+    probesToLaunch = Math.min(probesToLaunch, nodes.size());
+    
+    int probesToWaitFor = (int) Math.ceil(probeRequireRatio * tasks.size());
+    probesToWaitFor = Math.min(probesToWaitFor, nodes.size());
+    
+    LOG.debug("Launching " + probesToLaunch + " probes and waiting for " + 
+      probesToWaitFor);
+
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
     // per-task information to decide when to return.
-    int probesToLaunch = (int) Math.ceil(probeRatio * tasks.size());
-    probesToLaunch = Math.min(probesToLaunch, nodes.size());
-    LOG.debug("Launching " + probesToLaunch + " probes");
-
-    // Right now we wait for all probes to return, in the future we might add a timeout
-    CountDownLatch latch = new CountDownLatch(probesToLaunch);
+    CountDownLatch latch = new CountDownLatch(probesToWaitFor);
     List<InetSocketAddress> nodeList = new ArrayList<InetSocketAddress>(nodes);
     
     // Get a random subset of nodes by shuffling list

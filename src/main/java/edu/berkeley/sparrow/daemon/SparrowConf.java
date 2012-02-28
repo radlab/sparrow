@@ -43,9 +43,13 @@ public class SparrowConf {
   public final static String STATE_STORE_PORT = "state_store.port";
   public final static int DEFAULT_STATE_STORE_PORT = 20506;
   
-  /** The ratio of probes used in a scheduling decision to tasks. */
-  public final static String PROBE_RATIO = "probe.ratio";
-  public final static double DEFAULT_PROBE_MULTIPLIER = 1.05;
+  /** The ratio of probes to send vs tasks in a scheduling decision. */
+  public final static String PROBE_SEND_RATIO = "probe.send.ratio";
+  public final static double DEFAULT_PROBE_SEND_RATIO = 1.05;
+  
+  /** The ratio of probes we require hearing from vs tasks in a scheduling decision. */
+  public final static String PROBE_REQUIRE_RATIO = "probe.require.ratio";
+  public final static double DEFAULT_PROBE_REQUIRE_RATIO = 1.05;
   
   // Parameters for static operation (least usable system tests).
   // Expects a comma-separated list of host:port pairs describing the address of the
