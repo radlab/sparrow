@@ -13,7 +13,7 @@ if [ ! $APPCHK = '0' ]; then
   exit 1;
 fi
 
-nohup java -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.daemon.SparrowDaemon -c sparrow.conf > $LOG 2>&1 &
+nohup java -XX:MaxGCPauseMillis=3 -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.daemon.SparrowDaemon -c sparrow.conf > $LOG 2>&1 &
 PID=$!
 echo "Logging to $LOG"
 sleep 1
