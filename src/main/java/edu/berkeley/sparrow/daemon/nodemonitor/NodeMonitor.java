@@ -138,8 +138,10 @@ public class NodeMonitor {
    */
   public Map<String, TResourceVector> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
-    AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
-                                            address.getHostAddress()));
+    if (!requestId.equals("*")) { // Don't log state store request
+      AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
+                                              address.getHostAddress()));
+    }
     Map<String, TResourceVector> out = new HashMap<String, TResourceVector>();
     if (appId.equals("*")) {
       for (String app : appLoads.keySet()) {out.put(app, aggregateAppResources(app)); }
