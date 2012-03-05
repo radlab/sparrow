@@ -14,9 +14,11 @@ import math
 import os
 import sys
 import stats
+import time
 
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
+EXCLUDE_SECS = 0
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -77,6 +79,10 @@ class Probe:
                 self.received_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME)
         
+    def round_trip_time(self):
+        """ Returns the delay experienced by the probing machine. """
+        return self.completion_time - self.launch_time
+
     def get_clock_skew(self):
         """ Returns the clock skew of the probed machine.
         
@@ -177,6 +183,20 @@ class Request:
         # Address of the scheduler that received the request (and placed it).
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
+
+    def probe_stats(self):
+        probe_items_sorted = \
+          sorted(self.__probes.items(), key=lambda k:k[1].completion_time)
+        # print ["%s " % x[1].completion_time for x in probe_items_sorted]
+        machines_sorted = [k[0] for k in probe_items_sorted]
+        
+        out = []
+        for (i, machine) in enumerate(machines_sorted):
+            for task in self.__tasks.values():
+                if task.address == machine:
+                    out.append(i)
+        return out    
+                    
         
     def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
@@ -268,6 +288,46 @@ class Request:
                 queue_times.append(task.queued_time())
         return queue_times
 
+    def probe_times(self):
+        """ Returns a list of probe delays for all complete __probes. """
+        probe_times = []
+        for probe in self.__probes.values():
+            if probe.complete():
+                probe_times.append(probe.round_trip_time())
+        return probe_times
+
+    def receive_and_probing_time(self):
+        latest_completion = 0
+        for probe in self.__probes.values():
+		  	    if probe.complete():
+			  		    latest_completion = max(latest_completion, probe.completion_time)
+        return latest_completion - self.__arrival_time
+
+    def probing_time(self):
+       """ Returns the total time spent in probing for this request. """
+       earliest_launch = (time.time() * 1000)**2
+       latest_completion = 0
+       for probe in self.__probes.values():
+           if probe.complete():
+               earliest_launch = min(earliest_launch, probe.launch_time)
+               latest_completion = max(latest_completion, probe.completion_time)
+       return latest_completion - earliest_launch
+
+    def worst_necessary_probe_time(self):
+      """ Returns the nth longest probe time, where n is the number of tasks.
+
+          This represents the thoeretical limit of the minimum time we could
+          have spent probing that actually gets a probe from as many machines
+          as we have tasks. Note that in practice, if we are only waiting 
+          for ||tasks|| machines to respond we might as well just send the 
+          tasks randomly. """
+      probe_times = self.probe_times()
+      num_tasks = len(self.__tasks)
+      result = sorted(probe_times)[num_tasks - 1]
+      if result > 8:
+        print self.__id
+      return result
+
     def response_time(self, incorporate_skew=True):
         """ Returns the time from when the task arrived to when it completed.
         
@@ -356,7 +416,7 @@ class LogParser:
     def __init__(self):
         self.__requests = {}
         self.__logger = logging.getLogger("LogParser")
-        
+        self.__earliest_time = (time.time() * 1000)**2
     def parse_file(self, filename):
         file = open(filename, "r")
         for line in file:
@@ -370,7 +430,8 @@ class LogParser:
             
             # Time is expressed in epoch milliseconds.
             time = int(items[self.TIME_INDEX])
-            
+            self.__earliest_time = min(self.__earliest_time, time)            
+
             audit_event_params = items[self.AUDIT_EVENT_INDEX].split(":")
             if audit_event_params[0] == "arrived":
                 request = self.__get_request(audit_event_params[1])
@@ -409,11 +470,22 @@ class LogParser:
         network_delays = []
         processing_times = []
         queue_times = []
+        probe_times = []
+        probing_times = []
+        rcv_probing_times = []
+        worst_probe_times = []
         # Store clock skews as a map of pairs of addresses to a list of
         # (clock skew, time) pairs. Store addresses in tuple in increasing
         # order, so that we get the clock skew calculated in both directions.
         clock_skews = {}
-        for request in self.__requests.values():
+        all_probe_stats = {}
+        cutoff_time = self.__earliest_time + (EXCLUDE_SECS * 1000)
+        considered_requests = filter(lambda k: k.arrival_time() >= cutoff_time, 
+                                     self.__requests.values())
+        print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
+        for request in considered_requests:
+            for index in request.probe_stats():
+              all_probe_stats[index] = all_probe_stats.get(index, 0) + 1
             request.set_clock_skews()
             scheduler_address = request.scheduler_address()
             for address, probe_skew in request.clock_skews().items():
@@ -432,26 +504,38 @@ class LogParser:
             processing_times.extend(request.processing_times())
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
+            probe_times.extend(request.probe_times())
+            probing_times.append(request.probing_time())
+            rcv_probing_times.append(request.receive_and_probing_time())
+            worst_probe_times.append(request.worst_necessary_probe_time())
             if response_time != INVALID_TIME_DELTA:
                 response_times.append(response_time)
-        
+        print all_probe_stats
         # Output data for response time and network delay CDFs.
         results_filename = "%s_results.data" % file_prefix
         file = open(results_filename, "w")
-        file.write("%ile\tResponseTime\tNetworkDelay\tProcessingTime\tQueuedTime\n")
+        file.write("%ile\tResponseTime\tNetworkDelay\tProcessingTime\tQueuedTime\tProbeTime\tRcvProbingTime\tProbingTime\tWorstProbeTime\n")
         num_data_points = 100
         response_times.sort()
         network_delays.sort()
         processing_times.sort()
         queue_times.sort()
+        probe_times.sort()
+        probing_times.sort()
+        rcv_probing_times.sort()
+        worst_probe_times.sort()
 
         for i in range(100):
             i = float(i) / 100
-            file.write("%f\t%d\t%d\t%d\t%d\n" % (i, 
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i, 
                 get_percentile(response_times, i),
                 get_percentile(network_delays, i),
                 get_percentile(processing_times, i),
-                get_percentile(queue_times, i)))
+                get_percentile(queue_times, i),
+                get_percentile(probe_times, i),
+                get_percentile(rcv_probing_times, i),
+                get_percentile(probing_times, i),
+                get_percentile(worst_probe_times, i)))
 
         file.close()
         
