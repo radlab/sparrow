@@ -64,13 +64,10 @@ public class ProtoBackend implements BackendService.Iface {
   
   /**
    * This is just how many threads can concurrently be answering function calls
-   * from the NM. Each task is launched in its own from one of these threads. If tasks
-   * launches arrive fast enough that all worker threads are concurrently executing
-   * a task, this will queue. We currently launch new threads for each task to prevent
-   * this from happening. 
+   * from the NM.
    */
   private static final int THRIFT_WORKER_THREADS = 4;
-  private static final int TASK_WORKER_THREADS = 4;
+  private static final int DEFAULT_TASK_WORKER_THREADS = 4;
   private static final String APP_ID = "testApp";
   
   /** We assume we are speaking to local Node Manager. */
@@ -79,8 +76,7 @@ public class ProtoBackend implements BackendService.Iface {
   
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
-  private static final ExecutorService executor = 
-      Executors.newFixedThreadPool(TASK_WORKER_THREADS);
+  private static ExecutorService executor;
     
   /**
    * Thread spawned for each task. It runs for a given amount of time (and adds
@@ -280,6 +276,10 @@ public class ProtoBackend implements BackendService.Iface {
         new BackendService.Processor<BackendService.Iface>(new ProtoBackend());
    
     int listenPort = conf.getInt("listen_port", DEFAULT_LISTEN_PORT);
+    
+    int taskWorkerThreads = conf.getInt("task_worker_threads", 
+        DEFAULT_TASK_WORKER_THREADS);
+    executor = Executors.newFixedThreadPool(taskWorkerThreads);
     NM_PORT = conf.getInt("node_monitor_port", NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT);
     TServers.launchThreadedThriftServer(listenPort, THRIFT_WORKER_THREADS, processor);
     
