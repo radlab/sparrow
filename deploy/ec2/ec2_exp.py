@@ -214,6 +214,7 @@ def find_existing_cluster(conn, opts):
 
     return (frontend_nodes, backend_nodes)
   else:
+    return (frontend_nodes, backend_nodes)
     print "ERROR: Could not find full cluster: fe=%s be=%s" % (
       frontend_nodes, backend_nodes)
     sys.exit(1)
@@ -322,14 +323,22 @@ def stop_proto(frontends, backends, opts):
 
 # Collect logs from all machines
 def collect_logs(frontends, backends, opts):
-  rsync_from_all([fe.public_dns_name for fe in frontends], opts,
-    "*.log", opts.log_dir, len(frontends))
-  rsync_from_all([be.public_dns_name for be in backends], opts,
-    "*.log", opts.log_dir, len(backends))
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
+          "gzip *.log")
   ssh_all([be.public_dns_name for be in backends], opts,
-          "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
+          "gzip *.log")
+  rsync_from_all([fe.public_dns_name for fe in frontends], opts,
+    "*.log.gz", opts.log_dir, len(frontends))
+  rsync_from_all([be.public_dns_name for be in backends], opts,
+    "*.log.gz", opts.log_dir, len(backends))
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "rm -f /tmp/*audit*.log.gz; mv /root/*log.gz /tmp;")
+  ssh_all([be.public_dns_name for be in backends], opts,
+          "rm -f /tmp/*audit*.log.gz; mv /root/*log.gz /tmp;")
+  print "Unzipping logs"
+  cmd = "gunzip %s" % os.path.join(os.getcwd(), opts.log_dir, "*.log.gz")
+  print cmd
+  subprocess.check_call(cmd, shell=True)
 
 # Tear down a cluster
 def destroy_cluster(frontends, backends, opts):
@@ -365,9 +374,10 @@ def main():
   # Wait until ec2 says the cluster is started, then possibly wait more time
   # to make sure all nodes have booted.
   (frontends, backends) = find_existing_cluster(conn, opts)
-  print "Waiting for instances to start up"
-  wait_for_instances(conn, frontends)
-  wait_for_instances(conn, backends)
+  if opts.wait != 0:
+    print "Waiting for instances to start up"
+    wait_for_instances(conn, frontends)
+    wait_for_instances(conn, backends)
 
   print "Waiting %d more seconds..." % opts.wait
   time.sleep(opts.wait)

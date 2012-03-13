@@ -15,6 +15,7 @@ import os
 import sys
 import stats
 import time
+import numpy
 
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
@@ -324,8 +325,6 @@ class Request:
       probe_times = self.probe_times()
       num_tasks = len(self.__tasks)
       result = sorted(probe_times)[num_tasks - 1]
-      if result > 8:
-        print self.__id
       return result
 
     def response_time(self, incorporate_skew=True):
@@ -366,8 +365,10 @@ class Request:
              	if task.scheduler_launch_time > task.node_monitor_launch_time:
 								self.__logger.warn("Task %s suggests clock skew: " % task_id)
             completion_time = max(completion_time, task_completion_time)
-
-        return completion_time - self.__arrival_time
+        diff = completion_time - self.__arrival_time
+        if diff == 0:
+          print self.__id
+        return diff
         
     def complete(self):
         """ Returns whether we have complete info for the request.
@@ -536,6 +537,26 @@ class LogParser:
                 get_percentile(rcv_probing_times, i),
                 get_percentile(probing_times, i),
                 get_percentile(worst_probe_times, i)))
+    
+        file.write("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % ("mean",
+								stats.mean(response_times),
+								stats.mean(network_delays),
+								stats.mean(processing_times),
+								stats.mean(queue_times),
+								stats.mean(probe_times),
+								stats.mean(rcv_probing_times),
+								stats.mean(probing_times),
+								stats.mean(worst_probe_times)))
+
+        file.write("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % ("stdev",
+								numpy.std(response_times),
+								numpy.std(network_delays),
+								numpy.std(processing_times),
+								numpy.std(queue_times),
+								numpy.std(probe_times),
+								numpy.std(rcv_probing_times),
+								numpy.std(probing_times),
+								numpy.std(worst_probe_times)))
 
         file.close()
         

@@ -7,11 +7,9 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=5"
 
 for fe in $FRONTENDS; do
   rsync -e "ssh $SSH_OPTS" -az ~/ $fe:~/ &
-  sleep 0.3
 done
 
 for fe in $BACKENDS; do
   rsync -e "ssh $SSH_OPTS" -az ~/ $fe:~/ &
-  sleep 0.3
 done
 wait
