@@ -7,11 +7,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -19,9 +19,7 @@ import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
-import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -36,22 +34,24 @@ public class NodeMonitor {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
   /** How many blocking thrift clients to make for each registered backend. */ 
-  public final static int CLIENT_POOL_SIZE = 10;
   
   private static NodeMonitorState state;
   private HashMap<String, Map<TUserGroupInfo, TResourceVector>> appLoads = 
       new HashMap<String, Map<TUserGroupInfo, TResourceVector>>();
+  private HashMap<String, InetSocketAddress> appSockets = 
+      new HashMap<String, InetSocketAddress>();
+  private HashMap<String, List<String>> appTasks = 
+      new HashMap<String, List<String>>();
   
-  /** Cache of thrift clients pools for each backends. It is expected that clients
-   *  are removed from the pool when in use. */
-  private HashMap<String, BlockingQueue<BackendService.Client>> backendClients =
-      new HashMap<String, BlockingQueue<BackendService.Client>>();
   private TResourceVector capacity;
-  private InetAddress address;
   private Configuration conf;
+  private InetAddress address;
+  private TaskScheduler scheduler;
+  private TaskLauncherService taskLauncherService;
 
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
+    address = InetAddress.getLocalHost();
     if (mode.equals("standalone")) {
       state = new StandaloneNodeMonitorState();
     } else if (mode.equals("configbased")) {
@@ -67,7 +67,6 @@ public class NodeMonitor {
       LOG.fatal("Error initializing node monitor state.", e);
     }
     capacity = new TResourceVector();
-    address = InetAddress.getLocalHost();
     this.conf = conf;
     
     // Interrogate system resources. We may want to put this in another class, and note
@@ -94,6 +93,12 @@ public class NodeMonitor {
       LOG.info("Using default memory allocation: " + DEFAULT_MEMORY_MB);
       capacity.setMemory(DEFAULT_MEMORY_MB);  
     }
+    capacity.setCores(8);
+    
+    scheduler = new RoundRobinTaskScheduler();
+    scheduler.initialize(capacity);
+    taskLauncherService = new TaskLauncherService();
+    taskLauncherService.initialize(conf, scheduler, address);
   }
   
   /**
@@ -108,25 +113,8 @@ public class NodeMonitor {
       return false;
     }
     appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
-    
-    // NOTE: for now we do not require backends to export scheduling interface under
-    // standalone mode.
-    if (!conf.getString(SparrowConf.DEPLYOMENT_MODE).equals("standalone")) {
-    BlockingQueue<BackendService.Client> clients = new 
-        LinkedBlockingDeque<BackendService.Client>();
-    for (int i = 0; i < CLIENT_POOL_SIZE; i++) {
-      try {
-        clients.put(TClients.createBlockingBackendClient(
-            backendAddr.getHostName(), backendAddr.getPort()));
-      } catch (InterruptedException e) {
-        LOG.error("Interrupted creating thrift clients", e);
-      } catch (IOException e) {
-        LOG.error("Error creating thrift client", e);
-      }
-    }
-    backendClients.put(appId, clients);
-
-    }
+    appSockets.put(appId, backendAddr);
+    appTasks.put(appId, new ArrayList<String>());
     return state.registerBackend(appId, nmAddr);
   }
 
@@ -175,9 +163,22 @@ public class NodeMonitor {
       String app, Map<TUserGroupInfo, TResourceVector> load, 
       List<String> activeTaskIds) {
     LOG.debug(Logging.functionCall(app, load, activeTaskIds));
-    // TODO: currently ignores active task list, eventually want to check the duration
-    // of tasks in that list.
+    try {
+    List<String> toRemove = new LinkedList<String>();
+    for (String taskId : appTasks.get(app)) {
+      if (!activeTaskIds.contains(taskId)) {
+        scheduler.taskCompleted(taskId);
+        toRemove.add(taskId);
+      }
+    }
+    for (String taskId : toRemove) {
+      appTasks.get(app).remove(taskId);
+    }
     appLoads.put(app, load);
+    }
+    catch (RuntimeException e) {
+      e.printStackTrace();
+    }
   }
   
   /**
@@ -186,34 +187,23 @@ public class NodeMonitor {
   public boolean launchTask(String app, ByteBuffer message, String requestId,
       String taskId, TUserGroupInfo user, TResourceVector estimatedResources)
           throws TException {
-    LOG.debug(Logging.functionCall(app, message, requestId, taskId, user,
+    /* Task id's need not be unique between scheduling requests, so here we use an
+     * identifier which contains the request id, so we can tell when this task has
+     * finished. */
+    String compoundId = taskId + "-" + requestId;
+    LOG.debug(Logging.functionCall(app, message, requestId, compoundId, user,
                                    estimatedResources));
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_start", requestId,
                                             address.getHostAddress(), taskId));
-    if (!backendClients.containsKey(app)) {
-      LOG.warn("Requested task launch for unknown app: " + app);
+    InetSocketAddress socket = appSockets.get(app);
+    if (socket == null) {
+      LOG.error("No socket stored for " + app + " (never registered?). " +
+      		"Can't launch task.");
       return false;
     }
-    
-    BackendService.Client client = null;
-    try {
-      client = backendClients.get(app).take();
-    } catch (InterruptedException e) {
-      LOG.fatal(e);
-    }
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_call_start", requestId,
-        address.getHostAddress(), taskId));
-    client.launchTask(message, requestId, taskId, user, estimatedResources);
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_call_finish", requestId,
-        address.getHostAddress(), taskId));
-    try {
-      backendClients.get(app).put(client);
-    } catch (InterruptedException e) {
-      LOG.fatal(e);
-    }
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_finish", requestId,
-        address.getHostAddress(), taskId));
-    LOG.debug("Launched task " + taskId + " for app " + app);
+    appTasks.get(app).add(compoundId);
+    scheduler.submitTask(scheduler.new TaskDescription(taskId, taskId, message, 
+        estimatedResources, user, socket));
     return true;
   }
 }
