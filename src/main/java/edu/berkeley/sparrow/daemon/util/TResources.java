@@ -46,13 +46,25 @@ public class TResources {
     return addTo(clone(a), b);
   }
   
+  /** Subtract resource {@code b} from resource {@code a} and return the result */
+  public static TResourceVector subtract(TResourceVector a, TResourceVector b) {
+    return (subtractFrom(clone(a), b));
+  }
+  
   /** Return whether this resource is valid. */
   public static boolean isValid(TResourceVector r) {
-    return (r.memory > 0 && r.cores > 0);
+    return (r.memory >= 0 && r.cores >= 0);
   }
   
   /** Return whether two resources are equal. */
   public static boolean equal(TResourceVector a, TResourceVector b) {
     return ((a.getMemory() == b.getMemory()) && (a.getCores() == b.getCores()));
+  }
+  
+  /** Return whether resource {@code a} is less than or equal resource {@code b}, 
+   *  meaning all pairwise comparisons fulfill {@code a <= b}. 
+   */
+  public static boolean isLessThanOrEqualTo(TResourceVector a, TResourceVector b) {
+    return (a.getMemory() <= b.getMemory()) && (a.getCores() <= b.getCores());
   }
 }
