@@ -27,6 +27,10 @@ public class TaskLauncherService {
   private final static Logger LOG = Logger.getLogger(TaskLauncherService.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(
       TaskLauncherService.class);
+  /* The number of threads we use to launch tasks on backends. We also use this
+   * to determine how many thrift connections to keep open to each backend, so that
+   * in the limit case where all threads are talking to the same backend, we don't run
+   * out of connections.*/
   public final static int CLIENT_POOL_SIZE = 10;
   
   /** A runnable which spins in a loop asking for tasks to launch and launching them. */
@@ -40,7 +44,8 @@ public class TaskLauncherService {
           createThriftClients(task.backendSocket);
         }
         try {
-          client = backendClients.get(task.backendSocket).take();
+          client = backendClients.get(task.backendSocket).take(); // blocks until a client
+                                                                  // becomes available.
         } catch (InterruptedException e) {
           LOG.fatal(e);
         }

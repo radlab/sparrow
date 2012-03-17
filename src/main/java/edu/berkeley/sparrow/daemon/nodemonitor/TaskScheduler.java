@@ -47,7 +47,6 @@ public abstract class TaskScheduler {
   protected TResourceVector inUse = TResources.none();
   protected final BlockingQueue<TaskDescription> runnableTaskQueue = 
       new LinkedBlockingQueue<TaskDescription>();
-  protected final static TResourceVector ONE_CORE = TResources.createResourceVector(0, 1);
   private HashMap<String, TResourceVector> resourcesPerTask = new 
       HashMap<String, TResourceVector>();
   
@@ -79,7 +78,8 @@ public abstract class TaskScheduler {
   }
 
   void taskCompleted(String taskId) {
-    freeResourceInUse(ONE_CORE);
+    freeResourceInUse(resourcesPerTask.get(taskId));
+    resourcesPerTask.remove(taskId);
     handleTaskCompleted(taskId);
   }
   
@@ -91,10 +91,17 @@ public abstract class TaskScheduler {
   protected synchronized void addResourceInUse(TResourceVector nowInUse) {
     inUse = TResources.add(inUse, nowInUse);
   }  
+  
   protected synchronized void freeResourceInUse(TResourceVector nowFreed) {
     TResources.subtractFrom(inUse, nowFreed);
   }
-  protected synchronized TResourceVector getUnAssignedResources() {
+  
+  /**
+   * Return the quantity of free resources on the node. Free resources are determined
+   * by subtracting the currently used resources and currently runnable resources from
+   * the node's capacity.
+   */
+  protected synchronized TResourceVector getFreeResources() {
     TResourceVector free = TResources.subtract(capacity, inUse);
     TResourceVector reserved = TResources.none();
     for (TaskDescription t: runnableTaskQueue) {

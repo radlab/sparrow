@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 import edu.berkeley.sparrow.daemon.util.TResources;
 
 /**
- * A {@link TaskScheduler} which round-robin's requests over backlogged per-user queues.
+ * A {@link TaskScheduler} which round-robins requests over backlogged per-user queues.
  */
 public class RoundRobinTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(RoundRobinTaskScheduler.class);
@@ -19,11 +19,12 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       new HashMap<String, Queue<TaskDescription>>();
 
   private ArrayList<String> users = new ArrayList<String>();
-  private int currIndex = 0;
+  private int currentIndex = 0; // Round robin index, always used (mod n) where n is
+                                // the number of users.
 
   @Override
   void handleSubmitTask(TaskDescription task) {
-    if (TResources.isLessThanOrEqualTo(task.estimatedResources, getUnAssignedResources())) {
+    if (TResources.isLessThanOrEqualTo(task.estimatedResources, getFreeResources())) {
       try {
         runnableTaskQueue.put(task);
       } catch (InterruptedException e) {
@@ -65,17 +66,18 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
        * This makes sense for scheduling similar sized tasks (e.g. just scheduling cores)
        * but will not be the case if tasks take different amounts of resources. */
       for (int i = 0; i < users.size(); i++) {
-        String user = users.get((currIndex + i) % users.size());
+        String user = users.get((currentIndex + i) % users.size());
         Queue<TaskDescription> considering = userQueues.get(user);
         TaskDescription nextTask = considering.poll();
         if (nextTask == null) {
+          // Shouldn't get here if we are removing non-empty queues
           continue;
         }
         else {
           try {
             runnableTaskQueue.put(nextTask);
             removeTaskFromUserQueue(user, nextTask);
-            currIndex = currIndex + i + 1;
+            currentIndex = currentIndex + i + 1;
             return;
           } catch (InterruptedException e) {
             LOG.fatal(e);

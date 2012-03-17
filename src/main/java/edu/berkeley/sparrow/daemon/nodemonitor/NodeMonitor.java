@@ -33,6 +33,8 @@ public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
+  private final static int DEFAULT_CORES = 8;        // Default CPU capacity
+  
   /** How many blocking thrift clients to make for each registered backend. */ 
   
   private static NodeMonitorState state;
@@ -93,7 +95,8 @@ public class NodeMonitor {
       LOG.info("Using default memory allocation: " + DEFAULT_MEMORY_MB);
       capacity.setMemory(DEFAULT_MEMORY_MB);  
     }
-    capacity.setCores(8);
+    LOG.info("Using default core count: " + DEFAULT_CORES);
+    capacity.setCores(DEFAULT_CORES);
     
     scheduler = new RoundRobinTaskScheduler();
     scheduler.initialize(capacity);
@@ -187,7 +190,7 @@ public class NodeMonitor {
   public boolean launchTask(String app, ByteBuffer message, String requestId,
       String taskId, TUserGroupInfo user, TResourceVector estimatedResources)
           throws TException {
-    /* Task id's need not be unique between scheduling requests, so here we use an
+    /* Task ids need not be unique between scheduling requests, so here we use an
      * identifier which contains the request id, so we can tell when this task has
      * finished. */
     String compoundId = taskId + "-" + requestId;
