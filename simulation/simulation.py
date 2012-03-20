@@ -92,8 +92,6 @@ PARAMS = {'num_fes': [int, 1],             # number of frontends
           # packs multiple tasks on each node to minimize the overall queue
           # length.
           'queue_selection': [str, 'greedy'],
-          # Whether extra queue state should be recorded.
-          'record_queue_state': [lambda x: x == "True", False],
           # The metric to return when a server is probed for its load.  Options
           # are 'total', which returns the total queue length, 'estimate',
           # which returns an estimated queue length based on other probes it's
@@ -107,7 +105,12 @@ PARAMS = {'num_fes': [int, 1],             # number of frontends
           'relative_demands': [get_normalized_list, []],
           # comma separated list of relative weights with which to run tasks
           # for each user.  Currently, only integers are supported.
-          'relative_weights': [get_int_list, []]
+          'relative_weights': [get_int_list, []],
+          # Whether extra queue state should be recorded.
+          'record_queue_state': [lambda x: x == "True", False],
+          # Whether to record information about individual tasks, including
+          # expected load (based on the probe) and runtime.
+          'record_task_info': [lambda x: x == "True", False]
          }
 
 def get_param(key):
@@ -151,6 +154,15 @@ class Job(object):
         self.id_str = str(id_str)
         self.longest_task = 0
         
+        if get_param("record_task_info"):
+            # Expected load (based on the probe) and actual wait time for all
+            # tasks, indexed by the task id.
+            self.probe_results = []
+            self.wait_times = []
+            while len(self.probe_results) < self.num_tasks:
+                self.probe_results.append(-1)
+                self.wait_times.append(-1)
+        
     def get_task_length(self, task_id):
         """ Returns the time the current task takes to execute.
 
@@ -165,6 +177,21 @@ class Job(object):
                 task_length += random.expovariate(10.0 / self.task_length)
         self.longest_task = max(self.longest_task, task_length)
         return task_length
+    
+    def record_probe_result(self, task_id, load):
+        """ Records the expected load on the machine for the given task.
+        
+        This function should only be called if the "record_task_info" parameter
+        is true.
+        """
+        assert get_param("record_task_info")
+        assert task_id < self.num_tasks
+        self.probe_results[task_id] = load
+        
+    def record_wait_time(self, task_id, launch_time):
+        assert get_param("record_task_info")
+        assert task_id < self.num_tasks
+        self.wait_times[task_id] = launch_time - self.arrival_time
         
     def task_finished(self, current_time):
         """ Should be called whenever a task completes.
@@ -205,7 +232,7 @@ class Server(object):
     
     def __init__(self, id_str, stats_manager, num_users):
         # List of queues for each user, indexed by the user id.  Each queue
-        # contains (task_length, job) pairs.
+        # contains (job, task_id) pairs.
         self.queues = []
         for user in range(num_users):
             self.queues.append([])
@@ -310,9 +337,8 @@ class Server(object):
         Begins running the task, if there are no other tasks in the queue.
         Returns a TaskCompletion event, if there are no tasks running.
         """
-        task_length = job.get_task_length(task_index)
         self.queue_length += 1
-        self.queues[job.user_id].append((task_length, job))
+        self.queues[job.user_id].append((job, task_index))
         self.stats_manager.task_queued(job.user_id, current_time)
         if self.queue_length == 1:
             # There aren't any tasks currently running, so launch this one.
@@ -347,12 +373,14 @@ class Server(object):
             self.current_user = (self.current_user + 1) % self.num_users
             self.task_count = 0
         # Get the first task from the queue
-        task_length, job = self.queues[self.current_user][0]
+        job, task_id = self.queues[self.current_user][0]
         assert job.user_id == self.current_user
+        task_length = job.get_task_length(task_id)
         event = (current_time + task_length, TaskCompletion(job, self))
         self.stats_manager.task_started(self.current_user, current_time)
         self.time_started = current_time
-
+        if get_param("record_task_info"):
+            job.record_wait_time(task_id, current_time)
         return event
         
 class FrontEnd(object):
@@ -392,6 +420,8 @@ class FrontEnd(object):
         task_arrival_time = current_time + get_param("network_delay")
         for (counter, (server, length)) in enumerate(
                 self.get_best_n_queues(queue_lengths, job.num_tasks)):
+            if get_param("record_task_info"):
+                job.record_probe_result(counter, length)
             events.append((task_arrival_time,
                            TaskArrival(server, job, counter)))
             #self.logger.debug("\t%d\tAssigning job %s for user %d to %s" % 
@@ -653,6 +683,11 @@ class StatsManager(object):
         except:
             pass
         
+        if get_param("record_task_info"):
+            if get_param("load_metric") == "total":
+                self.output_wait_time_cdf()
+            else:
+                self.output_load_versus_launch_time()
         self.output_running_tasks()
         self.output_bucketed_running_tasks()
         #self.output_queue_size()
@@ -660,15 +695,127 @@ class StatsManager(object):
         #self.output_job_overhead()
         self.output_response_times()
         
-        for user_id in range(get_param("num_users")):
-            self.output_response_times(user_id)
+        if get_param("num_users") > 1:
+            for user_id in range(get_param("num_users")):
+                self.output_response_times(user_id)
          
         # This can be problematic for small total runtimes, since the number
         # of jobs with 200 tasks may be just 1 or 0.    
         if get_param("task_distribution") == "bimodal":
             self.output_per_job_size_response_time()
             
+    def output_load_versus_launch_time(self):
+        """ Outputs the predicted load and launch time for each task.
+        
+        This information is intended to help evaluate the staleness of the
+        load information from the probe.  If the information is quite stale,
+        we'd expect to see little correlation between the load and the launch
+        time of the task.
+        """
+        results_dirname = get_param("results_dir")
+        per_task_filename = os.path.join(results_dirname,
+                                         "%s_task_load_vs_wait" %
+                                         get_param("file_prefix"))
+        per_task_file = open(per_task_filename, "w")
+        per_task_file.write("load\twait_time\n")
+        
+        per_job_filename = os.path.join(results_dirname,
+                                        "%s_job_load_vs_wait" %
+                                        get_param("file_prefix"))
+        per_job_file = open(per_job_filename, "w")
+        per_job_file.write("load\twait_time\n")
+        for job in self.completed_jobs:
+            # Launch time and expected load for the last task to launch.
+            longest_task_wait = -1
+            longest_task_load = -1
+            for task_id in range(job.num_tasks):
+                load = job.probe_results[task_id]
+                wait = job.wait_times[task_id]
+                if wait > longest_task_wait:
+                    longest_task_wait = wait
+                    longest_task_load = load
+                per_task_file.write("%f\t%f\n" % (load, wait))
+                
+            per_job_file.write("%f\t%f\n" % (longest_task_load,
+                                             longest_task_wait))
+        per_job_file.close()
+        per_task_file.close()
+        
+    def output_wait_time_cdf(self):
+        """ Outputs a CDF of wait times for each probe response.
+        
+        This function should only be called if the load metric is total,
+        since otherwise, the probe responses will be non-integral (and there
+        will be potentially a large number of different responses), so the
+        output format used here won't make sense.
+        
+        Outputs two files, one with a CDF for all tasks, and one with
+        a CDF for the longest task in each job.
+        """
+        results_dirname = get_param("results_dir")
+        job_filename = os.path.join(results_dirname, "%s_job_wait_cdf" %
+                                    get_param("file_prefix"))
+        job_file = open(job_filename, "w")
+        task_filename = os.path.join(results_dirname, "%s_task_wait_cdf" %
+                                     get_param("file_prefix"))
+        task_file = open(task_filename, "w")
+        
+        # Dictionary mapping loads (as returned by probes) to a list of wait
+        # times for the corresponding tasks.
+        wait_times_per_load = {}
+        # Wait times for the last task in each job.
+        longest_wait_times_per_load = {}
+        for job in self.completed_jobs:
+            longest_task_wait = -1
+            longest_task_load = -1
+            for task_id in range(job.num_tasks):
+                load = job.probe_results[task_id]
+                wait = job.wait_times[task_id]
+                if wait > longest_task_wait:
+                    longest_task_wait = wait
+                    longest_task_load = load
+                if load not in wait_times_per_load:
+                    wait_times_per_load[load] = []
+                wait_times_per_load[load].append(wait)
+            if longest_task_load not in longest_wait_times_per_load:
+                longest_wait_times_per_load[longest_task_load] = []
+            longest_wait_times_per_load[longest_task_load].append(
+                    longest_task_wait)
+        
+        task_file.write("Percentile\t")
+        job_file.write("Percentile\t")
+        for load in sorted(wait_times_per_load.keys()):
+            wait_times_per_load[load].sort()
+            task_file.write("%f(%d)\t" %
+                            (load, len(wait_times_per_load[load])))
+        task_file.write("\n")
+        for load in sorted(longest_wait_times_per_load.keys()):
+            longest_wait_times_per_load[load].sort()
+            job_file.write("%f(%d)\t" %
+                           (load, len(longest_wait_times_per_load[load])))
+        job_file.write("\n")
+
+        percentile_granularity = 200
+        for i in range(percentile_granularity):
+            percentile = float(i) / percentile_granularity
+            job_file.write("%f" % percentile)
+            task_file.write("%f" % percentile)
+            for load in sorted(longest_wait_times_per_load.keys()):
+                job_file.write("\t%f" % self.percentile(
+                        longest_wait_times_per_load[load], percentile))
+            job_file.write("\n")
+            for load in sorted(wait_times_per_load.keys()):
+                task_file.write("\t%f" %
+                                self.percentile(wait_times_per_load[load],
+                                                percentile))
+            task_file.write("\n")
+        job_file.close()
+            
     def output_bucketed_running_tasks(self):
+        """ Writes the number of running tasks for each user.
+        
+        The number of running tasks are bucketed over some interval, to give
+        a sense of fairness over time. """
         bucketed_running_tasks_per_user = []
         bucket_interval = 100
         
@@ -681,7 +828,7 @@ class StatsManager(object):
 
         for user_id in range(get_param("num_users")):
             bucketed_running_tasks = []
-            # Total number of CPU millseconds used during this bucket.
+            # Total number of CPU milliseconds used during this bucket.
             cpu_millis = 0
             current_running_tasks = 0
             # Last time we got a measurement for the number of running tasks.
@@ -875,7 +1022,7 @@ class StatsManager(object):
                  get_param("num_servers"), avg_empty_queues))
         f.close()
         
-        # Write CDF of response times
+        # Write CDF of response times.
         #filename = os.path.join(results_dirname, "%s_response_time_cdf" %
         #                       get_param("file_prefix"))
         #f = open(filename, "w")
