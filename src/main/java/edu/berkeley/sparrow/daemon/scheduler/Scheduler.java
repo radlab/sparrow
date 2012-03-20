@@ -1,7 +1,6 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -17,6 +16,10 @@ import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.async.TAsyncClientManager;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocolFactory;
+import org.apache.thrift.transport.TNonblockingSocket;
+import org.apache.thrift.transport.TNonblockingTransport;
 import org.apache.thrift.transport.TTransport;
 import org.mortbay.log.Log;
 
@@ -143,18 +146,32 @@ public class Scheduler {
     // Launch tasks.
     CountDownLatch latch = new CountDownLatch(placement.size());
     for (TaskPlacementResponse response : placement) {
-      if (!response.getClient().isPresent()) {
-        throw new RuntimeException("TaskPlacer did not return thrift client.");
-      }
       LOG.debug("Attempting to launch task on " + response.getNodeAddr());
-      InternalService.AsyncClient client = response.getClient().get();
+
+      InternalService.AsyncClient client = null;
+      TNonblockingTransport transport = null;
+      if (!response.getClient().isPresent()) {
+        try {
+          transport = new TNonblockingSocket(
+              response.getNodeAddr().getHostName(), response.getNodeAddr().getPort());
+        } catch (IOException e) {
+          LOG.error(e);
+          return false;
+        }
+        TProtocolFactory factory = new TBinaryProtocol.Factory();
+        client = new InternalService.AsyncClient(
+            factory, clientManager, transport);
+      } else {
+        client = response.getClient().get();
+        transport = response.getTransport().get();
+      }
       String taskId = response.getTaskSpec().taskID;
 
       AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
       client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
           taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
           address.getHostName() + ":" + address.getPort(),
-          new TaskLaunchCallback(latch, response.getTransport().get()));
+          new TaskLaunchCallback(latch, transport));
     }
     try {
       LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");

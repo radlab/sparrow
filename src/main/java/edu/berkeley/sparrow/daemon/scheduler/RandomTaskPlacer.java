@@ -9,7 +9,7 @@ import java.util.HashSet;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.async.TAsyncClientManager;
-import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TNonblockingTransport;
 
 import com.google.common.base.Optional;
 
@@ -34,7 +34,7 @@ public class RandomTaskPlacer implements TaskPlacer {
     
     // Empty client/transport used for all responses
     Optional<InternalService.AsyncClient> client = Optional.absent();
-    Optional<TTransport> transport = Optional.absent();
+    Optional<TNonblockingTransport> transport = Optional.absent();
    
     int i = 0;
     for (TTaskSpec task : tasks) {
