@@ -11,11 +11,19 @@ Code Layout
 -------------------------
 `simulation.py` Code to run a single simulation
 
-`graph.py` Some scripts that use `simulation.py` to run multiple simulations, typically involving varying one or more parameters and graphing the result.
-
 `simulation_tests.py` Unit tests for the simulation.
 
 `stats.py` Statistics functionality to help with interpreting results.
+
+The remaining files run multiple simulations and typically vary one or more parameters and graph the result:
+
+`debug_wait_time.py`: Debugs surprising simulation behavior by looking at how the wait time for tasks corresponds to the information Sparrow got from the probe for that particular task.  Graphs a separate CDF of the task wait time, for each probe result.
+
+`effect_of_network_delay.py`: Measures the effect of network delay by graphing response time as a function of utilization, for various different network delays.
+
+`effect_of_probes.py`: Measures the effect of different numbers of probes by graphing response time as a function of utilization, for various different numbers of probes.
+
+`fairness.py`: Measures fairness in a few different ways, including plotting the number of running tasks for each user, over the duration of the experiment, and plotting the response time for each user.
 
 Running a Single Simulation
 -------------------------
@@ -36,7 +44,7 @@ Results are saved in the `raw_results/` directory, using the prefix given by the
 
 Running Larger Experiments
 -------------------------
-Typically, the most useful simulations involve varying one or more parameters and graphing the result.  The `graph.py` file includes functionality to run experiments using a variety of parameters, and automatically graphs  the results.
+Typically, the most useful simulations involve varying one or more parameters and graphing the result.  As described under Code Layout, there are various files to help run experiments using a variety of parameters and automatically graph the results.
 
 Testing the Simulation
 -------------------------
