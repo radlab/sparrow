@@ -188,7 +188,7 @@ class Job(object):
         assert task_id < self.num_tasks
         self.probe_results[task_id] = load
         
-    def record_launch_time(self, task_id, launch_time):
+    def record_wait_time(self, task_id, launch_time):
         assert get_param("record_task_info")
         assert task_id < self.num_tasks
         self.wait_times[task_id] = launch_time - self.arrival_time
@@ -380,8 +380,7 @@ class Server(object):
         self.stats_manager.task_started(self.current_user, current_time)
         self.time_started = current_time
         if get_param("record_task_info"):
-            job.record_launch_time(task_id, current_time)
-
+            job.record_wait_time(task_id, current_time)
         return event
         
 class FrontEnd(object):
@@ -761,9 +760,11 @@ class StatsManager(object):
                                      get_param("file_prefix"))
         task_file = open(task_filename, "w")
         
-        wait_times_per_load = []
+        # Dictionary mapping loads (as returned by probes) to a list of wait
+        # times for the corresponding tasks.
+        wait_times_per_load = {}
         # Wait times for the last task in each job.
-        longest_wait_times_per_load = []
+        longest_wait_times_per_load = {}
         for job in self.completed_jobs:
             longest_task_wait = -1
             longest_task_load = -1
@@ -773,22 +774,22 @@ class StatsManager(object):
                 if wait > longest_task_wait:
                     longest_task_wait = wait
                     longest_task_load = load
-                while load >= len(wait_times_per_load):
-                    wait_times_per_load.append([])
+                if load not in wait_times_per_load:
+                    wait_times_per_load[load] = []
                 wait_times_per_load[load].append(wait)
-            while longest_task_load >= len(longest_wait_times_per_load):
-                longest_wait_times_per_load.append([])
+            if longest_task_load not in longest_wait_times_per_load:
+                longest_wait_times_per_load[longest_task_load] = []
             longest_wait_times_per_load[longest_task_load].append(
                     longest_task_wait)
         
         task_file.write("Percentile\t")
         job_file.write("Percentile\t")
-        for load in range(len(wait_times_per_load)):
+        for load in sorted(wait_times_per_load.keys()):
             wait_times_per_load[load].sort()
             task_file.write("%f(%d)\t" %
                             (load, len(wait_times_per_load[load])))
         task_file.write("\n")
-        for load in range(len(longest_wait_times_per_load)):
+        for load in sorted(longest_wait_times_per_load.keys()):
             longest_wait_times_per_load[load].sort()
             job_file.write("%f(%d)\t" %
                            (load, len(longest_wait_times_per_load[load])))
@@ -799,13 +800,14 @@ class StatsManager(object):
             percentile = float(i) / percentile_granularity
             job_file.write("%f" % percentile)
             task_file.write("%f" % percentile)
-            for wait_times in longest_wait_times_per_load:
-                job_file.write("\t%f" %
-                               self.percentile(wait_times, percentile))
+            for load in sorted(longest_wait_times_per_load.keys()):
+                job_file.write("\t%f" % self.percentile(
+                        longest_wait_times_per_load[load], percentile))
             job_file.write("\n")
-            for wait_times in wait_times_per_load:
+            for load in sorted(wait_times_per_load.keys()):
                 task_file.write("\t%f" %
-                                self.percentile(wait_times, percentile))
+                                self.percentile(wait_times_per_load[load],
+                                                percentile))
             task_file.write("\n")
         job_file.close()
             
