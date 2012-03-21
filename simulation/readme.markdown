@@ -17,13 +17,13 @@ Code Layout
 
 The remaining files run multiple simulations and typically vary one or more parameters and graph the result:
 
-`debug_wait_time.py`: Debugs surprising simulation behavior by looking at how the wait time for tasks corresponds to the information Sparrow got from the probe for that particular task.  Graphs a separate CDF of the task wait time, for each probe result.
-
 `effect_of_network_delay.py`: Measures the effect of network delay by graphing response time as a function of utilization, for various different network delays.
 
 `effect_of_probes.py`: Measures the effect of different numbers of probes by graphing response time as a function of utilization, for various different numbers of probes.
 
 `fairness.py`: Measures fairness in a few different ways, including plotting the number of running tasks for each user, over the duration of the experiment, and plotting the response time for each user.
+
+`wait_time_vs_load.py`: Looks at how the wait time for tasks corresponds to the information Sparrow got from the probe for that particular task.  Graphs a separate CDF of the task wait time, for each probe result.
 
 Running a Single Simulation
 -------------------------

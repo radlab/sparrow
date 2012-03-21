@@ -2,7 +2,7 @@
 import simulation
 import subprocess
 
-def debug_load_vs_wait(file_prefix, utilization, num_servers, tasks_per_job,
+def wait_time_vs_load(file_prefix, utilization, num_servers, tasks_per_job,
                        probes_ratio):
     """ This debugs anomalous performance by plotting wait time.
     
@@ -57,7 +57,7 @@ def debug_load_vs_wait(file_prefix, utilization, num_servers, tasks_per_job,
 
 def main():
     # Fill this in with whatever experiment should be run.
-    debug_load_vs_wait("step_high", 0.8, 10000, 200, 1.5)
+    wait_time_vs_load("step_high", 0.8, 10000, 200, 1.5)
 
 if __name__ == '__main__':
     main()
