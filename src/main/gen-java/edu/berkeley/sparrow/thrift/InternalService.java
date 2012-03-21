@@ -26,7 +26,7 @@ public class InternalService {
 
     public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app, String requestId) throws org.apache.thrift.TException;
 
-    public boolean launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException;
+    public boolean launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress) throws org.apache.thrift.TException;
 
   }
 
@@ -34,7 +34,7 @@ public class InternalService {
 
     public void getLoad(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getLoad_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.launchTask_call> resultHandler) throws org.apache.thrift.TException;
+    public void launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.launchTask_call> resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -82,13 +82,13 @@ public class InternalService {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getLoad failed: unknown result");
     }
 
-    public boolean launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException
+    public boolean launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress) throws org.apache.thrift.TException
     {
-      send_launchTask(app, message, requestId, taskId, user, estimatedResources);
+      send_launchTask(app, message, requestId, taskId, user, estimatedResources, schedulerAddress);
       return recv_launchTask();
     }
 
-    public void send_launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException
+    public void send_launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress) throws org.apache.thrift.TException
     {
       launchTask_args args = new launchTask_args();
       args.setApp(app);
@@ -97,6 +97,7 @@ public class InternalService {
       args.setTaskId(taskId);
       args.setUser(user);
       args.setEstimatedResources(estimatedResources);
+      args.setSchedulerAddress(schedulerAddress);
       sendBase("launchTask", args);
     }
 
@@ -163,9 +164,9 @@ public class InternalService {
       }
     }
 
-    public void launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler) throws org.apache.thrift.TException {
+    public void launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      launchTask_call method_call = new launchTask_call(app, message, requestId, taskId, user, estimatedResources, resultHandler, this, ___protocolFactory, ___transport);
+      launchTask_call method_call = new launchTask_call(app, message, requestId, taskId, user, estimatedResources, schedulerAddress, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -177,7 +178,8 @@ public class InternalService {
       private String taskId;
       private edu.berkeley.sparrow.thrift.TUserGroupInfo user;
       private edu.berkeley.sparrow.thrift.TResourceVector estimatedResources;
-      public launchTask_call(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private String schedulerAddress;
+      public launchTask_call(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.app = app;
         this.message = message;
@@ -185,6 +187,7 @@ public class InternalService {
         this.taskId = taskId;
         this.user = user;
         this.estimatedResources = estimatedResources;
+        this.schedulerAddress = schedulerAddress;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -196,6 +199,7 @@ public class InternalService {
         args.setTaskId(taskId);
         args.setUser(user);
         args.setEstimatedResources(estimatedResources);
+        args.setSchedulerAddress(schedulerAddress);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -255,7 +259,7 @@ public class InternalService {
 
       protected launchTask_result getResult(I iface, launchTask_args args) throws org.apache.thrift.TException {
         launchTask_result result = new launchTask_result();
-        result.success = iface.launchTask(args.app, args.message, args.requestId, args.taskId, args.user, args.estimatedResources);
+        result.success = iface.launchTask(args.app, args.message, args.requestId, args.taskId, args.user, args.estimatedResources, args.schedulerAddress);
         result.setSuccessIsSet(true);
         return result;
       }
@@ -998,6 +1002,7 @@ public class InternalService {
     private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRING, (short)4);
     private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)5);
     private static final org.apache.thrift.protocol.TField ESTIMATED_RESOURCES_FIELD_DESC = new org.apache.thrift.protocol.TField("estimatedResources", org.apache.thrift.protocol.TType.STRUCT, (short)6);
+    private static final org.apache.thrift.protocol.TField SCHEDULER_ADDRESS_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulerAddress", org.apache.thrift.protocol.TType.STRING, (short)7);
 
     public String app; // required
     public ByteBuffer message; // required
@@ -1005,6 +1010,7 @@ public class InternalService {
     public String taskId; // required
     public edu.berkeley.sparrow.thrift.TUserGroupInfo user; // required
     public edu.berkeley.sparrow.thrift.TResourceVector estimatedResources; // required
+    public String schedulerAddress; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -1013,7 +1019,8 @@ public class InternalService {
       REQUEST_ID((short)3, "requestId"),
       TASK_ID((short)4, "taskId"),
       USER((short)5, "user"),
-      ESTIMATED_RESOURCES((short)6, "estimatedResources");
+      ESTIMATED_RESOURCES((short)6, "estimatedResources"),
+      SCHEDULER_ADDRESS((short)7, "schedulerAddress");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -1040,6 +1047,8 @@ public class InternalService {
             return USER;
           case 6: // ESTIMATED_RESOURCES
             return ESTIMATED_RESOURCES;
+          case 7: // SCHEDULER_ADDRESS
+            return SCHEDULER_ADDRESS;
           default:
             return null;
         }
@@ -1096,6 +1105,8 @@ public class InternalService {
           new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TUserGroupInfo.class)));
       tmpMap.put(_Fields.ESTIMATED_RESOURCES, new org.apache.thrift.meta_data.FieldMetaData("estimatedResources", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class)));
+      tmpMap.put(_Fields.SCHEDULER_ADDRESS, new org.apache.thrift.meta_data.FieldMetaData("schedulerAddress", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(launchTask_args.class, metaDataMap);
     }
@@ -1109,7 +1120,8 @@ public class InternalService {
       String requestId,
       String taskId,
       edu.berkeley.sparrow.thrift.TUserGroupInfo user,
-      edu.berkeley.sparrow.thrift.TResourceVector estimatedResources)
+      edu.berkeley.sparrow.thrift.TResourceVector estimatedResources,
+      String schedulerAddress)
     {
       this();
       this.app = app;
@@ -1118,6 +1130,7 @@ public class InternalService {
       this.taskId = taskId;
       this.user = user;
       this.estimatedResources = estimatedResources;
+      this.schedulerAddress = schedulerAddress;
     }
 
     /**
@@ -1143,6 +1156,9 @@ public class InternalService {
       if (other.isSetEstimatedResources()) {
         this.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector(other.estimatedResources);
       }
+      if (other.isSetSchedulerAddress()) {
+        this.schedulerAddress = other.schedulerAddress;
+      }
     }
 
     public launchTask_args deepCopy() {
@@ -1156,6 +1172,7 @@ public class InternalService {
       this.taskId = null;
       this.user = null;
       this.estimatedResources = null;
+      this.schedulerAddress = null;
     }
 
     public String getApp() {
@@ -1312,6 +1329,30 @@ public class InternalService {
       }
     }
 
+    public String getSchedulerAddress() {
+      return this.schedulerAddress;
+    }
+
+    public launchTask_args setSchedulerAddress(String schedulerAddress) {
+      this.schedulerAddress = schedulerAddress;
+      return this;
+    }
+
+    public void unsetSchedulerAddress() {
+      this.schedulerAddress = null;
+    }
+
+    /** Returns true if field schedulerAddress is set (has been assigned a value) and false otherwise */
+    public boolean isSetSchedulerAddress() {
+      return this.schedulerAddress != null;
+    }
+
+    public void setSchedulerAddressIsSet(boolean value) {
+      if (!value) {
+        this.schedulerAddress = null;
+      }
+    }
+
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case APP:
@@ -1362,6 +1403,14 @@ public class InternalService {
         }
         break;
 
+      case SCHEDULER_ADDRESS:
+        if (value == null) {
+          unsetSchedulerAddress();
+        } else {
+          setSchedulerAddress((String)value);
+        }
+        break;
+
       }
     }
 
@@ -1384,6 +1433,9 @@ public class InternalService {
 
       case ESTIMATED_RESOURCES:
         return getEstimatedResources();
+
+      case SCHEDULER_ADDRESS:
+        return getSchedulerAddress();
 
       }
       throw new IllegalStateException();
@@ -1408,6 +1460,8 @@ public class InternalService {
         return isSetUser();
       case ESTIMATED_RESOURCES:
         return isSetEstimatedResources();
+      case SCHEDULER_ADDRESS:
+        return isSetSchedulerAddress();
       }
       throw new IllegalStateException();
     }
@@ -1476,6 +1530,15 @@ public class InternalService {
         if (!(this_present_estimatedResources && that_present_estimatedResources))
           return false;
         if (!this.estimatedResources.equals(that.estimatedResources))
+          return false;
+      }
+
+      boolean this_present_schedulerAddress = true && this.isSetSchedulerAddress();
+      boolean that_present_schedulerAddress = true && that.isSetSchedulerAddress();
+      if (this_present_schedulerAddress || that_present_schedulerAddress) {
+        if (!(this_present_schedulerAddress && that_present_schedulerAddress))
+          return false;
+        if (!this.schedulerAddress.equals(that.schedulerAddress))
           return false;
       }
 
@@ -1555,6 +1618,16 @@ public class InternalService {
           return lastComparison;
         }
       }
+      lastComparison = Boolean.valueOf(isSetSchedulerAddress()).compareTo(typedOther.isSetSchedulerAddress());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetSchedulerAddress()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.schedulerAddress, typedOther.schedulerAddress);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
       return 0;
     }
 
@@ -1616,6 +1689,13 @@ public class InternalService {
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
             }
             break;
+          case 7: // SCHEDULER_ADDRESS
+            if (field.type == org.apache.thrift.protocol.TType.STRING) {
+              this.schedulerAddress = iprot.readString();
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
         }
@@ -1659,6 +1739,11 @@ public class InternalService {
       if (this.estimatedResources != null) {
         oprot.writeFieldBegin(ESTIMATED_RESOURCES_FIELD_DESC);
         this.estimatedResources.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      if (this.schedulerAddress != null) {
+        oprot.writeFieldBegin(SCHEDULER_ADDRESS_FIELD_DESC);
+        oprot.writeString(this.schedulerAddress);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -1715,6 +1800,14 @@ public class InternalService {
         sb.append("null");
       } else {
         sb.append(this.estimatedResources);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("schedulerAddress:");
+      if (this.schedulerAddress == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.schedulerAddress);
       }
       first = false;
       sb.append(")");
