@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.util;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.log4j.Logger;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -11,6 +12,7 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.thrift.BackendService;
+import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.StateStoreService;
@@ -34,6 +36,11 @@ public class TClients {
     TProtocol proto = new TBinaryProtocol(tr);
     NodeMonitorService.Client client = new NodeMonitorService.Client(proto);
     return client;
+  }
+  
+  public static SchedulerService.Client createBlockingSchedulerClient(
+      InetSocketAddress socket) throws IOException {
+    return createBlockingSchedulerClient(socket.getHostName(), socket.getPort());
   }
   
   public static SchedulerService.Client createBlockingSchedulerClient(
@@ -78,6 +85,26 @@ public class TClients {
     }
     TProtocol proto = new TBinaryProtocol(tr);
     StateStoreService.Client client = new StateStoreService.Client(proto);
+    return client;
+  }
+  
+  public static FrontendService.Client createBlockingFrontendClient(
+      InetSocketAddress socket) throws IOException {
+    return createBlockingFrontendClient(socket.getHostName(), socket.getPort());
+  }
+  
+  public static FrontendService.Client createBlockingFrontendClient(
+      String host, int port) throws IOException {
+    TTransport tr = new TFramedTransport(
+        new TSocket(host, port));
+    try {
+      tr.open();
+    } catch (TTransportException e) {
+      LOG.warn("Error creating state store client to " + host + ":" + port);
+      throw new IOException(e);
+    }
+    TProtocol proto = new TBinaryProtocol(tr);
+    FrontendService.Client client = new FrontendService.Client(proto);
     return client;
   }
 }

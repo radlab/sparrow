@@ -17,9 +17,14 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
+import com.google.common.base.Optional;
+
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.Serialization;
+import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.SchedulerService.Client;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -44,6 +49,9 @@ public class NodeMonitor {
       new HashMap<String, InetSocketAddress>();
   private HashMap<String, List<String>> appTasks = 
       new HashMap<String, List<String>>();
+  // Map to scheduler socket address for each request id.
+  private HashMap<String, InetSocketAddress> appSchedulers =
+      new HashMap<String, InetSocketAddress>();
   
   private TResourceVector capacity;
   private Configuration conf;
@@ -186,9 +194,11 @@ public class NodeMonitor {
   
   /**
    * Launch a task for the given app.
+   * @param schedulerAddress 
    */
   public boolean launchTask(String app, ByteBuffer message, String requestId,
-      String taskId, TUserGroupInfo user, TResourceVector estimatedResources)
+      String taskId, TUserGroupInfo user, TResourceVector estimatedResources, 
+      String schedulerAddress)
           throws TException {
     /* Task ids need not be unique between scheduling requests, so here we use an
      * identifier which contains the request id, so we can tell when this task has
@@ -198,6 +208,15 @@ public class NodeMonitor {
                                    estimatedResources));
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_start", requestId,
                                             address.getHostAddress(), taskId));
+    
+    Optional<InetSocketAddress> schedAddr = Serialization.strToSocket(schedulerAddress);
+    if (!schedAddr.isPresent()) {
+      LOG.error("No scheduler address specified in request for " + app + " got " + 
+                schedulerAddress);
+      return false;
+    }
+    appSchedulers.put(requestId, schedAddr.get());
+    
     InetSocketAddress socket = appSockets.get(app);
     if (socket == null) {
       LOG.error("No socket stored for " + app + " (never registered?). " +
@@ -205,8 +224,29 @@ public class NodeMonitor {
       return false;
     }
     appTasks.get(app).add(compoundId);
-    scheduler.submitTask(scheduler.new TaskDescription(taskId, taskId, message, 
+    scheduler.submitTask(scheduler.new TaskDescription(compoundId, requestId, message, 
         estimatedResources, user, socket));
     return true;
+  }
+
+  public void sendFrontendMessage(String app, String requestId,
+      ByteBuffer message) {
+    LOG.debug(Logging.functionCall(app, requestId, message));
+    InetSocketAddress scheduler = appSchedulers.get(requestId);
+    if (scheduler == null) {
+      LOG.error("Did not find any scheduler info for request: " + requestId);
+      return;
+    }
+
+    // TODO it would be nice if we had a generic way to send one-way messages
+    // asynchronously. This should probably be changed from the blocking interface.
+    try {
+      Client client = TClients.createBlockingSchedulerClient(scheduler);
+      client.sendFrontendMessage(app, requestId, message);
+    } catch (IOException e) {
+      LOG.error(e);
+    } catch (TException e) {
+      LOG.error(e);
+    }
   }
 }

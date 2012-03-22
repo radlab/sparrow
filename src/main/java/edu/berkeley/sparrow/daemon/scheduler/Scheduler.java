@@ -3,8 +3,10 @@ package edu.berkeley.sparrow.daemon.scheduler;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -18,9 +20,14 @@ import org.apache.thrift.async.TAsyncClientManager;
 import org.apache.thrift.transport.TTransport;
 import org.mortbay.log.Log;
 
+import com.google.common.base.Optional;
+
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.Serialization;
+import edu.berkeley.sparrow.daemon.util.TClients;
+import edu.berkeley.sparrow.thrift.FrontendService.Client;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
@@ -36,7 +43,11 @@ public class Scheduler {
   
   /** Used to uniquely identify requests arriving at this scheduler. */
   private int counter = 0;
-  private InetAddress address;
+  private InetSocketAddress address;
+  
+  /** Socket addresses for each frontend. */
+  HashMap<String, InetSocketAddress> frontendSockets = 
+      new HashMap<String, InetSocketAddress>();
   
   /** Pointer to shared selector thread. */
   TAsyncClientManager clientManager;
@@ -75,8 +86,8 @@ public class Scheduler {
   SchedulerState state;
   TaskPlacer placer;
 
-  public void initialize(Configuration conf) throws IOException {
-    address = InetAddress.getLocalHost();
+  public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
+    address = socket;
     clientManager = new TAsyncClientManager();
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
@@ -96,8 +107,14 @@ public class Scheduler {
     placer.initialize(conf);
   }
   
-  public boolean registerFrontEnd(String appId) {
-    LOG.debug(Logging.functionCall(appId));
+  public boolean registerFrontend(String appId, String addr) {
+    LOG.debug(Logging.functionCall(appId, addr));
+    Optional<InetSocketAddress> socketAddress = Serialization.strToSocket(addr);
+    if (!socketAddress.isPresent()) {
+      LOG.error("Bad address from frontend: " + addr);
+      return false;
+    }
+    frontendSockets.put(appId, socketAddress.get());
     return state.watchApplication(appId);
   }
 
@@ -113,7 +130,7 @@ public class Scheduler {
     // machine.
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
                                             req.getTasks().size(),
-                                            address.getHostAddress()));
+                                            address.getAddress().getHostAddress()));
     Collection<TaskPlacementResponse> placement = null;
     try {
       placement = getJobPlacementResp(req, requestId);
@@ -132,9 +149,11 @@ public class Scheduler {
       LOG.debug("Attempting to launch task on " + response.getNodeAddr());
       InternalService.AsyncClient client = response.getClient().get();
       String taskId = response.getTaskSpec().taskID;
+
       AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
       client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
           taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
+          address.getHostName() + ":" + address.getPort(),
           new TaskLaunchCallback(latch, response.getTransport().get()));
     }
     try {
@@ -198,5 +217,22 @@ public class Scheduler {
      * by the counter.  We use a counter rather than a hash of the request because there
      * may be multiple requests to run an identical job. */
     return String.format("%s_%d", address.toString(), counter++);
+  }
+
+  public void sendFrontendMessage(String app, String requestId,
+      ByteBuffer message) {
+    Logging.functionCall(app, requestId, message);
+    if (!frontendSockets.containsKey(app)) {
+      LOG.error("Requested message sent to unregistered app: " + app);
+    }
+    try {
+      Client client = TClients.createBlockingFrontendClient(frontendSockets.get(app));
+      client.frontendMessage(requestId, message);
+    } catch (IOException e) {
+      LOG.error("Error launching message on frontend: " + app, e);
+    } catch (TException e) {
+      LOG.error("Error launching message on frontend: " + app, e);
+
+    }
   }
 }

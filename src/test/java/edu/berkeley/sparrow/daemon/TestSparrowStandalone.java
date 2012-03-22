@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import org.junit.Test;
 
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.TClients;
+import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
@@ -26,7 +28,7 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 public class TestSparrowStandalone {
   private static int backendOnePort = 12347;
   private static int backendTwoPort = 12348;
- 
+  
   @BeforeClass
   /**
    * Set up a Sparrow daemon with two node monitors and two backends.
@@ -54,7 +56,7 @@ public class TestSparrowStandalone {
   public void testScheduleTwoTasks() throws TException, IOException {
     SchedulerService.Client fe1 = TClients.createBlockingSchedulerClient("localhost", 
         SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
-    fe1.registerFrontend("testApp");
+    fe1.registerFrontend("testApp", "unused:12345");
     
     // Create scheduling request with two tasks
     TSchedulingRequest req = new TSchedulingRequest();
@@ -94,7 +96,7 @@ public class TestSparrowStandalone {
   public void testScheduleMoreTasksThanBackends() throws TException, IOException {
     SchedulerService.Client fe1 = TClients.createBlockingSchedulerClient("localhost", 
         SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
-    fe1.registerFrontend("testApp");
+    fe1.registerFrontend("testApp", "unused:12345");
     
     // Create scheduling request with four tasks
     TSchedulingRequest req = new TSchedulingRequest();

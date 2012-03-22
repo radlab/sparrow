@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.util;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
 import com.google.common.base.Optional;
 
@@ -23,5 +24,11 @@ public class Serialization {
     } catch (NumberFormatException e) {
       return Optional.absent();
     }
+  }
+  
+  public static byte[] getByteBufferContents(ByteBuffer buffer) {
+    byte[] out = new byte[buffer.limit() - buffer.position()];
+    buffer.get(out);
+    return out;
   }
 }
