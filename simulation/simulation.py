@@ -53,6 +53,9 @@ def get_int_list(input_str):
 # param name => [convert func, default value]
 PARAMS = {'num_fes': [int, 1],             # number of frontends
           'num_servers': [int, 1000],       # number of servers
+          # Number of cores per server, which corresponds to the maximum
+          # number of tasks that can be run concurrently.
+          'cores_per_server': [int, 1],
           'num_users': [int, 10],           # number of users
           'total_time': [int, 1e4],   # time over which jobs are arriving
           # task_distribution describes the distribution of the number of tasks
@@ -220,30 +223,24 @@ class Job(object):
         return self.first_task_completion - self.arrival_time
         
 class Server(object):
-    """ Represents a back end server, which runs jobs.
-    
-    Attributes:
-        queue_length: An integer specifying the total number of tasks across
-            all queues (including any tasks currently running).
-        last_task_completion: Time that the last task in the queue will complete
-            (note that a real server wouldn't know this information; this is
-            just stored for ease of simulating everything).
-    """
+    """ Represents a back end server, which runs jobs. """
     
     def __init__(self, id_str, stats_manager, num_users):
+        self.num_users = num_users
         # List of queues for each user, indexed by the user id.  Each queue
         # contains (job, task_id) pairs.
         self.queues = []
-        for user in range(num_users):
+        for user in range(self.num_users):
             self.queues.append([])
-        self.num_users = num_users
-        # Index of the user whose task is currently running.
+        self.num_cores = get_param("cores_per_server")
+        assert self.num_cores >= 1
+        # Number of currently running tasks.
+        self.running_tasks = 0
+        self.queued_tasks = 0
+        # Index of the user whose task was most recently launched.
         self.current_user = 0
         # Count of tasks that have been run for this user.
         self.task_count = 0
-        self.queue_length = 0
-        # Time the currently running task was started (if there is one).
-        self.time_started = 0
         self.id_str = str(id_str)        
         self.stats_manager = stats_manager
         # An ordered list of probes received for this machine
@@ -266,14 +263,17 @@ class Server(object):
                     self.probes[start_index] <= probe_start:
                 start_index += 1
             self.probes = self.probes[start_index:]
-            estimated_load = self.queue_length + len(self.probes)
+            estimated_load = (self.queued_tasks + self.running_tasks +
+                              len(self.probes))
             self.probes.append(current_time)
             return estimated_load
         elif get_param("load_metric") == "per_user_length":
             return len(self.queues[user_id])
         elif get_param("load_metric") == "per_user_estimate":
-            # Tasks that will be run before a task for the given user_id.
-            total_tasks_before = 0
+            # Tasks that will be run before a task for the given user_id
+            # (including any currently running tasks, since we realistically
+            # assume that we don't know when these will complete).
+            total_tasks_before = self.running_tasks
             # Length of the queue for the user
             existing_queue = len(self.queues[user_id])
             # The scheduling round that the next task for this user will run
@@ -300,7 +300,7 @@ class Server(object):
                 
                 potential_tasks_before = (rounds_before *
                                           self.relative_weights[index])
-                if self.queue_length > 0 and self.current_user == index:
+                if self.running_tasks > 0 and self.current_user == index:
                     # Account for tasks that have already run in this round.
                     potential_tasks_before -= self.task_count
                 tasks_before = min(len(self.queues[index]),
@@ -313,19 +313,9 @@ class Server(object):
                     # count an extra round to allow for the round-robin
                     # ordering.
                     count_extra = False
-            
-            # Subtract incremental time for currently running task (this
-            # assumes we know the task length).
-            if (get_param("task_length_distribution") == "constant" and \
-                self.queue_length > 0):
-                time_running = current_time - self.time_started
-                total_tasks_before -= (time_running * 1.0 /
-                                       get_param("task_length"))
-            #self.logger.debug("\t%d\tServer %s returning per-user load of %f" %
-            #                  (current_time, self.id_str, total_tasks_before))
             return total_tasks_before
         else:
-            return self.queue_length
+            return self.queued_tasks + self.running_tasks
         
     def __get_num_rounds(self, user_id, queue_length):
         """ Returns the number of rounds it would take to empty the queue. """
@@ -337,32 +327,35 @@ class Server(object):
         Begins running the task, if there are no other tasks in the queue.
         Returns a TaskCompletion event, if there are no tasks running.
         """
-        self.queue_length += 1
+        self.queued_tasks += 1
         self.queues[job.user_id].append((job, task_index))
         self.stats_manager.task_queued(job.user_id, current_time)
-        if self.queue_length == 1:
-            # There aren't any tasks currently running, so launch this one.
+        if self.running_tasks < self.num_cores:
+            # Not all cores are in use, so launch this task.
             return [self.__launch_task(current_time)]
         
     def task_finished(self, user_id, current_time):
         """ Removes the task from the queue, and begins running the next task.
         
         Returns a TaskCompletion for the next task, if one exists. """
-        assert(self.queue_length > 0)
-        # Remove the task from the queue
-        self.queues[user_id] = self.queues[user_id][1:]
-        self.queue_length -= 1
-        if self.queue_length > 0:
+        assert self.running_tasks > 0
+        self.running_tasks -= 1
+        if self.queued_tasks > 0:
+            # If there are queued tasks, all but the core just freed should be
+            # in use.
+            assert self.running_tasks == self.num_cores - 1
             return [self.__launch_task(current_time)]
         
     def __launch_task(self, current_time):
-        """ Launches the next task in the queue.
+        """ Launches the next task in the queue on a free core.
         
         Returns an event for the launched task's completion.
         """
-        assert self.queue_length > 0
+        assert self.queued_tasks > 0
+        assert self.running_tasks < self.num_cores
+
+        self.queued_tasks -= 1
         tasks_per_round = self.relative_weights[self.current_user]
-            
         self.task_count += 1
         if self.task_count >= tasks_per_round:
             # Move on to the next user.
@@ -374,6 +367,8 @@ class Server(object):
             self.task_count = 0
         # Get the first task from the queue
         job, task_id = self.queues[self.current_user][0]
+        # Remove the task from the user's queue.
+        self.queues[self.current_user] = self.queues[self.current_user][1:]
         assert job.user_id == self.current_user
         task_length = job.get_task_length(task_id)
         event = (current_time + task_length, TaskCompletion(job, self))
@@ -381,6 +376,7 @@ class Server(object):
         self.time_started = current_time
         if get_param("record_task_info"):
             job.record_wait_time(task_id, current_time)
+        self.running_tasks += 1
         return event
         
 class FrontEnd(object):
@@ -615,7 +611,8 @@ class StatsManager(object):
         tasks_per_milli = (float(get_param('num_fes') * avg_num_tasks) /
                            get_param('job_arrival_delay'))
 
-        capacity_tasks_per_milli = (float(get_param('num_servers')) /
+        capacity_tasks_per_milli = (float(get_param('num_servers') *
+                                          get_param("cores_per_server")) /
                                     get_param('task_length'))
         self.utilization = tasks_per_milli / capacity_tasks_per_milli
 
