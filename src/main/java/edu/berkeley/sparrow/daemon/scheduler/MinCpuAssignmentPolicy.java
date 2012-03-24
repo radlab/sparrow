@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.thrift.transport.TNonblockingTransport;
 import org.apache.thrift.transport.TTransport;
 
 import com.google.common.base.Optional;
@@ -50,7 +51,7 @@ public class MinCpuAssignmentPolicy implements AssignmentPolicy {
     ArrayList<TaskPlacementResponse> out = new ArrayList<TaskPlacementResponse>();
     
     Optional<InternalService.AsyncClient> client = Optional.absent();
-    Optional<TTransport> transport = Optional.absent();
+    Optional<TNonblockingTransport> transport = Optional.absent();
     
     int i = 0;
     for (TTaskSpec task : tasks) {

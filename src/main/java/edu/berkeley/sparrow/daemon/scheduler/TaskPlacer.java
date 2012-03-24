@@ -6,7 +6,7 @@ import java.util.Collection;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.async.TAsyncClientManager;
-import org.apache.thrift.transport.TTransport;
+import org.apache.thrift.transport.TNonblockingTransport;
 
 import com.google.common.base.Optional;
 
@@ -23,10 +23,10 @@ public interface TaskPlacer {
     private InetSocketAddress nodeAddr;
     private Optional<InternalService.AsyncClient> client; // Pointer to thrift client, if 
                                                         // this TaskPlacer spoke to Thrift
-    private Optional<TTransport> transport;
+    private Optional<TNonblockingTransport> transport;
     
     public TaskPlacementResponse(TTaskSpec taskSpec, InetSocketAddress nodeAddr, 
-        Optional<InternalService.AsyncClient> client, Optional<TTransport> transport) {
+        Optional<InternalService.AsyncClient> client, Optional<TNonblockingTransport> transport) {
       this.taskSpec = taskSpec;
       this.client = client;
       this.nodeAddr = nodeAddr;
@@ -36,9 +36,9 @@ public interface TaskPlacer {
     public TTaskSpec getTaskSpec() { return this.taskSpec; }
     public InetSocketAddress getNodeAddr() { return this.nodeAddr; }
     public Optional<InternalService.AsyncClient> getClient() { return this.client; }
-    public Optional<TTransport> getTransport() { return this.transport; }
+    public Optional<TNonblockingTransport> getTransport() { return this.transport; }
     
-    public void setTransport(TTransport transport) {
+    public void setTransport(TNonblockingTransport transport) {
       this.transport = Optional.of(transport);
     }
     

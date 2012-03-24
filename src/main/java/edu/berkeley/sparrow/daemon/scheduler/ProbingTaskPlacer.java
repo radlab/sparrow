@@ -114,8 +114,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
     // Keep track of thrift clients/transports since we return handles on them to caller
     Map<InetSocketAddress, InternalService.AsyncClient> clients = 
         new HashMap<InetSocketAddress, InternalService.AsyncClient>();
-    Map<InetSocketAddress, TTransport> transports = 
-        new HashMap<InetSocketAddress, TTransport>();
+    Map<InetSocketAddress, TNonblockingTransport> transports = 
+        new HashMap<InetSocketAddress, TNonblockingTransport>();
     
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
