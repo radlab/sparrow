@@ -55,6 +55,12 @@ public class Scheduler {
   /** Pointer to shared selector thread. */
   TAsyncClientManager clientManager;
   
+  /** Information about cluster workload due to other schedulers. */
+  SchedulerState state;
+  
+  /** Logical task assignment. */
+  TaskPlacer placer;
+  
   /**
    * A callback handler for asynchronous task launches.
    * 
@@ -85,9 +91,6 @@ public class Scheduler {
       latch.countDown();
     }
   }
-  
-  SchedulerState state;
-  TaskPlacer placer;
 
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
