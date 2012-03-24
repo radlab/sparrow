@@ -15,7 +15,7 @@ public class Logging {
   public final static String AUDIT_LOG_FILENAME_FORMAT = "sparrow_audit.%d.%d.log";
   public final static String AUDIT_LOG_FORMAT = "%c\t%m%n";
   
-  private static Joiner paramJoiner = Joiner.on(",");
+  private static Joiner paramJoiner = Joiner.on(",").useForNull("null");
   private static Joiner auditParamJoiner = Joiner.on("\t");
   private static Joiner auditEventParamJoiner = Joiner.on(":");
   
