@@ -6,7 +6,7 @@ namespace java edu.berkeley.sparrow.thrift
 # and place jobs.
 service SchedulerService {
   # Register a frontend for the given application.
-  bool registerFrontend(1: string app);
+  bool registerFrontend(1: string app, 2: string socketAddress);
 
   # Submit a job composed of a list of individual tasks. 
   bool submitJob(1: types.TSchedulingRequest req);
@@ -16,6 +16,10 @@ service SchedulerService {
   # be reserved (this will take much longer, but guarantee no     
   # preemption). Otherwise, resources are acquired opportunistically.
   list<types.TTaskPlacement> getJobPlacement(1: types.TSchedulingRequest req);
+
+  # Send a message to be delivered to the frontend for {app} pertaining
+  # to the request {request}. For now this is only a task status message.
+  void sendFrontendMessage(1: string app, 2: string requestId, 3: binary message);
 }
 
 # A service used by application backends to coordinate with Sparrow.
@@ -27,6 +31,11 @@ service NodeMonitorService {
   void updateResourceUsage(1: string app,
                            2: map<types.TUserGroupInfo, types.TResourceVector> usage,
                            3: list<string> activeTaskIds);
+
+  # Send a message to be delivered to the frontend for {app} pertaining
+  # to the request {request}. For now this is only a task status message.
+  void sendFrontendMessage(1: string app, 2: string requestId, 3: binary message);
+  #
 }
 
 # A service that backends are expected to extend. Handles communication
@@ -42,6 +51,14 @@ service BackendService {
 
 }
 
+# A service that frontends are expected to extend. Handles communication from
+# a Scheduler.
+service FrontendService {
+  # Send a message to this frontend pertaining to {requestId} with value
+  # {message}.
+  void frontendMessage(1: string requestId, 2: binary message);
+}
+
 # The InternalService exposes state about application backends to:
 # 1) Other Sparrow daemons
 # 2) The central state store
@@ -49,12 +66,12 @@ service InternalService {
   map<string, types.TResourceVector> getLoad(1: string app, 2: string requestId);
   bool launchTask(1: string app, 2: binary message, 3: string requestId,
                   4: string taskId, 5: types.TUserGroupInfo user,
-                  6: types.TResourceVector estimatedResources);
+                  6: types.TResourceVector estimatedResources,
+                  7: string schedulerAddress);
 }
 
-# Message from the state store to update scheduler state. TODO: this should
-# be moved to internal interface or its own interface (maybe).
 service SchedulerStateStoreService {
+  # Message from the state store giving the scheduler new information
   void updateNodeState(1: map<string, types.TNodeState> snapshot);
 }
 

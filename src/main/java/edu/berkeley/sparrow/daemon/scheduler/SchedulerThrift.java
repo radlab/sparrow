@@ -1,6 +1,8 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,17 +35,18 @@ public class SchedulerThrift implements SchedulerService.Iface {
   public void initialize(Configuration conf) throws IOException {
     SchedulerService.Processor<SchedulerService.Iface> processor = 
         new SchedulerService.Processor<SchedulerService.Iface>(this);
-    scheduler.initialize(conf);
     int port = conf.getInt(SparrowConf.SCHEDULER_THRIFT_PORT, 
         DEFAULT_SCHEDULER_THRIFT_PORT);
     int threads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS, 
         DEFAULT_SCHEDULER_THRIFT_THREADS);
+    InetSocketAddress addr = new InetSocketAddress(port);
+    scheduler.initialize(conf, addr);
     TServers.launchThreadedThriftServer(port, threads, processor);
   }
 
   @Override
-  public boolean registerFrontend(String app) throws TException {
-    return scheduler.registerFrontEnd(app);
+  public boolean registerFrontend(String app, String socketAddress) {
+    return scheduler.registerFrontend(app, socketAddress);
   }
 
   @Override
@@ -62,5 +65,11 @@ public class SchedulerThrift implements SchedulerService.Iface {
     catch (IOException e) {
       throw new TException(e.getMessage());
     }
+  }
+
+  @Override
+  public void sendFrontendMessage(String app, String requestId,
+      ByteBuffer message) throws TException {
+    scheduler.sendFrontendMessage(app, requestId, message);
   }
 }

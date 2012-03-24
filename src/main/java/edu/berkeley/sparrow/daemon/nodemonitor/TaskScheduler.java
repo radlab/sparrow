@@ -44,7 +44,7 @@ public abstract class TaskScheduler {
   }
   
   protected TResourceVector capacity;
-  protected TResourceVector inUse = TResources.none();
+  protected TResourceVector inUse = TResources.clone(TResources.none());
   protected final BlockingQueue<TaskDescription> runnableTaskQueue = 
       new LinkedBlockingQueue<TaskDescription>();
   private HashMap<String, TResourceVector> resourcesPerTask = new 

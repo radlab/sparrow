@@ -28,7 +28,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
                                           InternalService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_NM_THRIFT_PORT = 20501;
-  public final static int DEFAULT_NM_THRIFT_THREADS = 2;
+  public final static int DEFAULT_NM_THRIFT_THREADS = 16;
   public final static int DEFAULT_INTERNAL_THRIFT_PORT = 20502;
   public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 8;
  
@@ -88,9 +88,9 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   @Override
   public boolean launchTask(String app, ByteBuffer message,
       String requestId, String taskId, TUserGroupInfo user,
-      TResourceVector estimatedResources) throws TException {
+      TResourceVector estimatedResources, String schedulerAddress) throws TException {
     return nodeMonitor.launchTask(app, message, requestId, taskId, user,
-                                  estimatedResources);
+                                  estimatedResources, schedulerAddress);
   }
 
   @Override
@@ -98,6 +98,12 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
       Map<TUserGroupInfo, TResourceVector> usage, List<String> activeTaskIds)
       throws TException {
     nodeMonitor.updateResourceUsage(app, usage, activeTaskIds);
+  }
+
+  @Override
+  public void sendFrontendMessage(String app, String requestId,
+      ByteBuffer message) throws TException {
+    nodeMonitor.sendFrontendMessage(app, requestId, message);
   }
 
 }

@@ -16,9 +16,11 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
+import edu.berkeley.sparrow.thrift.FrontendService;
 
 import edu.berkeley.sparrow.api.SparrowFrontendClient;
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
+import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -27,7 +29,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 /**
  * Frontend for the prototype implementation.
  */
-public class ProtoFrontend {
+public class ProtoFrontend implements FrontendService.Iface {
   public static final double DEFAULT_JOB_ARRIVAL_RATE_S = 10; // Jobs/second
   public static final int DEFAULT_TASKS_PER_JOB = 1;          // Tasks/job
   
@@ -40,25 +42,18 @@ public class ProtoFrontend {
   public static AtomicInteger tasksLaunched = new AtomicInteger(0);
 
   /** A runnable which Spawns a new thread to launch a scheduling request. */
-  private static class JobLaunchRunnable implements Runnable {
+  private class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
-    private int schedulerPort;
     private SparrowFrontendClient client;
     
-    public JobLaunchRunnable(List<TTaskSpec> request, int schedulerPort) {
+    public JobLaunchRunnable(List<TTaskSpec> request, SparrowFrontendClient client) {
       this.request = request;
-      this.schedulerPort = schedulerPort;
+      this.client = client;
     }
     
     @Override
     public void run() {
       long start = System.currentTimeMillis();
-      client = new SparrowFrontendClient();
-      try {
-        client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
-      } catch (TException e) {
-        LOG.fatal(e);
-      }
       TUserGroupInfo user = new TUserGroupInfo();
       user.setUser("*");
       user.setGroup("*");
@@ -68,13 +63,12 @@ public class ProtoFrontend {
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);
       }
-      client.close();
       long end = System.currentTimeMillis();
       LOG.debug("Scheduling request duration " + (end - start));
     }
   }
   
-  public static List<TTaskSpec> generateJob(int numTasks, int benchmarkId, 
+  public List<TTaskSpec> generateJob(int numTasks, int benchmarkId, 
       int benchmarkIterations) {
     TResourceVector resources = TResources.createResourceVector(300, 1);
     
@@ -94,12 +88,12 @@ public class ProtoFrontend {
     return out;
   }
   
-  public static double generateInterarrivalDelay(Random r, double lambda) {
+  public double generateInterarrivalDelay(Random r, double lambda) {
     double u = r.nextDouble();
     return -Math.log(u)/lambda;
   }
   
-  public static void main(String[] args) {
+  public void run(String[] args) {
     try {
       OptionParser parser = new OptionParser();
       parser.accepts("c", "configuration file").
@@ -133,7 +127,7 @@ public class ProtoFrontend {
       SparrowFrontendClient client = new SparrowFrontendClient();
       int schedulerPort = conf.getInt("scheduler_port", 
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
-      client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp");
+      client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp", this);
       long lastLaunch = System.currentTimeMillis();
       
       /* This is a little tricky. 
@@ -162,7 +156,7 @@ public class ProtoFrontend {
         }
         Thread.sleep(toWait);
         Runnable runnable =  new JobLaunchRunnable(
-            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), schedulerPort);
+            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), client);
         new Thread(runnable).start();
         int launched = tasksLaunched.addAndGet(1);
         double launchRate = (double) launched * 1000.0 / 
@@ -173,5 +167,16 @@ public class ProtoFrontend {
     catch (Exception e) {
       LOG.error("Fatal exception", e);
     }
+  }
+
+  @Override
+  public void frontendMessage(String requestId, ByteBuffer message)
+      throws TException {
+    // We don't use messages here, so just log it.
+    LOG.debug("Got unexpected message: " + Serialization.getByteBufferContents(message));
+  }
+  
+  public static void main(String[] args) {
+    new ProtoFrontend().run(args);
   }
 }
