@@ -676,7 +676,7 @@ class StatsManager(object):
             pass
         
         if get_param("record_task_info"):
-            if get_param("load_metric") == "total":
+            if get_param("load_metric") in ["total", "estimate"]:
                 self.output_wait_time_cdf()
             else:
                 self.output_load_versus_launch_time()
