@@ -239,7 +239,8 @@ class Server(object):
         self.queued_tasks = 0
         # Index of the user whose task was most recently launched.
         self.current_user = 0
-        # Count of tasks that have been run for this user.
+        # Count of tasks that have been launched in this scheduling round for
+        # self.current_user.
         self.task_count = 0
         self.id_str = str(id_str)        
         self.stats_manager = stats_manager
@@ -274,29 +275,24 @@ class Server(object):
             # (including any currently running tasks, since we realistically
             # assume that we don't know when these will complete).
             total_tasks_before = self.running_tasks
-            # Length of the queue for the user
-            existing_queue = len(self.queues[user_id])
-            # The scheduling round that the next task for this user will run
-            # in. 0 indicates that the task will run as part of the current
-            # round, and so on.
-            run_round = self.__get_num_rounds(user_id, existing_queue + 1) - 1
-            # Whether to count an extra round to account for the position of
-            # self.current_user
-            count_extra = True
+            # The number of rounds (including the current one) needed to empty
+            # the queue and ultimately run the task for this user.  1 indicates
+            # that the task will be run as part of the current round, and so forth.
+            rounds = self.__get_num_rounds(user_id, True)
+            # Whether the user specified by index (below) comes after user_id
+            # in the scheduling round.
+            past_user = False
             for count in range(len(self.queues)):
                 index = (count + self.current_user) % len(self.queues)
-                effective_queue_length = len(self.queues[index])
-                if self.current_user == index:
-                    # Need to incorporate the task count into the queue length
-                    # to get the appropriate number of rounds.
-                    effective_queue_length += self.task_count
                 # Number of rounds to empty the queue.
-                potential_rounds = self.__get_num_rounds(
-                    index, effective_queue_length)
-                if count_extra:
-                    rounds_before = min(potential_rounds, run_round + 1)
+                potential_rounds = self.__get_num_rounds(index, False)
+                if past_user:
+                    # The user specified by index comes after user_id, so
+                    # there will be one less scheduling round before
+                    # index.
+                    rounds_before = min(potential_rounds, rounds - 1)
                 else:
-                    rounds_before = min(potential_rounds, run_round)
+                    rounds_before = min(potential_rounds, rounds)
                 
                 potential_tasks_before = (rounds_before *
                                           self.relative_weights[index])
@@ -309,16 +305,26 @@ class Server(object):
                 total_tasks_before += tasks_before
 
                 if index == user_id:
-                    # Once we reach the specified user, no longer need to
-                    # count an extra round to allow for the round-robin
-                    # ordering.
-                    count_extra = False
+                    past_user = True
             return total_tasks_before
         else:
             return self.queued_tasks + self.running_tasks
         
-    def __get_num_rounds(self, user_id, queue_length):
-        """ Returns the number of rounds it would take to empty the queue. """
+    def __get_num_rounds(self, user_id, additional_task):
+        """ Returns the number of rounds it would take to empty the queue.
+        
+        Parameters:
+            user_id: An integer specifying the id of the user whose queue to
+                look at.
+            additional_task: Whether to include an additional task in the queue
+                length (used to determine the rounds needed to empty the queue,
+                including a potential new task).
+        """
+        queue_length = len(self.queues[user_id])
+        if self.current_user == user_id:
+            queue_length += self.task_count
+        if additional_task:
+            queue_length += 1
         return math.ceil(float(queue_length) / self.relative_weights[user_id])
 
     def queue_task(self, job, task_index, current_time):
@@ -356,7 +362,6 @@ class Server(object):
 
         self.queued_tasks -= 1
         tasks_per_round = self.relative_weights[self.current_user]
-        self.task_count += 1
         if self.task_count >= tasks_per_round:
             # Move on to the next user.
             self.task_count = 0
@@ -369,6 +374,7 @@ class Server(object):
         job, task_id = self.queues[self.current_user][0]
         # Remove the task from the user's queue.
         self.queues[self.current_user] = self.queues[self.current_user][1:]
+        self.task_count += 1
         assert job.user_id == self.current_user
         task_length = job.get_task_length(task_id)
         event = (current_time + task_length, TaskCompletion(job, self))

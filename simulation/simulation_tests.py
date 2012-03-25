@@ -18,19 +18,22 @@ class TestServer(unittest.TestCase):
         self.assertEquals(2, server.probe_load(0, 20))
         
         # Now ensure that actual queue length is being incorporated as well.
-        server.queue_length = 5
+        server.queued_tasks = 5
         self.assertEquals(7, server.probe_load(0, 25))
         
     def test_probe_load_per_user(self):
         simulation.set_param("relative_weights", "1,1,1,1,1")
         server = simulation.Server("test", self.stats_manager, 5)
         server.current_user = 3
+        server.running_tasks = 1
+        server.task_count = 1
         simulation.set_param("load_metric", "per_user_estimate")
         
         # Add fake jobs to the queues on the server (ok to just use strings
         # in the queue, since probe load only looks at the queue length).
-        num_jobs_per_user = [1, 3, 2, 6, 4]
+        num_jobs_per_user = [1, 3, 2, 5, 4]
         for user, num_jobs in enumerate(num_jobs_per_user):
+            server.queued_tasks += num_jobs
             for i in range(num_jobs):
                 server.queues[user].append("foo")
         
@@ -46,10 +49,11 @@ class TestServer(unittest.TestCase):
         simulation.set_param("relative_weights", "2,2")
         server = simulation.Server("test", self.stats_manager, 2)
         server.current_user = 0
-        server.task_count = 0
-        server.queue_length = 3
+        server.task_count = 1
+        server.running_tasks = 1
+        server.queued_tasks = 2
         
-        num_jobs_per_user= [2,1]
+        num_jobs_per_user= [1,1]
         for user, num_jobs in enumerate(num_jobs_per_user):
             for i in range(num_jobs):
                 server.queues[user].append("foo")
@@ -63,10 +67,11 @@ class TestServer(unittest.TestCase):
         simulation.set_param("relative_weights", "2,2")
         server = simulation.Server("test", self.stats_manager, 2)
         server.current_user = 0
-        server.task_count = 1
-        server.queue_length = 3
+        server.task_count = 2
+        server.queued_tasks = 2
+        server.running_tasks = 1
         
-        num_jobs_per_user= [2,1]
+        num_jobs_per_user= [1,1]
         for user, num_jobs in enumerate(num_jobs_per_user):
             for i in range(num_jobs):
                 server.queues[user].append("foo")
@@ -80,12 +85,13 @@ class TestServer(unittest.TestCase):
         simulation.set_param("relative_weights", "2,1,1,4,5")
         server = simulation.Server("test", self.stats_manager, 5)
         server.current_user = 3
-        server.task_count = 1
-        server.queue_length = 16
+        server.task_count = 2
+        server.running_tasks = 1
+        server.queued_tasks = 15
         
         # Add fake jobs to the queues on the server (ok to just use strings
         # in the queue, since probe load only looks at the queue length).
-        num_jobs_per_user = [1, 3, 2, 6, 4]
+        num_jobs_per_user = [1, 3, 2, 5, 4]
         for user, num_jobs in enumerate(num_jobs_per_user):
             for i in range(num_jobs):
                 server.queues[user].append("foo")
