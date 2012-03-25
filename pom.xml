@@ -50,6 +50,17 @@
 		<version>0.8.0</version>
 	</dependency>
 	<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>  
+    <version>1.9.0</version> 
+    <scope>test</scope>
+  </dependency>
+  <dependency>
+	  <groupId>commons-pool</groupId>
+		<artifactId>commons-pool</artifactId>
+	  <version>1.6</version>
+  </dependency>
+	<dependency>
     <groupId>edu.berkeley</groupId>
     <artifactId>mesos</artifactId>
     <version>1.0</version>

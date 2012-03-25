@@ -12,18 +12,12 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
-import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.apache.thrift.async.TAsyncClientManager;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TNonblockingSocket;
-import org.apache.thrift.transport.TNonblockingTransport;
-import org.apache.thrift.transport.TTransport;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
-import edu.berkeley.sparrow.thrift.InternalService;
+import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
+import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -32,11 +26,13 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  * A task placer which probes node monitors in order to determine placement.
  */
 public class ProbingTaskPlacer implements TaskPlacer {
-  private static final Logger LOG = Logger.getLogger(TaskPlacer.class);
-  private static final Logger AUDIT_LOG = Logging.getAuditLogger(TaskPlacer.class);
+  private static final Logger LOG = Logger.getLogger(ProbingTaskPlacer.class);
+  private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProbingTaskPlacer.class);
    
   /** See {@link SparrowConf.PROBE_MULTIPLIER} */
   private double probeRatio;
+  
+  private ThriftClientPool<AsyncClient> clientPool;
   
   /**
    * This acts as a callback for the asynchronous Thrift interface.
@@ -50,17 +46,17 @@ public class ProbingTaskPlacer implements TaskPlacer {
     CountDownLatch latch;
     private String appId;
     private String requestId;
-    private TTransport transport;
+    private AsyncClient client;
     
     private ProbeCallback(
         InetSocketAddress socket, Map<InetSocketAddress, TResourceVector> loads, 
-        CountDownLatch latch, String appId, String requestId, TTransport transport) {
+        CountDownLatch latch, String appId, String requestId, AsyncClient client) {
       this.socket = socket;
       this.loads = loads;
       this.latch = latch;
       this.appId = appId;
       this.requestId = requestId;
-      this.transport = transport;
+      this.client = client;
     }
     
     @Override
@@ -72,10 +68,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
       AUDIT_LOG.info(Logging.auditEventString("probe_completion", requestId,
                                               socket.getAddress().getHostAddress()));
       try {
-        if (latch.getCount() == 0) {
-          transport.close();
-        }
-        else if (!response.getResult().containsKey(appId)) {
+        clientPool.returnClient(socket, client);
+        if (!response.getResult().containsKey(appId)) {
           LOG.warn("Probe returned no load information for " + appId);
         }
         else {
@@ -83,7 +77,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
           loads.put(socket,result);
           latch.countDown();
         }
-      } catch (TException e) {
+      } catch (Exception e) {
         LOG.error("Error getting resources from response data", e);
       }
     }
@@ -98,24 +92,19 @@ public class ProbingTaskPlacer implements TaskPlacer {
   
 
   @Override
-  public void initialize(Configuration conf) {
+  public void initialize(Configuration conf, ThriftClientPool<AsyncClient> clientPool) {
     probeRatio = conf.getDouble(SparrowConf.PROBE_RATIO, 
         SparrowConf.DEFAULT_PROBE_MULTIPLIER);
+    this.clientPool = clientPool;
   }
   
   @Override
   public Collection<TaskPlacer.TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
-      TAsyncClientManager clientManager) throws IOException {
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks) 
+          throws IOException {
     LOG.debug(Logging.functionCall(appId, nodes, tasks));
     Map<InetSocketAddress, TResourceVector> loads = 
         new HashMap<InetSocketAddress, TResourceVector>(); 
-    
-    // Keep track of thrift clients/transports since we return handles on them to caller
-    Map<InetSocketAddress, InternalService.AsyncClient> clients = 
-        new HashMap<InetSocketAddress, InternalService.AsyncClient>();
-    Map<InetSocketAddress, TNonblockingTransport> transports = 
-        new HashMap<InetSocketAddress, TNonblockingTransport>();
     
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
@@ -133,22 +122,16 @@ public class ProbingTaskPlacer implements TaskPlacer {
     nodeList = nodeList.subList(0, probesToLaunch);
     
     for (InetSocketAddress node : nodeList) {
-      TNonblockingTransport nbTr = new TNonblockingSocket(
-          node.getHostName(), node.getPort());
-      TProtocolFactory factory = new TBinaryProtocol.Factory();
-      InternalService.AsyncClient client = new InternalService.AsyncClient(
-          factory, clientManager, nbTr);
-      clients.put(node, client);
-      transports.put(node, nbTr);
       try {
+        AsyncClient client = clientPool.borrowClient(node);
         ProbeCallback callback = new ProbeCallback(node, loads, latch, appId, requestId,
-                                                   nbTr);
+                                                   client);
         LOG.debug("Launching probe on node: " + node); 
         AUDIT_LOG.info(Logging.auditEventString("probe_launch", requestId,
                                                 node.getAddress().getHostAddress()));
         client.getLoad(appId, requestId, callback);
-      } catch (TException e) {
-        e.printStackTrace();
+      } catch (Exception e) {
+        LOG.error(e);
       }
     }
     
@@ -160,20 +143,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
     MinCpuAssignmentPolicy assigner = new MinCpuAssignmentPolicy();
     Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
-    
-    for (TaskPlacementResponse resp : out) {
-      resp.setTransport(transports.get(resp.getNodeAddr()));
-      resp.setClient(clients.get(resp.getNodeAddr()));
-      transports.remove(resp.getNodeAddr());
-    }
-    
-    // Close out any sockets related to nodes we aren't going to use
-    // TODO: really we need to change the way that thrift handles are re-used,
-    // and have a pool of thrift handles that is shared between the Scheduler and
-    // this class. The pool should be periodically cleaned up based on LRU.
-    for (TTransport transport : transports.values()) {
-      transport.close();
-    }
+
     return out;
   }
 }
