@@ -17,7 +17,7 @@ public class MinCpuAssignmentPolicy implements AssignmentPolicy {
   /**
    * A comparator for (node, resource vector) pairs, based on CPU usage.
    */
-  private class CPUNodeComparator implements Comparator<
+  public static class CPUNodeComparator implements Comparator<
       Entry<InetSocketAddress, TResourceVector>> {
     @Override
     public int compare(Entry<InetSocketAddress, TResourceVector> e1, 
