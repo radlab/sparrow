@@ -157,7 +157,8 @@ public class Scheduler {
     // Launch tasks.
     CountDownLatch latch = new CountDownLatch(placement.size());
     for (TaskPlacementResponse response : placement) {
-      LOG.debug("Attempting to launch task on " + response.getNodeAddr());
+      LOG.debug("Attempting to launch task " + response.getTaskSpec().getTaskID() 
+          + " on " + response.getNodeAddr());
 
       InternalService.AsyncClient client;
       try {

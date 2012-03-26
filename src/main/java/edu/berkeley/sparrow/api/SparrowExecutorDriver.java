@@ -115,11 +115,15 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     try {
       client = TClients.createBlockingNmClient("localhost", 20501);
     } catch (IOException e) {
+      System.err.println("Failed to create connection to Sparrow:");
+      e.printStackTrace(System.err);
       return abort();
     }
     try {
       client.registerBackend("spark", "localhost:4310");
     } catch (TException e) {
+      System.err.println("Failed to register backend with Sparrow");
+      e.printStackTrace(System.err);
       return abort();
     }
     BackendService.Processor<BackendService.Iface> processor =
@@ -137,31 +141,29 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   @Override
   public Status stop() {
     client.getOutputProtocol().getTransport().close(); // TODO: close server
-    synchronized (runLock) {
-      stopStatus = Status.DRIVER_STOPPED;
-      stopped.signalAll();
-    }
+    signalStopped();
     return stopStatus;
   }
 
   @Override
   public Status stop(boolean arg0) {
     client.getOutputProtocol().getTransport().close(); // TODO: close server
-    synchronized (runLock) {
-      stopStatus = Status.DRIVER_STOPPED;
-      stopped.signalAll();
-    }
+    signalStopped();
     return stopStatus;
   }
 
   @Override
   public Status abort() {
     client.getOutputProtocol().getTransport().close(); // TODO: close server
-    synchronized (runLock) {
-      stopStatus = Status.DRIVER_ABORTED;
-      stopped.signalAll();
-    }
+    signalStopped();
     return stopStatus;
+  }
+  
+  private void signalStopped() {
+    runLock.lock();
+    stopStatus = Status.DRIVER_STOPPED;
+    stopped.signalAll();
+    runLock.unlock();
   }
 
   @Override

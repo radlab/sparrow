@@ -186,7 +186,7 @@ public class NodeMonitor {
      * finished. */
     String compoundId = taskId + "-" + requestId;
     LOG.debug(Logging.functionCall(app, message, requestId, compoundId, user,
-                                   estimatedResources));
+                                   estimatedResources, schedulerAddress));
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_start", requestId,
                                             address.getHostAddress(), taskId));
     
