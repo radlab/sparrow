@@ -5,13 +5,9 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.thrift.transport.TNonblockingTransport;
-
-import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitor;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
-import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
@@ -24,8 +20,7 @@ public interface TaskPlacer {
     private TTaskSpec taskSpec; // Original request specification 
     private InetSocketAddress nodeAddr;
     
-    public TaskPlacementResponse(TTaskSpec taskSpec, InetSocketAddress nodeAddr, 
-        Optional<InternalService.AsyncClient> client, Optional<TNonblockingTransport> transport) {
+    public TaskPlacementResponse(TTaskSpec taskSpec, InetSocketAddress nodeAddr) {
       this.taskSpec = taskSpec;
       this.nodeAddr = nodeAddr;
     }

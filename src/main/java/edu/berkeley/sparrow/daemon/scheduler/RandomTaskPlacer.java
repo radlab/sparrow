@@ -8,12 +8,8 @@ import java.util.Collections;
 import java.util.HashSet;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.thrift.transport.TNonblockingTransport;
-
-import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
-import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
@@ -33,15 +29,10 @@ public class RandomTaskPlacer implements TaskPlacer {
     ArrayList<InetSocketAddress> orderedNodes = new ArrayList<InetSocketAddress>(nodes);
     Collections.shuffle(orderedNodes);
     
-    // Empty client/transport used for all responses
-    Optional<InternalService.AsyncClient> client = Optional.absent();
-    Optional<TNonblockingTransport> transport = Optional.absent();
-   
     int i = 0;
     for (TTaskSpec task : tasks) {
       InetSocketAddress addr = orderedNodes.get(i++ % nodes.size());
-      TaskPlacementResponse response = new TaskPlacementResponse(task,
-          addr, client, transport);
+      TaskPlacementResponse response = new TaskPlacementResponse(task, addr);
       out.add(response);
     }
     return out;
