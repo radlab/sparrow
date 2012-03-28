@@ -8,12 +8,9 @@ import java.util.Collections;
 import java.util.HashSet;
 
 import org.apache.commons.configuration.Configuration;
-import org.apache.thrift.async.TAsyncClientManager;
-import org.apache.thrift.transport.TNonblockingTransport;
 
-import com.google.common.base.Optional;
-
-import edu.berkeley.sparrow.thrift.InternalService;
+import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
+import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /***
@@ -25,28 +22,24 @@ public class RandomTaskPlacer implements TaskPlacer {
   
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, 
-      TAsyncClientManager clientManager) throws IOException {
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
+          throws IOException {
     Collection<TaskPlacementResponse> out = new HashSet<TaskPlacementResponse>();
     
     ArrayList<InetSocketAddress> orderedNodes = new ArrayList<InetSocketAddress>(nodes);
     Collections.shuffle(orderedNodes);
     
-    // Empty client/transport used for all responses
-    Optional<InternalService.AsyncClient> client = Optional.absent();
-    Optional<TNonblockingTransport> transport = Optional.absent();
-   
     int i = 0;
     for (TTaskSpec task : tasks) {
       InetSocketAddress addr = orderedNodes.get(i++ % nodes.size());
-      TaskPlacementResponse response = new TaskPlacementResponse(task,
-          addr, client, transport);
+      TaskPlacementResponse response = new TaskPlacementResponse(task, addr);
       out.add(response);
     }
     return out;
   }
 
   @Override
-  public void initialize(Configuration conf) {
+  public void initialize(Configuration conf, ThriftClientPool<AsyncClient> clientPool) {
   }
+
 }

@@ -15,12 +15,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.apache.thrift.async.TAsyncClientManager;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TNonblockingSocket;
-import org.apache.thrift.transport.TNonblockingTransport;
-import org.apache.thrift.transport.TTransport;
 import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
@@ -30,6 +24,7 @@ import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TClients;
+import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.FrontendService.Client;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
@@ -52,8 +47,8 @@ public class Scheduler {
   HashMap<String, InetSocketAddress> frontendSockets = 
       new HashMap<String, InetSocketAddress>();
   
-  /** Pointer to shared selector thread. */
-  TAsyncClientManager clientManager;
+  /** Thrift client pool */
+  ThriftClientPool<InternalService.AsyncClient> clientPool;
   
   /** Information about cluster workload due to other schedulers. */
   SchedulerState state;
@@ -69,32 +64,45 @@ public class Scheduler {
    */
   private class TaskLaunchCallback implements AsyncMethodCallback<launchTask_call> {
     private CountDownLatch latch;
-    private TTransport transport;
+    private InternalService.AsyncClient client;
+    private InetSocketAddress socket;
 
-    public TaskLaunchCallback(CountDownLatch latch, TTransport transport) {
+    // Note that the {@code client} must come from the Scheduler's {@code clientPool}.
+    public TaskLaunchCallback(CountDownLatch latch, InternalService.AsyncClient client,
+        InetSocketAddress socket) {
       this.latch = latch;
-      this.transport = transport;
+      this.client = client;
+      this.socket = socket;
     }
     
     @Override
     public void onComplete(launchTask_call response) {
+      try {
+        clientPool.returnClient(socket, client);
+      } catch (Exception e) {
+        LOG.error(e);
+      }
       latch.countDown();
-      transport.close();
     }
 
     @Override
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
+      try {
+        clientPool.returnClient(socket, client);
+      } catch (Exception e) {
+        LOG.error(e);
+      }
       // TODO We need to have a story here, regarding the failure model when the
       //      probe doesn't succeed.
-      transport.close();
       latch.countDown();
     }
   }
 
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
-    clientManager = new TAsyncClientManager();
+    clientPool = new ThriftClientPool<InternalService.AsyncClient>(
+        new ThriftClientPool.InternalServiceMakerFactory());
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
@@ -110,7 +118,7 @@ public class Scheduler {
     }
     
     state.initialize(conf);
-    placer.initialize(conf);
+    placer.initialize(conf, clientPool);
   }
   
   public boolean registerFrontend(String appId, String addr) {
@@ -141,7 +149,7 @@ public class Scheduler {
     try {
       placement = getJobPlacementResp(req, requestId);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOG.error(e);
       return false;
     }
     long probeFinish = System.currentTimeMillis();
@@ -151,22 +159,12 @@ public class Scheduler {
     for (TaskPlacementResponse response : placement) {
       LOG.debug("Attempting to launch task on " + response.getNodeAddr());
 
-      InternalService.AsyncClient client = null;
-      TNonblockingTransport transport = null;
-      if (!response.getClient().isPresent()) {
-        try {
-          transport = new TNonblockingSocket(
-              response.getNodeAddr().getHostName(), response.getNodeAddr().getPort());
-        } catch (IOException e) {
-          LOG.error(e);
-          return false;
-        }
-        TProtocolFactory factory = new TBinaryProtocol.Factory();
-        client = new InternalService.AsyncClient(
-            factory, clientManager, transport);
-      } else {
-        client = response.getClient().get();
-        transport = response.getTransport().get();
+      InternalService.AsyncClient client;
+      try {
+        client = clientPool.borrowClient(response.getNodeAddr());
+      } catch (Exception e) {
+        LOG.error(e);
+        return false;
       }
       String taskId = response.getTaskSpec().taskID;
 
@@ -174,7 +172,7 @@ public class Scheduler {
       client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
           taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
           address.getHostName() + ":" + address.getPort(),
-          new TaskLaunchCallback(latch, transport));
+          new TaskLaunchCallback(latch, client, response.getNodeAddr()));
     }
     try {
       LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");
@@ -220,7 +218,7 @@ public class Scheduler {
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);
     }
-    return placer.placeTasks(app, requestId, backendList, tasks, clientManager);
+    return placer.placeTasks(app, requestId, backendList, tasks);
   }
   
   /**

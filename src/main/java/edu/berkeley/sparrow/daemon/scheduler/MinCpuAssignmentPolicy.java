@@ -9,13 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.thrift.transport.TNonblockingTransport;
-import org.apache.thrift.transport.TTransport;
-
-import com.google.common.base.Optional;
-
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
-import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
@@ -50,15 +44,12 @@ public class MinCpuAssignmentPolicy implements AssignmentPolicy {
     
     ArrayList<TaskPlacementResponse> out = new ArrayList<TaskPlacementResponse>();
     
-    Optional<InternalService.AsyncClient> client = Optional.absent();
-    Optional<TNonblockingTransport> transport = Optional.absent();
-    
     int i = 0;
     for (TTaskSpec task : tasks) {
       Entry<InetSocketAddress, TResourceVector> entry = results.get(i++ % results.size());
       
       TaskPlacementResponse place = new TaskPlacementResponse(
-          task, entry.getKey(), client, transport);
+          task, entry.getKey());
       out.add(place);
     }
     return out;
