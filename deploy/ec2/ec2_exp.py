@@ -14,9 +14,9 @@ def parse_args():
     "\n\n<action> can be: launch, deploy, start, stop, start-proto, stop-proto, command, collect-logs, destroy")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
-  parser.add_option("-a", "--ami", default="ami-a74393ce",
+  parser.add_option("-a", "--ami", default="ami-7878a011",
       help="Amazon Machine Image ID to use")
-  parser.add_option("-t", "--instance-type", default="m1.large",
+  parser.add_option("-t", "--instance-type", default="m1.xlarge",
       help="Type of instance to launch (default: m1.large). " +
            "WARNING: must be 64 bit, thus small instances won't work")
   parser.add_option("-l", "--arrival-rate", type="float", default=100,
@@ -33,6 +33,8 @@ def parse_args():
       help="Number of seconds to wait for cluster nodes to boot (default: 0)")
   parser.add_option("-g", "--branch", default="master",
       help="Which git branch to checkout")
+  parser.add_option("-s", "--spark-branch", default="sparrow",
+      help="Which git branch to checkout (for spark)")
   parser.add_option("-d", "--log-dir", default="/tmp/",
       help="Local directory into which log files are copied")
   parser.add_option("-n", "--tasks-per-job", type="int", default=1,
@@ -45,6 +47,8 @@ def parse_args():
       help="Probe ratio")
   parser.add_option("-y", "--kill-delay", type="int", default=1,
       help="Time to wait between killing backends and frontends")
+  parser.add_option("-m", "--scheduler", type="string", default="mesos",
+      help="Which scheduler to use for running spark (mesos/sparrow)")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1:
@@ -228,10 +232,12 @@ def deploy_cluster(frontends, backends, opts):
                                  for i in frontends]),
     "static_backends": ",".join(["%s:20502" % i.public_dns_name \
                                  for i in backends]),
+    "name_node": frontends[0].public_dns_name,
     "backend_list": "\n".join(["%s" % i.public_dns_name \
                                  for i in backends]),
     "arrival_lambda": "%s" % opts.arrival_rate,
     "git_branch": "%s" % opts.branch,
+    "spark_git_branch": "%s" % opts.spark_branch,
     "benchmark_iterations": "%s" % opts.benchmark_iterations,
     "benchmark_id": "%s" % opts.benchmark_id,
     "tasks_per_job": "%s" % opts.tasks_per_job,
@@ -263,15 +269,13 @@ def deploy_cluster(frontends, backends, opts):
   scp(driver_machine, opts, opts.identity_file, '/root/.ssh/id_rsa')
 
   print "Building sparrow on driver machine..."
-  ssh(driver_machine, opts, "chmod 775 /root/build_sparrow.sh;" + 
+  ssh(driver_machine, opts, "chmod 755 /root/*.sh;"
                             "/root/build_sparrow.sh;")
 
   print "Deploying sparrow to other machines..."
-  ssh(driver_machine, opts, "chmod 775 /root/deploy_sparrow.sh;" +
-                            "/root/deploy_sparrow.sh")  
+  ssh(driver_machine, opts, "/root/deploy_sparrow.sh")  
 
-# Start a deployed Sparrow cluster
-def start_cluster(frontends, backends, opts):
+def start_sparrow(frontends, backends, opts):
   all_machines = []
   for fe in frontends: 
     all_machines.append(fe.public_dns_name) 
@@ -279,41 +283,84 @@ def start_cluster(frontends, backends, opts):
     all_machines.append(be.public_dns_name)
 
   print "Starting sparrow on all machines..."
-  ssh_all(all_machines, opts, "chmod 755 /root/start_sparrow.sh;" +
-                              "/root/start_sparrow.sh;")
+  ssh_all(all_machines, opts, "/root/start_sparrow.sh;")
 
-# Stop a deployed Sparrow cluster
-def stop_cluster(frontends, backends, opts):
+def stop_sparrow(frontends, backends, opts):
   all_machines = []
   for fe in frontends:
     all_machines.append(fe.public_dns_name)
   for be in backends:
     all_machines.append(be.public_dns_name)
   print "Stopping sparrow on all machines..."
-  ssh_all(all_machines, opts, "chmod 755 /root/stop_sparrow.sh;" +
-                              "/root/stop_sparrow.sh;")
+  ssh_all(all_machines, opts, "/root/stop_sparrow.sh;")
+
+def start_mesos(frontends, backends, opts):
+  print "Starting mesos master..."
+  ssh(frontends[0].public_dns_name, opts, "/root/start_mesos_master.sh;")
+  print "Starting mesos slaves..."
+  ssh_all([be.public_dns_name for be in backends], 
+           opts, "/root/start_mesos_slave.sh")
+
+def stop_mesos(frontends, backends, opts):
+  print "Stopping mesos slaves..."
+  ssh_all([be.public_dns_name for be in backends],
+          opts, "/root/stop_mesos_slave.sh")
+  print "Stopping mesos master..."
+  ssh(frontends[0].public_dns_name, opts, "/root/stop_mesos_master.sh")
+
+
+def start_spark(frontends, backends, opts):
+  if opts.scheduler == "sparrow":
+    print "Starting Spark backends..."
+    ssh_all([be.public_dns_name for be in backends], opts,
+           "/root/start_spark_backend.sh")
+  print "Starting Spark frontends..."
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "/root/start_spark_frontend.sh %s" % opts.scheduler)
+
+def stop_spark(frontends, backends, opts):
+  print "Stopping spark frontends..."
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "/root/stop_spark_frontend.sh")
+  time.sleep(opts.kill_delay)
+  print "Stopping spark backends..."
+  ssh_all([be.public_dns_name for be in backends], opts,
+         "/root/stop_spark_backend.sh")
+
+def start_hdfs(frontends, backends, opts):
+  print "Starting name node"
+  ssh(frontends[0].public_dns_name, opts,
+      "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh start namenode")
+  print "Starting data nodes"
+  ssh_all([be.public_dns_name for be in backends], opts,
+      "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh start datanode")
+
+def stop_hdfs(frontends, backends,opts):
+  print "Stopping data nodes"
+  ssh_all([be.public_dns_name for be in backends], opts,
+    "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh stop datanode")
+
+  print "Stopping name node"
+  ssh(frontends[0].public_dns_name, opts,
+      "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh stop namenode")
 
 # Start the prototype backends/frontends
 def start_proto(frontends, backends, opts):
   print "Starting Proto backends..."
   ssh_all([be.public_dns_name for be in backends], opts,
-         "chmod 755 /root/start_proto_backend.sh;" + 
          "/root/start_proto_backend.sh")
   print "Starting Proto frontends..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "chmod 755 /root/start_proto_frontend.sh;" + 
           "/root/start_proto_frontend.sh")
 
 # Start the prototype backends/frontends
 def stop_proto(frontends, backends, opts):
   print "Stopping Proto frontends..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "chmod 755 /root/stop_proto_frontend.sh;" +
           "/root/stop_proto_frontend.sh")
   time.sleep(opts.kill_delay)
   print "Stopping Proto backends..."
   ssh_all([be.public_dns_name for be in backends], opts,
-         "chmod 755 /root/stop_proto_backend.sh;" +
          "/root/stop_proto_backend.sh")
 
 # Collect logs from all machines
@@ -368,37 +415,40 @@ def main():
   print "Waiting %d more seconds..." % opts.wait
   time.sleep(opts.wait)
 
+  print "Executing action: %s" % action
+
   if action == "command":
     cmd = " ".join(args[1:])
-    print "Executing command: %s" % cmd
     execute_command(frontends, backends, opts, cmd)
-
-  if action == "deploy":
-    print "Deploying files..."
+  elif action == "deploy":
     deploy_cluster(frontends, backends, opts)
-
-  if action == "start":
-    print "Starting cluster..."
-    start_cluster(frontends, backends, opts)
-
-  if action == "stop":
-    print "Stopping cluster..."
-    stop_cluster(frontends, backends, opts)
-
-  if action == "start-proto":
-    print "Starting proto application..."
+  elif action == "start-sparrow":
+    start_sparrow(frontends, backends, opts)
+  elif action == "stop-sparrow":
+    stop_sparrow(frontends, backends, opts)
+  elif action == "start-mesos":
+    start_mesos(frontends, backends, opts)
+  elif action == "stop-mesos":
+    stop_mesos(frontends, backends, opts)
+  elif action == "start-spark":
+    start_spark(frontends, backends, opts)
+  elif action == "stop-spark":
+    stop_spark(frontends, backends, opts)
+  elif action == "start-proto":
     start_proto(frontends, backends, opts)
-
-  if action == "stop-proto":
-    print "Stopping proto application..."
+  elif action == "stop-proto":
     stop_proto(frontends, backends, opts)
-
-  if action == "collect-logs":
-    print "Collecting logs..."
+  elif action == "start-hdfs":
+    start_hdfs(frontends, backends, opts)
+  elif action == "stop-hdfs":
+    stop_hdfs(frontends, backends, opts)
+  elif action == "collect-logs":
     collect_logs(frontends, backends, opts)
-
-  if action == "destroy":
+  elif action == "destroy":
     destroy_cluster(frontends, backends, opts)
+  else:
+    print "Unknown action: %s" % action
+    sys.exit(1)
 
 if __name__ == "__main__":
   main()

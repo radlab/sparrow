@@ -1,7 +1,13 @@
 #!/bin/bash
 # Start Sparrow locally
 
-LOG=/tmp/sparrowDaemon.log
+LOG=/disk1/sparrow/sparrowDaemon.log
+IP=`ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+
+ip_there=`cat sparrow.conf |grep hostname`
+if [ "X$ip_there" == "X" ]; then
+  echo "hostname = $IP" >> sparrow.conf
+fi
 
 # Make sure software firewall is stopped (ec2 firewall subsumes)
 /etc/init.d/iptables stop > /dev/null 2>&1
