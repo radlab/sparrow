@@ -37,7 +37,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   /**
    * This acts as a callback for the asynchronous Thrift interface.
    */
-  public class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
+  private class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
     InetSocketAddress socket;
     /** This should not be modified after the {@code latch} count is zero! */
     Map<InetSocketAddress, TResourceVector> loads;
