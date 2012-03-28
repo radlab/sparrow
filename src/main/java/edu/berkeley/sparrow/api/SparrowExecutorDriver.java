@@ -53,6 +53,9 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   private Lock runLock = new ReentrantLock();
   final Condition stopped  = runLock.newCondition(); 
   
+  private String appName = System.getProperty("sparrow.app.name", "spark");
+  private int appPort = Integer.parseInt(System.getProperty("sparrow.app.port", "4310"));
+  
   public SparrowExecutorDriver(Executor executor) {
     this.executor = executor;
   }
@@ -89,7 +92,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       activeTaskIds.remove(status.getTaskId().getValue());
       // TODO deal with removing task ID's
       try {
-        client.updateResourceUsage("spark", 
+        client.updateResourceUsage(appName, 
             new HashMap<TUserGroupInfo, TResourceVector>(), activeTaskIds);
       } catch (TException e) {
         e.printStackTrace();
@@ -98,7 +101,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     String requestId = taskIdToRequestId.get(status.getTaskId().getValue());
 
     try {
-      client.sendFrontendMessage("spark", requestId, 
+      client.sendFrontendMessage(appName, requestId, 
           ByteBuffer.wrap(status.toByteArray()));
     } catch (TException e) {
       e.printStackTrace();
@@ -120,7 +123,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       return abort();
     }
     try {
-      client.registerBackend("spark", "localhost:4310");
+      client.registerBackend(appName, "localhost:" + appPort);
     } catch (TException e) {
       System.err.println("Failed to register backend with Sparrow");
       e.printStackTrace(System.err);
@@ -129,7 +132,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(this);
     try {
-      TServers.launchThreadedThriftServer(4310, 4, processor);
+      TServers.launchThreadedThriftServer(appPort, 4, processor);
     } catch (IOException e) {
       return Status.DRIVER_NOT_RUNNING;
     }
