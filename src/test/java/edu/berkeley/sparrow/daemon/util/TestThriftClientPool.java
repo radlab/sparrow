@@ -23,12 +23,11 @@ public class TestThriftClientPool {
     }
   }
   
+  /** Test a very common scenario where we make two thrift function calls to the same
+      node in rapid succession. This test ensures that a single client is created and 
+      used for both calls. */
   @Test
   public void ensureConnectionReUsed() throws Exception {
-    // Test a very common scenario where we make two thrift function calls to the same
-    // node in rapid succession. This test ensures that a single client is created and 
-    // for both calls. 
-    
     InetSocketAddress sock = new InetSocketAddress(12345);
     ThriftClientPool<TAsyncClient> pool = new ThriftClientPool<TAsyncClient>(
         new MockedMakerFactory());
@@ -81,7 +80,7 @@ public class TestThriftClientPool {
     assertEquals(1, pool.getNumIdle(sock));
     assertEquals(0, pool.getNumActive(sock));
     
-    Thread.sleep(100);
+    Thread.sleep(conf.timeBetweenEvictionRunsMillis * 2);
     
     assertEquals(0, pool.getNumIdle(sock));
     assertEquals(0, pool.getNumActive(sock));

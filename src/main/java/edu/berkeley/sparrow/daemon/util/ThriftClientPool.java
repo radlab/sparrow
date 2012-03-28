@@ -46,7 +46,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
   }
   
   // MakerFactory implementations for Sparrow interfaces...
-  public static class InernalServiceMakerFactory 
+  public static class InternalServiceMakerFactory 
     implements MakerFactory<InternalService.AsyncClient> {
     @Override
     public InternalService.AsyncClient create(TNonblockingTransport tr, 
@@ -92,6 +92,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
     public void activateObject(InetSocketAddress socket, T client) throws Exception {
       // Nothing to do here
     }
+    
     @Override
     public void passivateObject(InetSocketAddress socket, T client)
         throws Exception {

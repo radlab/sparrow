@@ -67,6 +67,7 @@ public class Scheduler {
     private InternalService.AsyncClient client;
     private InetSocketAddress socket;
 
+    // Note that the {@code client} must come from the Scheduler's {@code clientPool}.
     public TaskLaunchCallback(CountDownLatch latch, InternalService.AsyncClient client,
         InetSocketAddress socket) {
       this.latch = latch;
@@ -101,7 +102,7 @@ public class Scheduler {
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
     clientPool = new ThriftClientPool<InternalService.AsyncClient>(
-        new ThriftClientPool.InernalServiceMakerFactory());
+        new ThriftClientPool.InternalServiceMakerFactory());
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
