@@ -23,9 +23,10 @@ import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
-import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
-import edu.berkeley.sparrow.thrift.FrontendService.Client;
+import edu.berkeley.sparrow.thrift.FrontendService;
+import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient;
+import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
@@ -47,8 +48,15 @@ public class Scheduler {
   HashMap<String, InetSocketAddress> frontendSockets = 
       new HashMap<String, InetSocketAddress>();
   
-  /** Thrift client pool */
-  ThriftClientPool<InternalService.AsyncClient> clientPool;
+  /** Thrift client pools */
+  ThriftClientPool<InternalService.AsyncClient> schedulerClientPool = // For probes
+      new ThriftClientPool<InternalService.AsyncClient>(
+      new ThriftClientPool.InternalServiceMakerFactory());
+  
+  // For frontend messages
+  private ThriftClientPool<FrontendService.AsyncClient> frontendClientPool =  
+      new ThriftClientPool<FrontendService.AsyncClient>(
+          new ThriftClientPool.FrontendServiceMakerFactory());
   
   /** Information about cluster workload due to other schedulers. */
   SchedulerState state;
@@ -78,7 +86,7 @@ public class Scheduler {
     @Override
     public void onComplete(launchTask_call response) {
       try {
-        clientPool.returnClient(socket, client);
+        schedulerClientPool.returnClient(socket, client);
       } catch (Exception e) {
         LOG.error(e);
       }
@@ -89,7 +97,7 @@ public class Scheduler {
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
       try {
-        clientPool.returnClient(socket, client);
+        schedulerClientPool.returnClient(socket, client);
       } catch (Exception e) {
         LOG.error(e);
       }
@@ -101,8 +109,6 @@ public class Scheduler {
 
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
-    clientPool = new ThriftClientPool<InternalService.AsyncClient>(
-        new ThriftClientPool.InternalServiceMakerFactory());
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
@@ -118,7 +124,7 @@ public class Scheduler {
     }
     
     state.initialize(conf);
-    placer.initialize(conf, clientPool);
+    placer.initialize(conf, schedulerClientPool);
   }
   
   public boolean registerFrontend(String appId, String addr) {
@@ -162,7 +168,7 @@ public class Scheduler {
 
       InternalService.AsyncClient client;
       try {
-        client = clientPool.borrowClient(response.getNodeAddr());
+        client = schedulerClientPool.borrowClient(response.getNodeAddr());
       } catch (Exception e) {
         LOG.error(e);
         return false;
@@ -238,20 +244,44 @@ public class Scheduler {
     return String.format("%s_%d", address.toString(), counter++);
   }
 
+  private class sendFrontendMessageCallback implements 
+      AsyncMethodCallback<frontendMessage_call> {
+    private InetSocketAddress frontendSocket;
+    private AsyncClient client;
+    public sendFrontendMessageCallback(InetSocketAddress socket, AsyncClient client) {
+      frontendSocket = socket;
+      this.client = client;
+    }
+        
+    public void onComplete(frontendMessage_call response) {
+      try { frontendClientPool.returnClient(frontendSocket, client); } 
+      catch (Exception e) { LOG.error(e); }
+    }
+
+    public void onError(Exception exception) {
+      try { frontendClientPool.returnClient(frontendSocket, client); } 
+      catch (Exception e) { LOG.error(e); }
+      LOG.error(exception);
+    }
+  }
+  
   public void sendFrontendMessage(String app, String requestId,
       ByteBuffer message) {
-    Logging.functionCall(app, requestId, message);
-    if (!frontendSockets.containsKey(app)) {
+    LOG.debug(Logging.functionCall(app, requestId, message));
+    InetSocketAddress frontend = frontendSockets.get(app);
+    if (frontend == null) {
       LOG.error("Requested message sent to unregistered app: " + app);
     }
     try {
-      Client client = TClients.createBlockingFrontendClient(frontendSockets.get(app));
-      client.frontendMessage(requestId, message);
+      AsyncClient client = frontendClientPool.borrowClient(frontend);
+      client.frontendMessage(requestId, message, 
+          new sendFrontendMessageCallback(frontend, client));
     } catch (IOException e) {
       LOG.error("Error launching message on frontend: " + app, e);
     } catch (TException e) {
       LOG.error("Error launching message on frontend: " + app, e);
-
+    } catch (Exception e) {
+      LOG.error("Error launching message on frontend: " + app, e);
     }
   }
 }
