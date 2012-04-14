@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
@@ -44,6 +45,7 @@ public abstract class TaskScheduler {
   }
   
   protected TResourceVector capacity;
+  protected Configuration conf;
   protected TResourceVector inUse = TResources.clone(TResources.none());
   protected final BlockingQueue<TaskDescription> runnableTaskQueue = 
       new LinkedBlockingQueue<TaskDescription>();
@@ -52,8 +54,9 @@ public abstract class TaskScheduler {
   
   /** Initialize the task scheduler, passing it the current available resources 
    *  on the machine. */
-  void initialize(TResourceVector capacity) {
+  void initialize(TResourceVector capacity, Configuration conf) {
     this.capacity = capacity;
+    this.conf = conf;
   }
   
   /**
