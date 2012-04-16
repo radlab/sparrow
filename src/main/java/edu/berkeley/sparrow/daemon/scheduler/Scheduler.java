@@ -106,13 +106,13 @@ public class Scheduler {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
-      placer = new RandomTaskPlacer();
+      placer = new ConstraintObservingProbingTaskPlacer();
     } else if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
-      placer = new ProbingTaskPlacer();
+      placer = new ConstraintObservingProbingTaskPlacer();
     } else if (mode.equals("production")) {
       state = new StateStoreSchedulerState();
-      placer = new ProbingTaskPlacer();
+      placer = new ConstraintObservingProbingTaskPlacer();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }

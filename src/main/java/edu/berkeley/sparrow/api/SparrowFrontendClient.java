@@ -63,7 +63,7 @@ public class SparrowFrontendClient {
     FrontendService.Processor<FrontendService.Iface> processor =
         new FrontendService.Processor<FrontendService.Iface>(frontendServer);
     try {
-      TServers.launchThreadedThriftServer(54321, 5, processor);
+      TServers.launchThreadedThriftServer(listenPort, 5, processor);
     } catch (IOException e) {
       LOG.fatal("Couldn't launch server side of frontend", e);
     }
@@ -73,7 +73,7 @@ public class SparrowFrontendClient {
           sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort());
       clients.add(client);
     }
-    clients.peek().registerFrontend(app, "localhost" + listenPort); 
+    clients.peek().registerFrontend(app, "localhost:" + listenPort); 
   }
   
   public synchronized boolean submitJob(String app, 

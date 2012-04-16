@@ -37,7 +37,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   /**
    * This acts as a callback for the asynchronous Thrift interface.
    */
-  private class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
+  protected class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
     InetSocketAddress socket;
     /** This should not be modified after the {@code latch} count is zero! */
     Map<InetSocketAddress, TResourceVector> loads;
@@ -69,7 +69,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
                                               socket.getAddress().getHostAddress()));
       try {
         clientPool.returnClient(socket, client);
-        if (!response.getResult().containsKey(appId)) {
+        Map<String, TResourceVector> resp = response.getResult();
+        if (!resp.containsKey(appId)) {
           LOG.warn("Probe returned no load information for " + appId);
         }
         else {
