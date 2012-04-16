@@ -1,8 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -21,6 +19,7 @@ import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
@@ -56,7 +55,7 @@ public class NodeMonitor {
   private TResourceVector capacity;
   private Configuration conf;
   private InetAddress address;
-  private TaskScheduler scheduler;
+  private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
 
   public void initialize(Configuration conf) throws UnknownHostException {
@@ -79,35 +78,17 @@ public class NodeMonitor {
     capacity = new TResourceVector();
     this.conf = conf;
     
-    // Interrogate system resources. We may want to put this in another class, and note
-    // that currently this will only work on Linux machines (otherwise will use default).
-    try {
-      Process p = Runtime.getRuntime().exec("cat /proc/meminfo");  
-      BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
-      String line = in.readLine();
-      while (line != null) {
-        if (line.contains("MemTotal")) { 
-          String[] parts = line.split("\\s+");
-          if (parts.length > 1) {
-            int memory = Integer.parseInt(parts[1]) / 1000;
-            capacity.setMemory(memory);
-            LOG.info("Setting memory capacity to " + memory);
-          }
-        }
-        line = in.readLine();
-      }
-    } catch (IOException e) {
-      LOG.info("Error interrogating memory from system.");
-    }
-    if (!capacity.isSetMemory()) { 
-      LOG.info("Using default memory allocation: " + DEFAULT_MEMORY_MB);
-      capacity.setMemory(DEFAULT_MEMORY_MB);  
-    }
-    LOG.info("Using default core count: " + DEFAULT_CORES);
-    capacity.setCores(DEFAULT_CORES);
+    int mem = Resources.getSystemMemoryMb(conf);
+    capacity.setMemory(mem);
+    LOG.info("Using memory allocation: " + mem);
     
-    scheduler = new RoundRobinTaskScheduler();
-    scheduler.initialize(capacity);
+    int cores = Resources.getSystemCPUCount(conf);
+    capacity.setCores(cores);
+    LOG.info("Using core allocation: " + cores);
+    
+    scheduler = new FifoTaskScheduler();
+    scheduler.setMaxActiveTasks(cores);
+    scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler, address);
   }

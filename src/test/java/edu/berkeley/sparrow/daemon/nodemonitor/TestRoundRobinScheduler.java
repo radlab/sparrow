@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.junit.Test;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskDescription;
@@ -25,7 +26,7 @@ public class TestRoundRobinScheduler {
   public void testBasicRoundRobin() {
     TaskScheduler scheduler = new RoundRobinTaskScheduler();
     TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity);
+    scheduler.initialize(capacity, new PropertiesConfiguration());
     
     TUserGroupInfo user1 = new TUserGroupInfo();
     user1.user = "user1";

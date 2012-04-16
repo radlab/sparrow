@@ -31,6 +31,12 @@ public class SparrowConf {
   public final static String INTERNAL_THRIFT_THREADS =
       "internal_agent.thrift.threads";
   
+  public final static String SYSTEM_MEMORY = "system.memory";
+  public final static int DEFAULT_SYSTEM_MEMORY = 1024;
+  
+  public final static String SYSTEM_CPUS = "system.cpus";
+  public final static int DEFAULT_SYSTEM_CPUS = 4;
+  
   // Values: "production", "standalone", "configbased"
   public final static String DEPLYOMENT_MODE = "deployment.mode";
   public final static String DEFAULT_DEPLOYMENT_MODE = "production";
