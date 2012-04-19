@@ -26,6 +26,8 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   void handleSubmitTask(TaskDescription task) {
     if (TResources.isLessThanOrEqualTo(task.estimatedResources, getFreeResources())) {
       try {
+        LOG.info("Task: " + task.taskId + " instantly runnable. " 
+            + task.estimatedResources + "<=" + getFreeResources());
         runnableTaskQueue.put(task);
       } catch (InterruptedException e) {
       }
@@ -75,6 +77,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
         }
         else {
           try {
+            LOG.info("Task: " + nextTask.taskId + " now runnable");
             runnableTaskQueue.put(nextTask);
             removeTaskFromUserQueue(user, nextTask);
             currentIndex = currentIndex + i + 1;

@@ -14,6 +14,7 @@ import java.util.Map;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.base.Optional;
 
@@ -21,9 +22,12 @@ import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.Serialization;
-import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.SchedulerService.Client;
+import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
+import edu.berkeley.sparrow.thrift.SchedulerService;
+import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
+import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
+import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.sendFrontendMessage_call;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -51,6 +55,9 @@ public class NodeMonitor {
   // Map to scheduler socket address for each request id.
   private HashMap<String, InetSocketAddress> appSchedulers =
       new HashMap<String, InetSocketAddress>();
+  private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool = 
+      new ThriftClientPool<SchedulerService.AsyncClient>(
+          new ThriftClientPool.SchedulerServiceMakerFactory());
   
   private TResourceVector capacity;
   private Configuration conf;
@@ -186,7 +193,7 @@ public class NodeMonitor {
      * finished. */
     String compoundId = taskId + "-" + requestId;
     LOG.debug(Logging.functionCall(app, message, requestId, compoundId, user,
-                                   estimatedResources));
+                                   estimatedResources, schedulerAddress));
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_start", requestId,
                                             address.getHostAddress(), taskId));
     
@@ -210,6 +217,27 @@ public class NodeMonitor {
     return true;
   }
 
+  private class sendFrontendMessageCallback implements 
+  AsyncMethodCallback<sendFrontendMessage_call> {
+    private InetSocketAddress frontendSocket;
+    private AsyncClient client;
+    public sendFrontendMessageCallback(InetSocketAddress socket, AsyncClient client) {
+      frontendSocket = socket;
+      this.client = client;
+    }
+        
+    public void onComplete(sendFrontendMessage_call response) {
+      try { schedulerClientPool.returnClient(frontendSocket, client); } 
+      catch (Exception e) { LOG.error(e); }
+    }
+    
+    public void onError(Exception exception) {
+      try { schedulerClientPool.returnClient(frontendSocket, client); } 
+      catch (Exception e) { LOG.error(e); }
+      LOG.error(exception);
+    }
+  }
+  
   public void sendFrontendMessage(String app, String requestId,
       ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, requestId, message));
@@ -218,15 +246,19 @@ public class NodeMonitor {
       LOG.error("Did not find any scheduler info for request: " + requestId);
       return;
     }
-
-    // TODO it would be nice if we had a generic way to send one-way messages
-    // asynchronously. This should probably be changed from the blocking interface.
+    
     try {
-      Client client = TClients.createBlockingSchedulerClient(scheduler);
-      client.sendFrontendMessage(app, requestId, message);
+      LOG.debug("requestID: " + requestId + " scheduler: " + 
+                scheduler.getHostName() + " app:" + app);
+      AsyncClient client = schedulerClientPool.borrowClient(scheduler);
+      client.sendFrontendMessage(app, requestId, message, 
+          new sendFrontendMessageCallback(scheduler, client));
+      LOG.debug("finished sending message");
     } catch (IOException e) {
       LOG.error(e);
     } catch (TException e) {
+      LOG.error(e);
+    } catch (Exception e) {
       LOG.error(e);
     }
   }

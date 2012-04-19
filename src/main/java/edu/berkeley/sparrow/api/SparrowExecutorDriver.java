@@ -53,6 +53,9 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   private Lock runLock = new ReentrantLock();
   final Condition stopped  = runLock.newCondition(); 
   
+  private String appName = System.getProperty("sparrow.app.name", "spark");
+  private int appPort = Integer.parseInt(System.getProperty("sparrow.app.port", "4310"));
+  
   public SparrowExecutorDriver(Executor executor) {
     this.executor = executor;
   }
@@ -89,7 +92,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       activeTaskIds.remove(status.getTaskId().getValue());
       // TODO deal with removing task ID's
       try {
-        client.updateResourceUsage("spark", 
+        client.updateResourceUsage(appName, 
             new HashMap<TUserGroupInfo, TResourceVector>(), activeTaskIds);
       } catch (TException e) {
         e.printStackTrace();
@@ -98,7 +101,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     String requestId = taskIdToRequestId.get(status.getTaskId().getValue());
 
     try {
-      client.sendFrontendMessage("spark", requestId, 
+      client.sendFrontendMessage(appName, requestId, 
           ByteBuffer.wrap(status.toByteArray()));
     } catch (TException e) {
       e.printStackTrace();
@@ -115,17 +118,21 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     try {
       client = TClients.createBlockingNmClient("localhost", 20501);
     } catch (IOException e) {
+      System.err.println("Failed to create connection to Sparrow:");
+      e.printStackTrace(System.err);
       return abort();
     }
     try {
-      client.registerBackend("spark", "localhost:4310");
+      client.registerBackend(appName, "localhost:" + appPort);
     } catch (TException e) {
+      System.err.println("Failed to register backend with Sparrow");
+      e.printStackTrace(System.err);
       return abort();
     }
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(this);
     try {
-      TServers.launchThreadedThriftServer(4310, 4, processor);
+      TServers.launchThreadedThriftServer(appPort, 4, processor);
     } catch (IOException e) {
       return Status.DRIVER_NOT_RUNNING;
     }
@@ -137,31 +144,29 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   @Override
   public Status stop() {
     client.getOutputProtocol().getTransport().close(); // TODO: close server
-    synchronized (runLock) {
-      stopStatus = Status.DRIVER_STOPPED;
-      stopped.signalAll();
-    }
+    signalStopped();
     return stopStatus;
   }
 
   @Override
   public Status stop(boolean arg0) {
     client.getOutputProtocol().getTransport().close(); // TODO: close server
-    synchronized (runLock) {
-      stopStatus = Status.DRIVER_STOPPED;
-      stopped.signalAll();
-    }
+    signalStopped();
     return stopStatus;
   }
 
   @Override
   public Status abort() {
     client.getOutputProtocol().getTransport().close(); // TODO: close server
-    synchronized (runLock) {
-      stopStatus = Status.DRIVER_ABORTED;
-      stopped.signalAll();
-    }
+    signalStopped();
     return stopStatus;
+  }
+  
+  private void signalStopped() {
+    runLock.lock();
+    stopStatus = Status.DRIVER_STOPPED;
+    stopped.signalAll();
+    runLock.unlock();
   }
 
   @Override

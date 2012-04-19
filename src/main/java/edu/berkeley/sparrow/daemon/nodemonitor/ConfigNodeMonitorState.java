@@ -4,8 +4,10 @@ import java.net.InetSocketAddress;
 import java.util.Set;
 
 import org.apache.commons.configuration.Configuration;
+import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.daemon.scheduler.ConfigSchedulerState;
 import edu.berkeley.sparrow.daemon.util.ConfigUtil;
 
 /***
@@ -13,6 +15,8 @@ import edu.berkeley.sparrow.daemon.util.ConfigUtil;
  * file.
  */
 public class ConfigNodeMonitorState implements NodeMonitorState {
+  private static final Logger LOG = Logger.getLogger(ConfigNodeMonitorState.class);
+
   private Set<InetSocketAddress> nodeMonitors;
   private String staticAppId;
   
@@ -26,7 +30,7 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
   public boolean registerBackend(String appId, InetSocketAddress nodeMonitor) {
     // Verify that the given backend information matches the static configuration.
     if (!appId.equals(staticAppId)) {
-      throw new RuntimeException("Requested to register backend for app " + appId +
+      LOG.warn("Requested to register backend for app " + appId +
           " but was expecting app " + staticAppId);
     } else if (!nodeMonitors.contains(nodeMonitor)) {
       throw new RuntimeException("Address " + nodeMonitor.toString() + 

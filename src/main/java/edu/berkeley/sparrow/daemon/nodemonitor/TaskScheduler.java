@@ -92,7 +92,7 @@ public abstract class TaskScheduler {
   }
   
   protected synchronized void addResourceInUse(TResourceVector nowInUse) {
-    inUse = TResources.add(inUse, nowInUse);
+    TResources.addTo(inUse, nowInUse);
   }  
   
   protected synchronized void freeResourceInUse(TResourceVector nowFreed) {

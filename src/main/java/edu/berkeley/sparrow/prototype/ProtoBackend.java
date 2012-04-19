@@ -77,6 +77,8 @@ public class ProtoBackend implements BackendService.Iface {
   private static final String NM_HOST = "localhost";
   private static int NM_PORT;
   
+  private static Client client;
+  
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
   private static final ExecutorService executor = 
@@ -242,6 +244,9 @@ public class ProtoBackend implements BackendService.Iface {
     // Note we ignore user here
     executor.submit(new TaskRunnable(
         requestId, taskId, message, estimatedResources));
+    synchronized (client) {
+      client.sendFrontendMessage(APP_ID, requestId, ByteBuffer.wrap("Started".getBytes()));
+    }
   }
   
   public static void main(String[] args) throws IOException, TException {
@@ -284,7 +289,7 @@ public class ProtoBackend implements BackendService.Iface {
     TServers.launchThreadedThriftServer(listenPort, THRIFT_WORKER_THREADS, processor);
     
     // Register server
-    Client client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
+    client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
     client.registerBackend(APP_ID, "localhost:" + listenPort);
   }
 }

@@ -53,6 +53,9 @@ public class SparrowConf {
   public final static String PROBE_RATIO = "probe.ratio";
   public final static double DEFAULT_PROBE_MULTIPLIER = 1.05;
   
+  /** The hostname of this machine. */
+  public final static String HOSTNAME = "hostname";
+  
   // Parameters for static operation (least usable system tests).
   // Expects a comma-separated list of host:port pairs describing the address of the
   // internal interface of the node monitors.

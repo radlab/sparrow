@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
@@ -39,7 +41,8 @@ public class SchedulerThrift implements SchedulerService.Iface {
         DEFAULT_SCHEDULER_THRIFT_PORT);
     int threads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS, 
         DEFAULT_SCHEDULER_THRIFT_THREADS);
-    InetSocketAddress addr = new InetSocketAddress(port);
+    String hostname = Hostname.getHostName(conf);
+    InetSocketAddress addr = new InetSocketAddress(hostname, port);
     scheduler.initialize(conf, addr);
     TServers.launchThreadedThriftServer(port, threads, processor);
   }

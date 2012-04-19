@@ -1,7 +1,7 @@
 #!/bin/bash
 # Start Prototype frontend
 
-LOG=/tmp/protoFrontend.log
+LOG=/disk1/sparrow/protoFrontend.log
 
 APPCHK=$(ps aux | grep -v grep | grep -c ProtoFrontend)
 
