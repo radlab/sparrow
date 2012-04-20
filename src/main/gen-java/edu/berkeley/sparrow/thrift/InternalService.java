@@ -24,7 +24,7 @@ public class InternalService {
 
   public interface Iface {
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app, String requestId) throws org.apache.thrift.TException;
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getLoad(String app, String requestId) throws org.apache.thrift.TException;
 
     public boolean launchTask(String app, ByteBuffer message, String requestId, String taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, String schedulerAddress) throws org.apache.thrift.TException;
 
@@ -58,7 +58,7 @@ public class InternalService {
       super(iprot, oprot);
     }
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getLoad(String app, String requestId) throws org.apache.thrift.TException
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getLoad(String app, String requestId) throws org.apache.thrift.TException
     {
       send_getLoad(app, requestId);
       return recv_getLoad();
@@ -72,7 +72,7 @@ public class InternalService {
       sendBase("getLoad", args);
     }
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> recv_getLoad() throws org.apache.thrift.TException
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> recv_getLoad() throws org.apache.thrift.TException
     {
       getLoad_result result = new getLoad_result();
       receiveBase(result, "getLoad");
@@ -154,7 +154,7 @@ public class InternalService {
         prot.writeMessageEnd();
       }
 
-      public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getResult() throws org.apache.thrift.TException {
+      public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getResult() throws org.apache.thrift.TException {
         if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -657,7 +657,7 @@ public class InternalService {
 
     private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.MAP, (short)0);
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> success; // required
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> success; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -725,7 +725,7 @@ public class InternalService {
       tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.MapMetaData(org.apache.thrift.protocol.TType.MAP, 
               new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING), 
-              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class))));
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceUsage.class))));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getLoad_result.class, metaDataMap);
     }
@@ -734,7 +734,7 @@ public class InternalService {
     }
 
     public getLoad_result(
-      Map<String,edu.berkeley.sparrow.thrift.TResourceVector> success)
+      Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> success)
     {
       this();
       this.success = success;
@@ -745,15 +745,15 @@ public class InternalService {
      */
     public getLoad_result(getLoad_result other) {
       if (other.isSetSuccess()) {
-        Map<String,edu.berkeley.sparrow.thrift.TResourceVector> __this__success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceVector>();
-        for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceVector> other_element : other.success.entrySet()) {
+        Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> __this__success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>();
+        for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> other_element : other.success.entrySet()) {
 
           String other_element_key = other_element.getKey();
-          edu.berkeley.sparrow.thrift.TResourceVector other_element_value = other_element.getValue();
+          edu.berkeley.sparrow.thrift.TResourceUsage other_element_value = other_element.getValue();
 
           String __this__success_copy_key = other_element_key;
 
-          edu.berkeley.sparrow.thrift.TResourceVector __this__success_copy_value = new edu.berkeley.sparrow.thrift.TResourceVector(other_element_value);
+          edu.berkeley.sparrow.thrift.TResourceUsage __this__success_copy_value = new edu.berkeley.sparrow.thrift.TResourceUsage(other_element_value);
 
           __this__success.put(__this__success_copy_key, __this__success_copy_value);
         }
@@ -773,18 +773,18 @@ public class InternalService {
       return (this.success == null) ? 0 : this.success.size();
     }
 
-    public void putToSuccess(String key, edu.berkeley.sparrow.thrift.TResourceVector val) {
+    public void putToSuccess(String key, edu.berkeley.sparrow.thrift.TResourceUsage val) {
       if (this.success == null) {
-        this.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceVector>();
+        this.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>();
       }
       this.success.put(key, val);
     }
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceVector> getSuccess() {
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getSuccess() {
       return this.success;
     }
 
-    public getLoad_result setSuccess(Map<String,edu.berkeley.sparrow.thrift.TResourceVector> success) {
+    public getLoad_result setSuccess(Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> success) {
       this.success = success;
       return this;
     }
@@ -810,7 +810,7 @@ public class InternalService {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((Map<String,edu.berkeley.sparrow.thrift.TResourceVector>)value);
+          setSuccess((Map<String,edu.berkeley.sparrow.thrift.TResourceUsage>)value);
         }
         break;
 
@@ -908,13 +908,13 @@ public class InternalService {
             if (field.type == org.apache.thrift.protocol.TType.MAP) {
               {
                 org.apache.thrift.protocol.TMap _map18 = iprot.readMapBegin();
-                this.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceVector>(2*_map18.size);
+                this.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map18.size);
                 for (int _i19 = 0; _i19 < _map18.size; ++_i19)
                 {
                   String _key20; // required
-                  edu.berkeley.sparrow.thrift.TResourceVector _val21; // required
+                  edu.berkeley.sparrow.thrift.TResourceUsage _val21; // required
                   _key20 = iprot.readString();
-                  _val21 = new edu.berkeley.sparrow.thrift.TResourceVector();
+                  _val21 = new edu.berkeley.sparrow.thrift.TResourceUsage();
                   _val21.read(iprot);
                   this.success.put(_key20, _val21);
                 }
@@ -942,7 +942,7 @@ public class InternalService {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
         {
           oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, this.success.size()));
-          for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceVector> _iter22 : this.success.entrySet())
+          for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter22 : this.success.entrySet())
           {
             oprot.writeString(_iter22.getKey());
             _iter22.getValue().write(oprot);
