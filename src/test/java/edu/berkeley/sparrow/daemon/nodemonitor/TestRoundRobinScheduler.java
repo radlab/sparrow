@@ -13,13 +13,12 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 public class TestRoundRobinScheduler {
-  private TaskDescription createTaskDescription(int id, TUserGroupInfo user, 
-      TaskScheduler scheduler) {
+  private TaskDescription createTaskDescription(int id, TaskScheduler scheduler) {
     String idStr = Integer.toString(id);
     return scheduler.new TaskDescription(
             idStr, idStr, ByteBuffer.wrap(new byte[] {(byte) id}), 
             TResources.createResourceVector(0, 1), 
-            user, InetSocketAddress.createUnresolved("localhost", 1234));
+            new TUserGroupInfo(), InetSocketAddress.createUnresolved("localhost", 1234));
   }
   
   @Test
@@ -27,54 +26,47 @@ public class TestRoundRobinScheduler {
     TaskScheduler scheduler = new RoundRobinTaskScheduler();
     TResourceVector capacity = TResources.createResourceVector(0, 4);
     scheduler.initialize(capacity, new PropertiesConfiguration());
-    
-    TUserGroupInfo user1 = new TUserGroupInfo();
-    user1.user = "user1";
-    user1.group = "user1";
-    
-    TUserGroupInfo user2 = new TUserGroupInfo();
-    user2.user = "user2";
-    user2.group = "user2";
-    
-    TUserGroupInfo user3 = new TUserGroupInfo();
-    user3.user = "user3";
-    user3.group = "user3";
         
+    final String app1 = "app1";
+    final String app2 = "app2";
+    final String app3 = "app3";
+    final String app4 = "app4";
+    
     // Submit enough tasks to saturate the existing capacity.
-    scheduler.submitTask(createTaskDescription(1, user1, scheduler));
+    scheduler.submitTask(createTaskDescription(1, scheduler), app1);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.submitTask(createTaskDescription(2, user2, scheduler));
+    scheduler.submitTask(createTaskDescription(2, scheduler), app2);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
     
-    scheduler.submitTask(createTaskDescription(3, user3, scheduler));
+    scheduler.submitTask(createTaskDescription(3, scheduler), app3);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
     
-    scheduler.submitTask(createTaskDescription(4, user1, scheduler));
+    scheduler.submitTask(createTaskDescription(4, scheduler), app4);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
     
     /* Create the following backlogs.
-     * user1: 2 tasks
-     * user2: 3 tasks
-     * user3: 4 tasks
+     * app1: 2 tasks
+     * app2: 3 tasks
+     * app3: 4 tasks
      */
-    scheduler.submitTask(createTaskDescription(5, user1, scheduler));
-    scheduler.submitTask(createTaskDescription(6, user1, scheduler));
-    scheduler.submitTask(createTaskDescription(7, user2, scheduler));
-    scheduler.submitTask(createTaskDescription(8, user2, scheduler));
-    scheduler.submitTask(createTaskDescription(9, user2, scheduler));
-    scheduler.submitTask(createTaskDescription(10, user3, scheduler));
-    scheduler.submitTask(createTaskDescription(11, user3, scheduler));
-    scheduler.submitTask(createTaskDescription(12, user3, scheduler));
-    scheduler.submitTask(createTaskDescription(13, user3, scheduler));
+    scheduler.submitTask(createTaskDescription(5, scheduler), app1);
+    scheduler.submitTask(createTaskDescription(6, scheduler), app1);
+    scheduler.submitTask(createTaskDescription(7, scheduler), app2);
+    scheduler.submitTask(createTaskDescription(8, scheduler), app2);
+    scheduler.submitTask(createTaskDescription(9, scheduler), app2);
+    scheduler.submitTask(createTaskDescription(10, scheduler), app3);
+    scheduler.submitTask(createTaskDescription(11, scheduler), app3);
+    scheduler.submitTask(createTaskDescription(12, scheduler), app3);
+    scheduler.submitTask(createTaskDescription(13, scheduler), app3);
 
     assertEquals(0, scheduler.runnableTasks());
     
@@ -83,55 +75,55 @@ public class TestRoundRobinScheduler {
     scheduler.taskCompleted("1");
     assertEquals(1, scheduler.runnableTasks());
     TaskDescription task = scheduler.getNextTask();
-    assertEquals("user1", task.user.user);
+    assertEquals("5", task.taskId);
     assertEquals(0, scheduler.runnableTasks()); 
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user2", task.user.user);
+    assertEquals("7", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user3", task.user.user);
+    assertEquals("10", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
-    assertEquals("user1", task.user.user);
+    assertEquals("6", task.taskId);
     assertEquals(0, scheduler.runnableTasks()); 
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user2", task.user.user);
+    assertEquals("8", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user3", task.user.user);
+    assertEquals("11", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user2", task.user.user);
+    assertEquals("9", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user3", task.user.user);
+    assertEquals("12", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("user3", task.user.user);
+    assertEquals("13", task.taskId);
     assertEquals(0, scheduler.runnableTasks());
   }
 }

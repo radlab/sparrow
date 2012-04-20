@@ -6,13 +6,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
@@ -20,10 +18,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
-import edu.berkeley.sparrow.daemon.scheduler.MinCpuAssignmentPolicy.CPUNodeComparator;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.TResourceVector;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
@@ -42,7 +39,7 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
    *    - Assign to nodes based on {@link MinCpuAssignmentPolicy}.
    */
   public Collection<TaskPlacementResponse> assignTasks(
-      Collection<TTaskSpec> tasks, Map<InetSocketAddress, TResourceVector> nodes) {
+      Collection<TTaskSpec> tasks, Map<InetSocketAddress, TResourceUsage> nodes) {
     HashMap<InetAddress, InetSocketAddress> addrToSocket = Maps.newHashMap();
     
     for (InetSocketAddress node: nodes.keySet()) {
@@ -68,33 +65,37 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
       }
       // We have constraints
       if (interests.size() > 0) {
-        Comparator<TResourceVector> comp = new Comparator<TResourceVector>() {
-          public int compare(TResourceVector a, TResourceVector b) {
-            return new Integer(a.getCores()).compareTo(new Integer(b.getCores())); 
-          }
-        };
-        HashMap<InetSocketAddress, TResourceVector> choices = Maps.newHashMap();
+        HashMap<InetSocketAddress, TResourceUsage> choices = Maps.newHashMap();
         for (InetSocketAddress node : interests) {
           if (nodes.containsKey(node)) {
             choices.put(node, nodes.get(node));
           }
         }
-        List<Entry<InetSocketAddress, TResourceVector>> results = 
-            new ArrayList<Entry<InetSocketAddress, TResourceVector>>(choices.entrySet());
-        Collections.sort(results, new CPUNodeComparator());
+        List<Entry<InetSocketAddress, TResourceUsage>> results = 
+            new ArrayList<Entry<InetSocketAddress, TResourceUsage>>(choices.entrySet());
+        Collections.sort(results, TResources.makeEntryComparator(
+            new TResources.CPUThenQueueComparator()));
         
         // TODO: this should really return something saying the constraints are unsatisfiable
         if (results.size() == 0) LOG.fatal("No information pertaining to task: " + task); 
         
-        Entry<InetSocketAddress, TResourceVector> entry = results.get(0);
+        Entry<InetSocketAddress, TResourceUsage> entry = results.get(0);
         out.add(new TaskPlacementResponse(task, entry.getKey()));
-        TResources.addTo(entry.getValue(), task.estimatedResources);
+        TResources.addTo(entry.getValue().getResources(), task.estimatedResources);
         
         } else { // We are not constrained
         unconstrainedTasks.add(task);
       }
     }
-    MinCpuAssignmentPolicy delegate = new MinCpuAssignmentPolicy();
+    /**
+     * NOTE,TODO: This may have undesired consequences. One issue is that this policy
+     * ranks all nodes in terms of (CPU, queue length) ordering. That means a node with
+     * a positive queue length might be assigned over one which has an extra free queue
+     * (but does have a queue which has already been assigned). This might be a place
+     * to look if we are seeing below-expected performance.
+     */
+    AssignmentPolicy delegate = new ComparatorAssignmentPolicy(
+        new TResources.CPUThenQueueComparator());
     out.addAll(delegate.assignTasks(unconstrainedTasks, nodes));
     return out;
   }

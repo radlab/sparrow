@@ -10,6 +10,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -86,9 +87,9 @@ public abstract class TaskScheduler {
     handleTaskCompleted(taskId);
   }
   
-  void submitTask(TaskDescription task) {
+  void submitTask(TaskDescription task, String appId) {
     resourcesPerTask.put(task.taskId, task.estimatedResources);
-    handleSubmitTask(task);
+    handleSubmitTask(task, appId);
   }
   
   protected synchronized void addResourceInUse(TResourceVector nowInUse) {
@@ -113,14 +114,21 @@ public abstract class TaskScheduler {
     return TResources.subtract(free, reserved);
   }
   
+  // TASK SCHEDULERS MUST IMPLEMENT THE FOLLOWING
+  
   /**
    * Submit a task to the scheduler.
    */
-  abstract void handleSubmitTask(TaskDescription task);
+  abstract void handleSubmitTask(TaskDescription task, String appId);
   
   /**
    * Signal that a given task has completed.
    */
   protected abstract void handleTaskCompleted(String taskId);
   
+  /**
+   * Returns the current resource usage. If the resource usage is equal to the
+   * machines capacity, this will include the queue length for appId.
+   */
+  abstract TResourceUsage getResourceUsage(String appId);
 }

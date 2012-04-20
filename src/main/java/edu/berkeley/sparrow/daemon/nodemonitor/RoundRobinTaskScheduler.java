@@ -8,22 +8,26 @@ import java.util.Queue;
 import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
- * A {@link TaskScheduler} which round-robins requests over backlogged per-user queues.
+ * A {@link TaskScheduler} which round-robins requests over backlogged per-app queues.
+ * 
+ * NOTE: This current round-robins over applications, rather than users. Not sure
+ * what we want here going forward.
  */
 public class RoundRobinTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(RoundRobinTaskScheduler.class);
 
-  private HashMap<String, Queue<TaskDescription>> userQueues = 
+  private HashMap<String, Queue<TaskDescription>> appQueues = 
       new HashMap<String, Queue<TaskDescription>>();
 
-  private ArrayList<String> users = new ArrayList<String>();
+  private ArrayList<String> apps = new ArrayList<String>();
   private int currentIndex = 0; // Round robin index, always used (mod n) where n is
-                                // the number of users.
+                                // the number of apps.
 
   @Override
-  void handleSubmitTask(TaskDescription task) {
+  void handleSubmitTask(TaskDescription task, String appId) {
     if (TResources.isLessThanOrEqualTo(task.estimatedResources, getFreeResources())) {
       try {
         LOG.info("Task: " + task.taskId + " instantly runnable. " 
@@ -32,34 +36,34 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       } catch (InterruptedException e) {
       }
     } else {
-      addTaskToUserQueue(task.user.user, task);
+      addTaskToAppQueue(appId, task);
     }
   }
   
-  void addTaskToUserQueue(String user, TaskDescription task) {
-    synchronized(userQueues) {
-      if (!userQueues.containsKey(user)) {
-        userQueues.put(user, new LinkedList<TaskDescription>());
-        users.add(user);
+  void addTaskToAppQueue(String app, TaskDescription task) {
+    synchronized(appQueues) {
+      if (!appQueues.containsKey(app)) {
+        appQueues.put(app, new LinkedList<TaskDescription>());
+        apps.add(app);
       }
-      userQueues.get(user).add(task);
+      appQueues.get(app).add(task);
     }
   }
   
-  void removeTaskFromUserQueue(String user, TaskDescription task) {
-    synchronized(userQueues) {
-      userQueues.get(user).remove(task);
-      if (userQueues.get(user).size() == 0) {
-        userQueues.remove(user);
-        users.remove(user);
+  void removeTaskFromAppQueue(String app, TaskDescription task) {
+    synchronized(appQueues) {
+      appQueues.get(app).remove(task);
+      if (appQueues.get(app).size() == 0) {
+        appQueues.remove(app);
+        apps.remove(app);
       }
     }
   }
 
   @Override
   protected void handleTaskCompleted(String taskId) {
-    synchronized(userQueues) {
-      /* Scan through the list of users (starting at currentIndex) and find the first
+    synchronized(appQueues) {
+      /* Scan through the list of apps (starting at currentIndex) and find the first
        * one with a pending tasks. If we find a pending task, make that task runnable
        * and update the round robin index.
        * 
@@ -67,9 +71,9 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
        * by virtue of a task having just finished, have enough resources to execute it. 
        * This makes sense for scheduling similar sized tasks (e.g. just scheduling cores)
        * but will not be the case if tasks take different amounts of resources. */
-      for (int i = 0; i < users.size(); i++) {
-        String user = users.get((currentIndex + i) % users.size());
-        Queue<TaskDescription> considering = userQueues.get(user);
+      for (int i = 0; i < apps.size(); i++) {
+        String app = apps.get((currentIndex + i) % apps.size());
+        Queue<TaskDescription> considering = appQueues.get(app);
         TaskDescription nextTask = considering.poll();
         if (nextTask == null) {
           // Shouldn't get here if we are removing non-empty queues
@@ -79,7 +83,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
           try {
             LOG.info("Task: " + nextTask.taskId + " now runnable");
             runnableTaskQueue.put(nextTask);
-            removeTaskFromUserQueue(user, nextTask);
+            removeTaskFromAppQueue(app, nextTask);
             currentIndex = currentIndex + i + 1;
             return;
           } catch (InterruptedException e) {
@@ -89,6 +93,20 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       }
       // No one had a task, so do nothing.
     }
+  }
+
+  @Override
+  TResourceUsage getResourceUsage(String appId) {
+    TResourceUsage out = new TResourceUsage();
+    out.resources = TResources.subtract(capacity, getFreeResources());
+    // We use one shared queue for all apps here
+    if (appQueues.containsKey(appId)) {
+      out.queueLength = appQueues.get(appId).size();
+    } else {
+      LOG.info("Got resource request for application I've never seen: " + appId);
+      out.queueLength = 0;
+    }
+    return out;
   }
 
 }

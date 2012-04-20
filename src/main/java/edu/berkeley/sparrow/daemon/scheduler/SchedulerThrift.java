@@ -1,7 +1,6 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

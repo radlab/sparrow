@@ -17,6 +17,7 @@ import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -80,7 +81,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   }
   
   @Override
-  public Map<String, TResourceVector> getLoad(String app, String requestId)
+  public Map<String, TResourceUsage> getLoad(String app, String requestId)
       throws TException {
     return nodeMonitor.getLoad(app, requestId);
   }
