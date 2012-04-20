@@ -7,7 +7,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.scheduler.ConfigSchedulerState;
 import edu.berkeley.sparrow.daemon.util.ConfigUtil;
 
 /***

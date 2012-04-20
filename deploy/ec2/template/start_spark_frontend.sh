@@ -26,11 +26,11 @@ chmod 755 spark-run.sh
 if [ "$SCHED" = "sparrow" ];
 then
   export SPARK_HOSTNAME=`hostname`.ec2.internal
-  nohup ./spark-run.sh -Dspark.master.host=$ip -Dspark.master.port=7077 -Dsparrow.app.name=spark_$ip -Dspark.scheduler=sparrow spark.SparkTPCHRunner sparrow@localhost:20503 hdfs://{{name_node}}:8020/ 1 true .5 15 /root/spark_tpch_$ip.log > $log 2>&1 &
+  nohup ./spark-run.sh -Dspark.master.host=$ip -Dspark.master.port=7077 -Dsparrow.app.name=spark_$ip -Dspark.scheduler=sparrow spark.SparkTPCHRunner sparrow@localhost:20503 hdfs://{{name_node}}:8020/ 1 true 1 60 /root/spark_tpch_$ip.log > $log 2>&1 &
 else
   SPARK_MEM="3000m"
   export SPARK_MEM
-  nohup ./spark-run.sh -Dspark.master.host=$ip -Dspark.master.port=7077 -Dspark.locality.wait=500000 spark.SparkTPCHRunner master@$MESOS_MASTER:5050 hdfs://{{name_node}}:8020/ 1 true .5 15 /root/spark_tpch_$ip.log > $log 2>&1 &
+  nohup ./spark-run.sh -Dspark.master.host=$ip -Dspark.master.port=7077 -Dspark.locality.wait=500000 spark.SparkTPCHRunner master@$MESOS_MASTER:5050 hdfs://{{name_node}}:8020/ 1 true 1 60 /root/spark_tpch_$ip.log > $log 2>&1 &
 fi
 
 PID=$!

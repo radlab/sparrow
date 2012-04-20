@@ -5,6 +5,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
+import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
+
 /** This scheduler assumes that backends can execute a fixed number of tasks (equal to
  * the number of cores on the machine) and FIFO's whenever outstanding tasks exceed 
  * this amount.
@@ -20,7 +23,7 @@ public class FifoTaskScheduler extends TaskScheduler {
   }
   
   @Override
-  synchronized void handleSubmitTask(TaskDescription task) {
+  synchronized void handleSubmitTask(TaskDescription task, String appId) {
     if (activeTasks.get() < maxActiveTasks) {
       try {
         runnableTaskQueue.put(task);
@@ -49,6 +52,15 @@ public class FifoTaskScheduler extends TaskScheduler {
       }
       activeTasks.incrementAndGet();
     }
+  }
+
+  @Override
+  TResourceUsage getResourceUsage(String appId) {
+    TResourceUsage out = new TResourceUsage();
+    out.resources = TResources.subtract(capacity, getFreeResources());
+    // We use one shared queue for all apps here
+    out.queueLength = tasks.size();
+    return out;
   }
 
 }

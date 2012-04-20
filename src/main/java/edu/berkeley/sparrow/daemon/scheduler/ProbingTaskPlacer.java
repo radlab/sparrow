@@ -2,10 +2,8 @@ package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -14,12 +12,16 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.async.AsyncMethodCallback;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
-import edu.berkeley.sparrow.thrift.TResourceVector;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /**
@@ -40,7 +42,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   protected class ProbeCallback implements AsyncMethodCallback<getLoad_call> {
     InetSocketAddress socket;
     /** This should not be modified after the {@code latch} count is zero! */
-    Map<InetSocketAddress, TResourceVector> loads;
+    Map<InetSocketAddress, TResourceUsage> loads;
     /** Synchronization latch so caller can return when enough backends have
      * responded. */
     CountDownLatch latch;
@@ -49,7 +51,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
     private AsyncClient client;
     
     ProbeCallback(
-        InetSocketAddress socket, Map<InetSocketAddress, TResourceVector> loads, 
+        InetSocketAddress socket, Map<InetSocketAddress, TResourceUsage> loads, 
         CountDownLatch latch, String appId, String requestId, AsyncClient client) {
       this.socket = socket;
       this.loads = loads;
@@ -69,12 +71,12 @@ public class ProbingTaskPlacer implements TaskPlacer {
                                               socket.getAddress().getHostAddress()));
       try {
         clientPool.returnClient(socket, client);
-        Map<String, TResourceVector> resp = response.getResult();
+        Map<String, TResourceUsage> resp = response.getResult();
         if (!resp.containsKey(appId)) {
           LOG.warn("Probe returned no load information for " + appId);
         }
         else {
-          TResourceVector result = response.getResult().get(appId);
+          TResourceUsage result = response.getResult().get(appId);
           loads.put(socket,result);
           latch.countDown();
         }
@@ -104,8 +106,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
       String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks) 
           throws IOException {
     LOG.debug(Logging.functionCall(appId, nodes, tasks));
-    Map<InetSocketAddress, TResourceVector> loads = 
-        new HashMap<InetSocketAddress, TResourceVector>(); 
+    Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
     
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
@@ -116,7 +117,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
     // Right now we wait for all probes to return, in the future we might add a timeout
     CountDownLatch latch = new CountDownLatch(probesToLaunch);
-    List<InetSocketAddress> nodeList = new ArrayList<InetSocketAddress>(nodes);
+    List<InetSocketAddress> nodeList = Lists.newArrayList(nodes);
     
     // Get a random subset of nodes by shuffling list
     Collections.shuffle(nodeList);
@@ -142,7 +143,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
       e.printStackTrace();
     }
 
-    MinCpuAssignmentPolicy assigner = new MinCpuAssignmentPolicy();
+    AssignmentPolicy assigner = new ComparatorAssignmentPolicy(
+        new TResources.CPUThenQueueComparator());
     Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
 
     return out;

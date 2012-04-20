@@ -7,8 +7,14 @@ struct TPlacementPreference {
 }
 
 struct TResourceVector {
-  1: i64 memory; // Memory, in Mb
-  2: i32 cores;    // # Cores
+  1: i64 memory;      // Memory, in Mb
+  2: i32 cores;       // # Cores
+}
+
+// Conveys both a quantity of resources in use and a task queue length
+struct TResourceUsage { 
+  1: TResourceVector resources; // Current resource usage
+  2: i32 queueLength;           // Number of queued tasks
 }
 
 struct TUserGroupInfo {

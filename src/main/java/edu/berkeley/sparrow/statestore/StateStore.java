@@ -34,6 +34,7 @@ import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService.AsyncClient.updateNodeState_call;
 import edu.berkeley.sparrow.thrift.StateStoreService;
 import edu.berkeley.sparrow.thrift.TNodeState;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
@@ -91,8 +92,8 @@ public class StateStore implements StateStoreService.Iface {
       try {
         // Aggregate resource usage from all applications
         TResourceVector sparrowUsage = TResources.none();
-        for (TResourceVector res : response.getResult().values()) {
-          TResources.addTo(sparrowUsage, res);
+        for (TResourceUsage res : response.getResult().values()) {
+          TResources.addTo(sparrowUsage, res.getResources());
         }
         state.sparrowUsage = sparrowUsage;
       } catch (TException e) {

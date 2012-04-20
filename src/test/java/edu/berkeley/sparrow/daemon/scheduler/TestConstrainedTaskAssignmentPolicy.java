@@ -1,19 +1,21 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
 import org.junit.Test;
 
+import com.google.common.collect.Maps;
+
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TPlacementPreference;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
@@ -46,24 +48,23 @@ public class TestConstrainedTaskAssignmentPolicy {
     task3.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task3);
     
-    Map<InetSocketAddress, TResourceVector> usage = 
-        new HashMap<InetSocketAddress, TResourceVector>();
+    Map<InetSocketAddress, TResourceUsage> usage = Maps.newHashMap();
     
     // Create three nodes
     InetSocketAddress socket1 = new InetSocketAddress("1.1.1.1", 1);
     TResourceVector resource1 = new TResourceVector();
     resource1.cores = 4;
-    usage.put(socket1, resource1);
+    usage.put(socket1, TResources.createResourceUsage(resource1, 0));
     
     InetSocketAddress socket2 = new InetSocketAddress("2.2.2.2", 1);
     TResourceVector resource2 = new TResourceVector();
     resource2.cores = 4;
-    usage.put(socket2, resource2);
+    usage.put(socket2, TResources.createResourceUsage(resource2, 0));
     
     InetSocketAddress socket3 = new InetSocketAddress("3.3.3.3", 1);
     TResourceVector resource3 = new TResourceVector();
     resource3.cores = 4;
-    usage.put(socket3, resource3);
+    usage.put(socket3, TResources.createResourceUsage(resource3, 0));
     
     Collection<TaskPlacementResponse> out = policy.assignTasks(tasks, usage);
     

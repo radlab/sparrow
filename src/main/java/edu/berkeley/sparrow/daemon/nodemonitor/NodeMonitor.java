@@ -22,12 +22,11 @@ import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.Serialization;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.SchedulerService;
-import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.sendFrontendMessage_call;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -46,8 +45,6 @@ public class NodeMonitor {
   /** How many blocking thrift clients to make for each registered backend. */ 
   
   private static NodeMonitorState state;
-  private HashMap<String, Map<TUserGroupInfo, TResourceVector>> appLoads = 
-      new HashMap<String, Map<TUserGroupInfo, TResourceVector>>();
   private HashMap<String, InetSocketAddress> appSockets = 
       new HashMap<String, InetSocketAddress>();
   private HashMap<String, List<String>> appTasks = 
@@ -107,11 +104,10 @@ public class NodeMonitor {
   public boolean registerBackend(String appId, InetSocketAddress nmAddr, 
       InetSocketAddress backendAddr) {
     LOG.debug(Logging.functionCall(appId, nmAddr, backendAddr));
-    if (appLoads.containsKey(appId)) {
+    if (appSockets.containsKey(appId)) {
       LOG.warn("Attempt to re-register app " + appId);
       return false;
     }
-    appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
     appSockets.put(appId, backendAddr);
     appTasks.put(appId, new ArrayList<String>());
     return state.registerBackend(appId, nmAddr);
@@ -123,38 +119,25 @@ public class NodeMonitor {
    * application name, the map only includes that application. If it is set to anything
    * else, an empty map is returned.
    */
-  public Map<String, TResourceVector> getLoad(String appId, String requestId) {
+  public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
     if (!requestId.equals("*")) { // Don't log state store request
       AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
                                               address.getHostAddress()));
     }
-    Map<String, TResourceVector> out = new HashMap<String, TResourceVector>();
+    Map<String, TResourceUsage> out = new HashMap<String, TResourceUsage>();
     if (appId.equals("*")) {
-      for (String app : appLoads.keySet()) {out.put(app, aggregateAppResources(app)); }
-      LOG.debug("Returning " + out);
-      return out;
+      for (String app : appSockets.keySet()) {
+        out.put(app, scheduler.getResourceUsage(app)); 
+      }
     }
-    else if (appLoads.containsKey(appId)) {
-      out.put(appId, aggregateAppResources(appId));
-      LOG.debug("Returning " + out);
-      return out;
-    } else {
-      LOG.warn("Request for load of uknown app " + appId);
-      return out;
+    else {
+      out.put(appId, scheduler.getResourceUsage(appId));
     }
+    LOG.debug("Returning " + out);
+    return out;
   }
-  
-  /** Return the aggregate resource usage for a given appId, across all users. This will
-   *  fail if appId is not currently tracked.
-   */
-  public TResourceVector aggregateAppResources(String appId) {
-    TResourceVector inUse = TResources.none();
-    for (TResourceVector res : appLoads.get(appId).values()) {
-      TResources.addTo(inUse, res);
-    }
-    return inUse;
-  }
+
   /**
    * Update the resource usage for a given application.
    */
@@ -162,18 +145,17 @@ public class NodeMonitor {
       String app, Map<TUserGroupInfo, TResourceVector> load, 
       List<String> activeTaskIds) {
     LOG.debug(Logging.functionCall(app, load, activeTaskIds));
-    try {
-    List<String> toRemove = new LinkedList<String>();
-    for (String taskId : appTasks.get(app)) {
-      if (!activeTaskIds.contains(taskId)) {
-        scheduler.taskCompleted(taskId);
-        toRemove.add(taskId);
+      try {
+      List<String> toRemove = new LinkedList<String>();
+      for (String taskId : appTasks.get(app)) {
+        if (!activeTaskIds.contains(taskId)) {
+          scheduler.taskCompleted(taskId);
+          toRemove.add(taskId);
+        }
       }
-    }
-    for (String taskId : toRemove) {
-      appTasks.get(app).remove(taskId);
-    }
-    appLoads.put(app, load);
+      for (String taskId : toRemove) {
+        appTasks.get(app).remove(taskId);
+      }
     }
     catch (RuntimeException e) {
       e.printStackTrace();
@@ -213,7 +195,7 @@ public class NodeMonitor {
     }
     appTasks.get(app).add(compoundId);
     scheduler.submitTask(scheduler.new TaskDescription(compoundId, requestId, message, 
-        estimatedResources, user, socket));
+        estimatedResources, user, socket), app);
     return true;
   }
 

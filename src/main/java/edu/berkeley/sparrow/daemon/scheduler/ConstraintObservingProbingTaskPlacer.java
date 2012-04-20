@@ -22,7 +22,7 @@ import com.google.common.collect.Sets;
 
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
-import edu.berkeley.sparrow.thrift.TResourceVector;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
@@ -46,7 +46,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       Collection<TTaskSpec> tasks) throws IOException {
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks);
     CountDownLatch latch = new CountDownLatch(machinesToProbe.size());
-    Map<InetSocketAddress, TResourceVector> loads = Maps.newHashMap();
+    Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
     for (InetSocketAddress machine: machinesToProbe) {
       AsyncClient client = null;
       try {

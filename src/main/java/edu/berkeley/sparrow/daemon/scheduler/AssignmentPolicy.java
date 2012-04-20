@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
-import edu.berkeley.sparrow.thrift.TResourceVector;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /**
@@ -19,5 +19,5 @@ public interface AssignmentPolicy {
    * {@code nodes} provided.
    */
   public Collection<TaskPlacementResponse> assignTasks(Collection<TTaskSpec> tasks, 
-      Map<InetSocketAddress, TResourceVector> nodes);
+      Map<InetSocketAddress, TResourceUsage> nodes);
 }

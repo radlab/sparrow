@@ -1,5 +1,10 @@
 package edu.berkeley.sparrow.daemon.util;
 
+import java.net.InetSocketAddress;
+import java.util.Comparator;
+import java.util.Map.Entry;
+
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
@@ -14,6 +19,14 @@ public class TResources {
     TResourceVector out = new TResourceVector();
     out.setMemory(memory);
     out.setCores(cores);
+    return out;
+  }
+  
+  /** Constructor for resource usage. */
+  public static TResourceUsage createResourceUsage(TResourceVector res, int queueLength) {
+    TResourceUsage out = new TResourceUsage();
+    out.queueLength = queueLength;
+    out.resources = res;
     return out;
   }
   
@@ -67,4 +80,60 @@ public class TResources {
   public static boolean isLessThanOrEqualTo(TResourceVector a, TResourceVector b) {
     return (a.getMemory() <= b.getMemory()) && (a.getCores() <= b.getCores());
   }
+  
+  /**
+   * First compares nodes based on free CPU's. If two nodes both have the same number of
+   * CPU's in use, breaks ties using the queue length. Since the queue length is only
+   * expected to be greater than 1 when all CPU's are in use, this effectively ranks 
+   * all fully loaded nodes in order of queue length.
+   */
+  public static class CPUThenQueueComparator implements Comparator<TResourceUsage> {
+    private Comparator<TResourceUsage> queueComp = new MinQueueComparator();
+    private Comparator<TResourceUsage> cpuComp = new MinCPUComparator();
+    @Override
+    public int compare(TResourceUsage u1, TResourceUsage u2) {
+      int res = cpuComp.compare(u1, u2);
+      if (res == 0) {
+        return queueComp.compare(u1, u2);
+      } else {
+        return res;
+      }
+    }
+  }
+  
+  public static class MinQueueComparator implements Comparator<TResourceUsage> {
+    @Override
+    public int compare(TResourceUsage u1, TResourceUsage u2) {
+      int q1 = u1.queueLength;
+      int q2 = u2.queueLength;
+      if (q1 > q2) { return 1; }
+      if (q1 < q2) { return -1; }
+      return 0;
+    }
+  }
+  public static class MinCPUComparator implements Comparator<TResourceUsage> {
+    @Override
+    public int compare(TResourceUsage u1, TResourceUsage u2) {
+      int c1 = u1.getResources().cores;
+      int c2 = u2.getResources().cores;
+      if (c1 > c2) { return 1; }
+      if (c1 < c2) { return -1; }
+      return 0;
+    }
+  }
+  
+  /**
+   * Function for making an entry comparator out of a resource comparator. Useful
+   * when sorting entries of nodes with associated resources.
+   */
+  public static Comparator<Entry<InetSocketAddress, TResourceUsage>> makeEntryComparator(
+      final Comparator<TResourceUsage> comparator) {
+    return new Comparator<Entry<InetSocketAddress, TResourceUsage>>() {
+      public int compare(Entry<InetSocketAddress, TResourceUsage> e1, 
+          Entry<InetSocketAddress, TResourceUsage> e2) {
+        return comparator.compare(e1.getValue(), e2.getValue());
+      }
+    };
+  }
+  
 }
