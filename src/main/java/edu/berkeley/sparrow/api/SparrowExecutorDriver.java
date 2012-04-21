@@ -2,12 +2,8 @@ package edu.berkeley.sparrow.api;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -24,7 +20,6 @@ import org.apache.thrift.TException;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.protobuf.ByteString;
 
 import edu.berkeley.sparrow.daemon.util.TClients;
@@ -51,9 +46,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   private Executor executor;
   private NodeMonitorService.Client client;
   private HashMap<String, TFullTaskId> taskIdToFullTaskId = Maps.newHashMap();
-  private Set<TFullTaskId> activeTaskIds = Sets.newSetFromMap(
-      new ConcurrentHashMap<TFullTaskId, Boolean>());
-  
+
   private boolean isRunning = false;
   private Status stopStatus = Status.OK;
   private Lock runLock = new ReentrantLock();
@@ -96,12 +89,8 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   public synchronized Status sendStatusUpdate(TaskStatus status) {
     TFullTaskId fullId = taskIdToFullTaskId.get(status.getTaskId().getValue());
     if (status.getState() == TaskState.TASK_FINISHED) {
-      activeTaskIds.remove(fullId);
-      // TODO deal with removing task ID's
       try {
-        client.updateResourceUsage(appName, 
-            new HashMap<TUserGroupInfo, TResourceVector>(), 
-              Lists.newArrayList(activeTaskIds));
+        client.tasksFinished(Lists.newArrayList(fullId));
       } catch (TException e) {
         e.printStackTrace();
       }
@@ -187,7 +176,6 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {
-    activeTaskIds.add(taskId);
     taskIdToFullTaskId.put(taskId.taskId, taskId);
     TaskID id = TaskID.newBuilder().setValue(taskId.taskId).build();
     SlaveID sId = SlaveID.newBuilder().setValue("slave").build();

@@ -105,4 +105,9 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
       ByteBuffer message) throws TException {
     nodeMonitor.sendFrontendMessage(app, requestId, message);
   }
+
+  @Override
+  public void tasksFinished(List<TFullTaskId> tasks) throws TException {
+    nodeMonitor.tasksFinished(tasks);
+  }
 }

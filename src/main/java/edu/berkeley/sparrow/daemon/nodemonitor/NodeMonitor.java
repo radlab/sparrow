@@ -6,7 +6,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -146,7 +145,15 @@ public class NodeMonitor {
       String app, Map<TUserGroupInfo, TResourceVector> load, 
       List<TFullTaskId> activeTaskIds) {
     LOG.debug(Logging.functionCall(app, load, activeTaskIds));
-    scheduler.noteCompletedTasks(activeTaskIds);
+    LOG.error("UpdateResourceUsage not supported");
+  }
+  
+  /**
+   * Account for tasks which have finished.
+   */
+  public void tasksFinished(List<TFullTaskId> tasks) {
+    LOG.debug(Logging.functionCall(tasks));
+    scheduler.tasksFinished(tasks);
   }
   
   /**

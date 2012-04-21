@@ -590,7 +590,8 @@ class LogParser:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
             queue_length = request._Request__probes[task.address].queue_length
-            scatter_file.write("%s\t%s\n" % (queue_length, wait_time))
+            scatter_file.write("%s\t%s\t%s\t%s\n" % (
+              queue_length, wait_time, task.address, task.id))
         scatter_file.close
 
 

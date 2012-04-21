@@ -2,10 +2,7 @@ package edu.berkeley.sparrow.prototype;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -23,7 +20,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.util.Logging;
@@ -133,18 +130,13 @@ public class ProtoBackend implements BackendService.Iface {
       synchronized(resourceUsage) {
         TResources.subtractFrom(resourceUsage, taskResources);
       }
-      ArrayList<TFullTaskId> tasksCopy = null;
-      synchronized(ongoingTasks) {
-        ongoingTasks.remove(this.taskId);
-        tasksCopy = new ArrayList<TFullTaskId>(ongoingTasks);
-      }
       
       HashMap<TUserGroupInfo, TResourceVector> out = 
           new HashMap<TUserGroupInfo, TResourceVector>();
       // Inform NM of resource usage
       out.put(user, resourceUsage);
       try {
-        client.updateResourceUsage(ProtoBackend.APP_ID, out, tasksCopy);
+        client.tasksFinished(Lists.newArrayList(taskId));
       } catch (TException e) {
         e.printStackTrace();
       }
@@ -211,7 +203,6 @@ public class ProtoBackend implements BackendService.Iface {
   
   private TUserGroupInfo user; // We force all tasks to be run by same user
   private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
-  private HashSet<TFullTaskId> ongoingTasks = Sets.newHashSet();
   
   public ProtoBackend() {
     this.user = new TUserGroupInfo();
@@ -233,9 +224,6 @@ public class ProtoBackend implements BackendService.Iface {
     // finishes.
     synchronized(resourceUsage) {
       TResources.addTo(resourceUsage, estimatedResources);
-    }
-    synchronized(ongoingTasks) {
-      ongoingTasks.add(taskId);
     }
     
     // Note we ignore user here

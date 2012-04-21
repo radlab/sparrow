@@ -32,6 +32,9 @@ service NodeMonitorService {
                            2: map<types.TUserGroupInfo, types.TResourceVector> usage,
                            3: list<types.TFullTaskId> activeTaskIds);
 
+  # Inform the NodeMonitor that a particular task has finished
+  void tasksFinished(1: list<types.TFullTaskId> tasks);
+
   # Send a message to be delivered to the frontend for {app} pertaining
   # to the request {request}. For now this is only a task status message.
   void sendFrontendMessage(1: string app, 2: string requestId, 3: binary message);
