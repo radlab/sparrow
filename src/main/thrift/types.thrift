@@ -17,6 +17,15 @@ struct TResourceUsage {
   2: i32 queueLength;           // Number of queued tasks
 }
 
+
+// A fully-specified Sparrow task has four identifiers
+struct TFullTaskId {
+  1: string taskId;    // Task ID as reported from the FE
+  2: string requestId; // Scheduling request ID as assigned by the FE
+  3: string appId;     // ID of the application
+  4: string frontendSocket; // Host:Port of the sparrow frontend
+}
+
 struct TUserGroupInfo {
   1: string user;
   2: string group;

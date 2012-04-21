@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -20,12 +22,16 @@ import org.apache.mesos.Protos.TaskState;
 import org.apache.mesos.Protos.TaskStatus;
 import org.apache.thrift.TException;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.protobuf.ByteString;
 
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -44,9 +50,9 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Iface {
   private Executor executor;
   private NodeMonitorService.Client client;
-  private HashMap<String, String> taskIdToRequestId = 
-      new HashMap<String, String>();
-  private List<String> activeTaskIds = new ArrayList<String>();
+  private HashMap<String, TFullTaskId> taskIdToFullTaskId = Maps.newHashMap();
+  private Set<TFullTaskId> activeTaskIds = Sets.newSetFromMap(
+      new ConcurrentHashMap<TFullTaskId, Boolean>());
   
   private boolean isRunning = false;
   private Status stopStatus = Status.OK;
@@ -88,17 +94,19 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
 
   @Override
   public synchronized Status sendStatusUpdate(TaskStatus status) {
+    TFullTaskId fullId = taskIdToFullTaskId.get(status.getTaskId().getValue());
     if (status.getState() == TaskState.TASK_FINISHED) {
-      activeTaskIds.remove(status.getTaskId().getValue());
+      activeTaskIds.remove(fullId);
       // TODO deal with removing task ID's
       try {
         client.updateResourceUsage(appName, 
-            new HashMap<TUserGroupInfo, TResourceVector>(), activeTaskIds);
+            new HashMap<TUserGroupInfo, TResourceVector>(), 
+              Lists.newArrayList(activeTaskIds));
       } catch (TException e) {
         e.printStackTrace();
       }
     }
-    String requestId = taskIdToRequestId.get(status.getTaskId().getValue());
+    String requestId = fullId.requestId;
 
     try {
       client.sendFrontendMessage(appName, requestId, 
@@ -176,12 +184,12 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   }
 
   @Override
-  public void launchTask(ByteBuffer message, String requestId, String taskId,
+  public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {
     activeTaskIds.add(taskId);
-    taskIdToRequestId.put(taskId, requestId);
-    TaskID id = TaskID.newBuilder().setValue(taskId).build();
+    taskIdToFullTaskId.put(taskId.taskId, taskId);
+    TaskID id = TaskID.newBuilder().setValue(taskId.taskId).build();
     SlaveID sId = SlaveID.newBuilder().setValue("slave").build();
     TaskDescription task = TaskDescription.newBuilder()
         .setTaskId(id)

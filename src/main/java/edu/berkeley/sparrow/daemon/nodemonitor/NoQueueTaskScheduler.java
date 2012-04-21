@@ -1,8 +1,7 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
-import org.apache.log4j.Logger;
-
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 
@@ -14,16 +13,11 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
  * but still want Sparrow to launch tasks.
  */
 public class NoQueueTaskScheduler extends TaskScheduler {
-  private final static Logger LOG = Logger.getLogger(NoQueueTaskScheduler.class);
 
   @Override
   void handleSubmitTask(TaskDescription task, String appId) {
     // Make this task instantly runnable
-    try {
-      runnableTaskQueue.put(task);
-    } catch (InterruptedException e) {
-      LOG.fatal(e);
-    }
+    makeTaskRunnable(task);
   }
 
 
@@ -39,7 +33,7 @@ public class NoQueueTaskScheduler extends TaskScheduler {
 
 
   @Override
-  protected void handleTaskCompleted(String taskId) {
+  protected void handleTaskCompleted(TFullTaskId taskId) {
     // Do nothing
   }
 

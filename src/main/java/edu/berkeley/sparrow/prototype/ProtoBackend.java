@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -22,6 +23,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
+import com.google.common.collect.Sets;
+
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TClients;
@@ -30,6 +33,7 @@ import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService.Client;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -80,7 +84,6 @@ public class ProtoBackend implements BackendService.Iface {
   private static Client client;
   
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
-  private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProtoBackend.class);
   private static final ExecutorService executor = 
       Executors.newFixedThreadPool(TASK_WORKER_THREADS);
     
@@ -93,25 +96,23 @@ public class ProtoBackend implements BackendService.Iface {
     private int benchmarkId;
     private int benchmarkIterations;
     private TResourceVector taskResources;
-    private String requestId;
-    private String taskId;
+    private TFullTaskId taskId;
     
-    public TaskRunnable(String requestId, String taskId, ByteBuffer message,
+    public TaskRunnable(String requestId, TFullTaskId taskId, ByteBuffer message,
         TResourceVector taskResources) {
       this.benchmarkId = message.getInt();
       this.benchmarkIterations = message.getInt();
       this.taskResources = taskResources;
-      this.requestId = requestId;
       this.taskId = taskId;
     }
     
     @Override
     public void run() {
-      AUDIT_LOG.info(Logging.auditEventString("task_start", this.requestId,
-          this.taskId, this.benchmarkId, this.benchmarkIterations, Thread.activeCount()));
       if (startTime == -1) {
         startTime = System.currentTimeMillis();
       }
+      
+      long taskStart = System.currentTimeMillis();
       NodeMonitorService.Client client = null;
       try {
         client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
@@ -128,19 +129,14 @@ public class ProtoBackend implements BackendService.Iface {
       Random r = new Random();
       runBenchmark(benchmarkId, benchmarkIterations, r);
       
-      // Log task finish before updating bookkeeping, in case bookkeeping ends up being
-      // expensive.
-      AUDIT_LOG.info(Logging.auditEventString("task_completion", this.requestId,
-                                              this.taskId));
-      
       // Update bookkeeping for task finish
       synchronized(resourceUsage) {
         TResources.subtractFrom(resourceUsage, taskResources);
       }
-      ArrayList<String> tasksCopy = null;
+      ArrayList<TFullTaskId> tasksCopy = null;
       synchronized(ongoingTasks) {
         ongoingTasks.remove(this.taskId);
-        tasksCopy = new ArrayList<String>(ongoingTasks);
+        tasksCopy = new ArrayList<TFullTaskId>(ongoingTasks);
       }
       
       HashMap<TUserGroupInfo, TResourceVector> out = 
@@ -154,6 +150,7 @@ public class ProtoBackend implements BackendService.Iface {
       }
       client.getInputProtocol().getTransport().close();
       client.getOutputProtocol().getTransport().close();
+      System.out.println(System.currentTimeMillis() - taskStart);
     }
   }
   
@@ -214,7 +211,7 @@ public class ProtoBackend implements BackendService.Iface {
   
   private TUserGroupInfo user; // We force all tasks to be run by same user
   private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
-  private List<String> ongoingTasks = new ArrayList<String>();
+  private HashSet<TFullTaskId> ongoingTasks = Sets.newHashSet();
   
   public ProtoBackend() {
     this.user = new TUserGroupInfo();
@@ -229,7 +226,7 @@ public class ProtoBackend implements BackendService.Iface {
   }
 
   @Override
-  public void launchTask(ByteBuffer message, String requestId, String taskId,
+  public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
     // We want to add accounting for task start here, even though the task is actually
     // queued. Note that this won't be propagated to the node monitor until another task
@@ -243,9 +240,9 @@ public class ProtoBackend implements BackendService.Iface {
     
     // Note we ignore user here
     executor.submit(new TaskRunnable(
-        requestId, taskId, message, estimatedResources));
+        taskId.requestId, taskId, message, estimatedResources));
     synchronized (client) {
-      client.sendFrontendMessage(APP_ID, requestId, ByteBuffer.wrap("Started".getBytes()));
+      client.sendFrontendMessage(APP_ID, taskId.requestId, ByteBuffer.wrap("Started".getBytes()));
     }
   }
   
