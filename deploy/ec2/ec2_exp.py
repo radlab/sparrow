@@ -49,6 +49,10 @@ def parse_args():
       help="Time to wait between killing backends and frontends")
   parser.add_option("-m", "--scheduler", type="string", default="mesos",
       help="Which scheduler to use for running spark (mesos/sparrow)")
+  parser.add_option("-j", "--max-queries", type=int, default=60,
+      help="How many spark queries to run before shutting down")
+  parser.add_option("-v", "--query-rate", type=int, default=1,
+      help="What rate to run spark queries at (queries per second)")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1:
@@ -316,7 +320,8 @@ def start_spark(frontends, backends, opts):
            "/root/start_spark_backend.sh")
   print "Starting Spark frontends..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "/root/start_spark_frontend.sh %s" % opts.scheduler)
+          "/root/start_spark_frontend.sh %s %s %s" % (
+            opts.scheduler, opts.query_rate, opts.max_queries))
 
 def stop_spark(frontends, backends, opts):
   print "Stopping spark frontends..."

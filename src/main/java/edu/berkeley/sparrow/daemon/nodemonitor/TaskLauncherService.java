@@ -51,6 +51,7 @@ public class TaskLauncherService {
               task.estimatedResources);
         } catch (TException e) {
           LOG.error("Error launching task: " + task.taskId, e);
+          return; // Don't put this client back if there was an error
         }
         
         try {
