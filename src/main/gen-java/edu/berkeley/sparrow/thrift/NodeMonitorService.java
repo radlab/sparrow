@@ -26,7 +26,7 @@ public class NodeMonitorService {
 
     public boolean registerBackend(String app, String listenSocket) throws org.apache.thrift.TException;
 
-    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<String> activeTaskIds) throws org.apache.thrift.TException;
+    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds) throws org.apache.thrift.TException;
 
     public void sendFrontendMessage(String app, String requestId, ByteBuffer message) throws org.apache.thrift.TException;
 
@@ -36,7 +36,7 @@ public class NodeMonitorService {
 
     public void registerBackend(String app, String listenSocket, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.registerBackend_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<String> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.updateResourceUsage_call> resultHandler) throws org.apache.thrift.TException;
+    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.updateResourceUsage_call> resultHandler) throws org.apache.thrift.TException;
 
     public void sendFrontendMessage(String app, String requestId, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException;
 
@@ -86,13 +86,13 @@ public class NodeMonitorService {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "registerBackend failed: unknown result");
     }
 
-    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<String> activeTaskIds) throws org.apache.thrift.TException
+    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds) throws org.apache.thrift.TException
     {
       send_updateResourceUsage(app, usage, activeTaskIds);
       recv_updateResourceUsage();
     }
 
-    public void send_updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<String> activeTaskIds) throws org.apache.thrift.TException
+    public void send_updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds) throws org.apache.thrift.TException
     {
       updateResourceUsage_args args = new updateResourceUsage_args();
       args.setApp(app);
@@ -183,7 +183,7 @@ public class NodeMonitorService {
       }
     }
 
-    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<String> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<updateResourceUsage_call> resultHandler) throws org.apache.thrift.TException {
+    public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<updateResourceUsage_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
       updateResourceUsage_call method_call = new updateResourceUsage_call(app, usage, activeTaskIds, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
@@ -193,8 +193,8 @@ public class NodeMonitorService {
     public static class updateResourceUsage_call extends org.apache.thrift.async.TAsyncMethodCall {
       private String app;
       private Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage;
-      private List<String> activeTaskIds;
-      public updateResourceUsage_call(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<String> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<updateResourceUsage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      private List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds;
+      public updateResourceUsage_call(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<updateResourceUsage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.app = app;
         this.usage = usage;
@@ -1018,7 +1018,7 @@ public class NodeMonitorService {
 
     public String app; // required
     public Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage; // required
-    public List<String> activeTaskIds; // required
+    public List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -1097,7 +1097,7 @@ public class NodeMonitorService {
               new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class))));
       tmpMap.put(_Fields.ACTIVE_TASK_IDS, new org.apache.thrift.meta_data.FieldMetaData("activeTaskIds", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
-              new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING))));
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TFullTaskId.class))));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(updateResourceUsage_args.class, metaDataMap);
     }
@@ -1108,7 +1108,7 @@ public class NodeMonitorService {
     public updateResourceUsage_args(
       String app,
       Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage,
-      List<String> activeTaskIds)
+      List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds)
     {
       this();
       this.app = app;
@@ -1139,9 +1139,9 @@ public class NodeMonitorService {
         this.usage = __this__usage;
       }
       if (other.isSetActiveTaskIds()) {
-        List<String> __this__activeTaskIds = new ArrayList<String>();
-        for (String other_element : other.activeTaskIds) {
-          __this__activeTaskIds.add(other_element);
+        List<edu.berkeley.sparrow.thrift.TFullTaskId> __this__activeTaskIds = new ArrayList<edu.berkeley.sparrow.thrift.TFullTaskId>();
+        for (edu.berkeley.sparrow.thrift.TFullTaskId other_element : other.activeTaskIds) {
+          __this__activeTaskIds.add(new edu.berkeley.sparrow.thrift.TFullTaskId(other_element));
         }
         this.activeTaskIds = __this__activeTaskIds;
       }
@@ -1220,22 +1220,22 @@ public class NodeMonitorService {
       return (this.activeTaskIds == null) ? 0 : this.activeTaskIds.size();
     }
 
-    public java.util.Iterator<String> getActiveTaskIdsIterator() {
+    public java.util.Iterator<edu.berkeley.sparrow.thrift.TFullTaskId> getActiveTaskIdsIterator() {
       return (this.activeTaskIds == null) ? null : this.activeTaskIds.iterator();
     }
 
-    public void addToActiveTaskIds(String elem) {
+    public void addToActiveTaskIds(edu.berkeley.sparrow.thrift.TFullTaskId elem) {
       if (this.activeTaskIds == null) {
-        this.activeTaskIds = new ArrayList<String>();
+        this.activeTaskIds = new ArrayList<edu.berkeley.sparrow.thrift.TFullTaskId>();
       }
       this.activeTaskIds.add(elem);
     }
 
-    public List<String> getActiveTaskIds() {
+    public List<edu.berkeley.sparrow.thrift.TFullTaskId> getActiveTaskIds() {
       return this.activeTaskIds;
     }
 
-    public updateResourceUsage_args setActiveTaskIds(List<String> activeTaskIds) {
+    public updateResourceUsage_args setActiveTaskIds(List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds) {
       this.activeTaskIds = activeTaskIds;
       return this;
     }
@@ -1277,7 +1277,7 @@ public class NodeMonitorService {
         if (value == null) {
           unsetActiveTaskIds();
         } else {
-          setActiveTaskIds((List<String>)value);
+          setActiveTaskIds((List<edu.berkeley.sparrow.thrift.TFullTaskId>)value);
         }
         break;
 
@@ -1451,11 +1451,12 @@ public class NodeMonitorService {
             if (field.type == org.apache.thrift.protocol.TType.LIST) {
               {
                 org.apache.thrift.protocol.TList _list8 = iprot.readListBegin();
-                this.activeTaskIds = new ArrayList<String>(_list8.size);
+                this.activeTaskIds = new ArrayList<edu.berkeley.sparrow.thrift.TFullTaskId>(_list8.size);
                 for (int _i9 = 0; _i9 < _list8.size; ++_i9)
                 {
-                  String _elem10; // required
-                  _elem10 = iprot.readString();
+                  edu.berkeley.sparrow.thrift.TFullTaskId _elem10; // required
+                  _elem10 = new edu.berkeley.sparrow.thrift.TFullTaskId();
+                  _elem10.read(iprot);
                   this.activeTaskIds.add(_elem10);
                 }
                 iprot.readListEnd();
@@ -1500,10 +1501,10 @@ public class NodeMonitorService {
       if (this.activeTaskIds != null) {
         oprot.writeFieldBegin(ACTIVE_TASK_IDS_FIELD_DESC);
         {
-          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRING, this.activeTaskIds.size()));
-          for (String _iter12 : this.activeTaskIds)
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, this.activeTaskIds.size()));
+          for (edu.berkeley.sparrow.thrift.TFullTaskId _iter12 : this.activeTaskIds)
           {
-            oprot.writeString(_iter12);
+            _iter12.write(oprot);
           }
           oprot.writeListEnd();
         }
