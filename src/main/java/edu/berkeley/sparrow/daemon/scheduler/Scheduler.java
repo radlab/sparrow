@@ -21,6 +21,7 @@ import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
+import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
@@ -29,6 +30,7 @@ import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient;
 import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -63,6 +65,8 @@ public class Scheduler {
   
   /** Logical task assignment. */
   TaskPlacer placer;
+  
+  private Configuration conf;
   
   /**
    * A callback handler for asynchronous task launches.
@@ -110,6 +114,7 @@ public class Scheduler {
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
+    this.conf = conf;
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
       placer = new ConstraintObservingProbingTaskPlacer();
@@ -176,9 +181,13 @@ public class Scheduler {
       String taskId = response.getTaskSpec().taskID;
 
       AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
-      client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
-          taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
-          address.getHostName() + ":" + address.getPort(),
+      TFullTaskId id = new TFullTaskId();
+      id.appId = req.getApp();
+      id.frontendSocket = address.getHostName() + ":" + address.getPort();
+      id.requestId = requestId;
+      id.taskId = taskId;
+      client.launchTask(response.getTaskSpec().message, id,
+          req.getUser(), response.getTaskSpec().getEstimatedResources(),          
           new TaskLaunchCallback(latch, client, response.getNodeAddr()));
     }
     try {
@@ -241,7 +250,7 @@ public class Scheduler {
     /* The request id is a string that includes the IP address of this scheduler followed
      * by the counter.  We use a counter rather than a hash of the request because there
      * may be multiple requests to run an identical job. */
-    return String.format("%s_%d", address.toString(), counter++);
+    return String.format("%s_%d", Hostname.getIPAddress(conf), counter++);
   }
 
   private class sendFrontendMessageCallback implements 

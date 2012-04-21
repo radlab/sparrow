@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
+import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.collect.Lists;
@@ -29,7 +30,7 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  */
 public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(ProbingTaskPlacer.class);
-  private static final Logger AUDIT_LOG = Logging.getAuditLogger(ProbingTaskPlacer.class);
+  protected static final Logger AUDIT_LOG = Logging.getAuditLogger(ProbingTaskPlacer.class);
    
   /** See {@link SparrowConf.PROBE_MULTIPLIER} */
   private double probeRatio;
@@ -67,8 +68,15 @@ public class ProbingTaskPlacer implements TaskPlacer {
       
       // TODO: Include the port, as well as the address, in the log message, so this
       // works properly when multiple daemons are running on the same machine.
+      int queueLength = -1;
+      try {
+        queueLength = response.getResult().get(appId).queueLength;
+      } catch (TException e1) {
+        LOG.error("Probe returned no information for " + appId);
+      }
       AUDIT_LOG.info(Logging.auditEventString("probe_completion", requestId,
-                                              socket.getAddress().getHostAddress()));
+                                              socket.getAddress().getHostAddress(),
+                                              queueLength));
       try {
         clientPool.returnClient(socket, client);
         Map<String, TResourceUsage> resp = response.getResult();

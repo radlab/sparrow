@@ -8,6 +8,7 @@ import java.util.Queue;
 import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
@@ -29,12 +30,9 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   @Override
   void handleSubmitTask(TaskDescription task, String appId) {
     if (TResources.isLessThanOrEqualTo(task.estimatedResources, getFreeResources())) {
-      try {
-        LOG.info("Task: " + task.taskId + " instantly runnable. " 
-            + task.estimatedResources + "<=" + getFreeResources());
-        runnableTaskQueue.put(task);
-      } catch (InterruptedException e) {
-      }
+      LOG.info("Task: " + task.taskId + " instantly runnable. " 
+        + task.estimatedResources + "<=" + getFreeResources());
+      makeTaskRunnable(task);
     } else {
       addTaskToAppQueue(appId, task);
     }
@@ -61,7 +59,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected void handleTaskCompleted(String taskId) {
+  protected void handleTaskCompleted(TFullTaskId taskId) {
     synchronized(appQueues) {
       /* Scan through the list of apps (starting at currentIndex) and find the first
        * one with a pending tasks. If we find a pending task, make that task runnable
@@ -80,15 +78,11 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
           continue;
         }
         else {
-          try {
-            LOG.info("Task: " + nextTask.taskId + " now runnable");
-            runnableTaskQueue.put(nextTask);
-            removeTaskFromAppQueue(app, nextTask);
-            currentIndex = currentIndex + i + 1;
-            return;
-          } catch (InterruptedException e) {
-            LOG.fatal(e);
-          }
+          LOG.info("Task: " + nextTask.taskId + " now runnable");
+          makeTaskRunnable(nextTask);
+          removeTaskFromAppQueue(app, nextTask);
+          currentIndex = currentIndex + i + 1;
+          return;
         }
       }
       // No one had a task, so do nothing.

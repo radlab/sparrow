@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /** This scheduler assumes that backends can execute a fixed number of tasks (equal to
@@ -25,11 +26,7 @@ public class FifoTaskScheduler extends TaskScheduler {
   @Override
   synchronized void handleSubmitTask(TaskDescription task, String appId) {
     if (activeTasks.get() < maxActiveTasks) {
-      try {
-        runnableTaskQueue.put(task);
-      } catch (InterruptedException e) {
-        LOG.fatal(e);
-      }
+      makeTaskRunnable(task);
       activeTasks.incrementAndGet();
     } else {
       try {
@@ -41,15 +38,10 @@ public class FifoTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected synchronized void handleTaskCompleted(String taskId) {
+  protected synchronized void handleTaskCompleted(TFullTaskId taskId) {
     activeTasks.decrementAndGet();
     if (!tasks.isEmpty()) {
-      try {
-        runnableTaskQueue.put(tasks.poll());
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-        System.exit(0);
-      }
+      makeTaskRunnable(tasks.poll());
       activeTasks.incrementAndGet();
     }
   }

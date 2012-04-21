@@ -26,6 +26,7 @@ import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -46,7 +47,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   private NodeMonitorService.Client client;
   private HashMap<String, String> taskIdToRequestId = 
       new HashMap<String, String>();
-  private List<String> activeTaskIds = new ArrayList<String>();
+  private List<TFullTaskId> activeTaskIds = new ArrayList<TFullTaskId>();
   
   private boolean isRunning = false;
   private Status stopStatus = Status.OK;
@@ -176,12 +177,12 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   }
 
   @Override
-  public void launchTask(ByteBuffer message, String requestId, String taskId,
+  public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {
     activeTaskIds.add(taskId);
-    taskIdToRequestId.put(taskId, requestId);
-    TaskID id = TaskID.newBuilder().setValue(taskId).build();
+    taskIdToRequestId.put(taskId.taskId, taskId.requestId);
+    TaskID id = TaskID.newBuilder().setValue(taskId.taskId).build();
     SlaveID sId = SlaveID.newBuilder().setValue("slave").build();
     TaskDescription task = TaskDescription.newBuilder()
         .setTaskId(id)

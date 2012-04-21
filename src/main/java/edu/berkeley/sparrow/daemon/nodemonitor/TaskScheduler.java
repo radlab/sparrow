@@ -3,13 +3,21 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Sets;
+
+import edu.berkeley.sparrow.daemon.util.Hostname;
+import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
@@ -25,20 +33,20 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  */
 public abstract class TaskScheduler {
   private final static Logger LOG = Logger.getLogger(TaskScheduler.class);
-  
+  private final static Logger AUDIT_LOG = Logging.getAuditLogger(
+      TaskScheduler.class);
+  private String ipAddress;
   class TaskDescription {
     ByteBuffer message;
-    public String requestId;
-    public String taskId;
+    public TFullTaskId taskId;
     public TResourceVector estimatedResources;
     public TUserGroupInfo user;
     public InetSocketAddress backendSocket;
     
-    public TaskDescription(String taskId, String requestId, ByteBuffer message, 
+    public TaskDescription(TFullTaskId taskId, ByteBuffer message, 
         TResourceVector estimatedResources, TUserGroupInfo user, InetSocketAddress addr) {
-      this.taskId = taskId;
-      this.requestId = requestId;
       this.message = message;
+      this.taskId = taskId;
       this.estimatedResources = estimatedResources;
       this.user = user;
       this.backendSocket = addr;
@@ -48,16 +56,19 @@ public abstract class TaskScheduler {
   protected TResourceVector capacity;
   protected Configuration conf;
   protected TResourceVector inUse = TResources.clone(TResources.none());
-  protected final BlockingQueue<TaskDescription> runnableTaskQueue = 
+  private final BlockingQueue<TaskDescription> runnableTaskQueue = 
       new LinkedBlockingQueue<TaskDescription>();
-  private HashMap<String, TResourceVector> resourcesPerTask = new 
-      HashMap<String, TResourceVector>();
+  // Task ids of tasks that have been made runnable at some point
+  private final HashSet<TFullTaskId> runnableTaskIds = Sets.newHashSet();
+  private HashMap<TFullTaskId, TResourceVector> resourcesPerTask = new 
+      HashMap<TFullTaskId, TResourceVector>();
   
   /** Initialize the task scheduler, passing it the current available resources 
    *  on the machine. */
   void initialize(TResourceVector capacity, Configuration conf) {
     this.capacity = capacity;
     this.conf = conf;
+    this.ipAddress = Hostname.getIPAddress(conf);
   }
   
   /**
@@ -80,14 +91,45 @@ public abstract class TaskScheduler {
   int runnableTasks() {
     return runnableTaskQueue.size();
   }
-
-  void taskCompleted(String taskId) {
+  
+  synchronized void noteCompletedTasks(List<TFullTaskId> runningTasks) {
+  List<TFullTaskId> toRemove = new LinkedList<TFullTaskId>();
+  List<TFullTaskId> completed = new LinkedList<TFullTaskId>();
+    for (TFullTaskId taskId : runnableTaskIds) {
+      if (!runningTasks.contains(taskId)) {
+        completed.add(taskId);
+        toRemove.add(taskId);
+      }
+    }
+    runnableTaskIds.removeAll(toRemove);
+    for (TFullTaskId t : completed) {
+      taskCompleted(t);
+    }
+  }
+  
+  void makeTaskRunnable(TaskDescription task) {
+    runnableTaskIds.add(task.taskId);
+    AUDIT_LOG.info(
+        Logging.auditEventString("nodemonitor_task_runnable", ipAddress, 
+            task.taskId.requestId, task.taskId.taskId));
+    try {
+      runnableTaskQueue.put(task);
+    } catch (InterruptedException e) {
+      LOG.fatal(e);
+    }
+  }
+  synchronized void taskCompleted(TFullTaskId taskId) {
+    AUDIT_LOG.info(
+        Logging.auditEventString("nodemonitor_task_completed", taskId.requestId, 
+            taskId.taskId));
     freeResourceInUse(resourcesPerTask.get(taskId));
     resourcesPerTask.remove(taskId);
     handleTaskCompleted(taskId);
   }
   
-  void submitTask(TaskDescription task, String appId) {
+   void submitTask(TaskDescription task, String appId) {
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_task_submitted", ipAddress,
+        task.taskId.requestId, task.taskId.taskId));
     resourcesPerTask.put(task.taskId, task.estimatedResources);
     handleSubmitTask(task, appId);
   }
@@ -105,7 +147,7 @@ public abstract class TaskScheduler {
    * by subtracting the currently used resources and currently runnable resources from
    * the node's capacity.
    */
-  protected synchronized TResourceVector getFreeResources() {
+  protected TResourceVector getFreeResources() {
     TResourceVector free = TResources.subtract(capacity, inUse);
     TResourceVector reserved = TResources.none();
     for (TaskDescription t: runnableTaskQueue) {
@@ -124,7 +166,7 @@ public abstract class TaskScheduler {
   /**
    * Signal that a given task has completed.
    */
-  protected abstract void handleTaskCompleted(String taskId);
+  protected abstract void handleTaskCompleted(TFullTaskId taskId);
   
   /**
    * Returns the current resource usage. If the resource usage is equal to the

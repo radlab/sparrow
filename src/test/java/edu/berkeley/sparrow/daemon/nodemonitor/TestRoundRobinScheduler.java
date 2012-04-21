@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskDescription;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -16,9 +17,16 @@ public class TestRoundRobinScheduler {
   private TaskDescription createTaskDescription(int id, TaskScheduler scheduler) {
     String idStr = Integer.toString(id);
     return scheduler.new TaskDescription(
-            idStr, idStr, ByteBuffer.wrap(new byte[] {(byte) id}), 
+            createTaskId(idStr, idStr), ByteBuffer.wrap(new byte[] {(byte) id}), 
             TResources.createResourceVector(0, 1), 
             new TUserGroupInfo(), InetSocketAddress.createUnresolved("localhost", 1234));
+  }
+  
+  private TFullTaskId createTaskId(String taskId, String requestId) {
+    TFullTaskId fullTaskId = new TFullTaskId();
+    fullTaskId.taskId = taskId;
+    fullTaskId.requestId = requestId;
+    return fullTaskId;
   }
   
   @Test
@@ -72,58 +80,58 @@ public class TestRoundRobinScheduler {
     
     // Make sure that as tasks finish (and space is freed up) new tasks are added to the
     // runqueue in round-robin order.
-    scheduler.taskCompleted("1");
+    scheduler.taskCompleted(createTaskId("1", "1"));
     assertEquals(1, scheduler.runnableTasks());
     TaskDescription task = scheduler.getNextTask();
-    assertEquals("5", task.taskId);
+    assertEquals("5", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks()); 
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("7", task.taskId);
+    assertEquals("7", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("10", task.taskId);
+    assertEquals("10", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
-    assertEquals("6", task.taskId);
+    assertEquals("6", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks()); 
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("8", task.taskId);
+    assertEquals("8", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("11", task.taskId);
+    assertEquals("11", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("9", task.taskId);
+    assertEquals("9", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("12", task.taskId);
+    assertEquals("12", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
     
     scheduler.taskCompleted(task.taskId);
     assertEquals(1, scheduler.runnableTasks()); 
     task = scheduler.getNextTask();
-    assertEquals("13", task.taskId);
+    assertEquals("13", task.taskId.taskId);
     assertEquals(0, scheduler.runnableTasks());
   }
 }

@@ -20,6 +20,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
@@ -55,6 +56,9 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
         LOG.fatal(e);
       }
       try {
+        LOG.debug("Launching probe on node: " + machine); 
+        AUDIT_LOG.info(Logging.auditEventString("probe_launch", requestId,
+            machine.getAddress().getHostAddress()));
         client.getLoad(appId, requestId, 
             new ProbeCallback(machine, loads, latch, appId, requestId, client));
       } catch (TException e) {

@@ -30,7 +30,7 @@ service NodeMonitorService {
   # Inform the NodeMonitor of the node's current resource usage.
   void updateResourceUsage(1: string app,
                            2: map<types.TUserGroupInfo, types.TResourceVector> usage,
-                           3: list<string> activeTaskIds);
+                           3: list<types.TFullTaskId> activeTaskIds);
 
   # Send a message to be delivered to the frontend for {app} pertaining
   # to the request {request}. For now this is only a task status message.
@@ -45,9 +45,9 @@ service BackendService {
   # applications exceed their allowed usage, Sparrow may terminate the
   # backend.
   void updateResourceLimits(1: map<types.TUserGroupInfo, types.TResourceVector> resources);
-  void launchTask(1: binary message, 2: string requestId, 3: string taskId,
-                  4: types.TUserGroupInfo user,
-                  5: types.TResourceVector estimatedResources);
+  void launchTask(1: binary message, 2: types.TFullTaskId taskId,
+                  3: types.TUserGroupInfo user,
+                  4: types.TResourceVector estimatedResources);
 
 }
 
@@ -64,10 +64,9 @@ service FrontendService {
 # 2) The central state store
 service InternalService {
   map<string, types.TResourceUsage> getLoad(1: string app, 2: string requestId);
-  bool launchTask(1: string app, 2: binary message, 3: string requestId,
-                  4: string taskId, 5: types.TUserGroupInfo user,
-                  6: types.TResourceVector estimatedResources,
-                  7: string schedulerAddress);
+  bool launchTask(1: binary message, 2: types.TFullTaskId taskId,
+                  3: types.TUserGroupInfo user, 
+                  4: types.TResourceVector estimatedResources);
 }
 
 service SchedulerStateStoreService {
