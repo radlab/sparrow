@@ -20,6 +20,7 @@ import org.apache.mesos.Protos.TaskState;
 import org.apache.mesos.Protos.TaskStatus;
 import org.apache.thrift.TException;
 
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 
 import edu.berkeley.sparrow.daemon.util.TClients;
@@ -45,8 +46,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Iface {
   private Executor executor;
   private NodeMonitorService.Client client;
-  private HashMap<String, String> taskIdToRequestId = 
-      new HashMap<String, String>();
+  private HashMap<String, TFullTaskId> taskIdToFullTaskId = Maps.newHashMap();
   private List<TFullTaskId> activeTaskIds = new ArrayList<TFullTaskId>();
   
   private boolean isRunning = false;
@@ -89,6 +89,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
 
   @Override
   public synchronized Status sendStatusUpdate(TaskStatus status) {
+    TFullTaskId fullId = taskIdToFullTaskId.get(status.getTaskId().getValue());
     if (status.getState() == TaskState.TASK_FINISHED) {
       activeTaskIds.remove(status.getTaskId().getValue());
       // TODO deal with removing task ID's
@@ -99,7 +100,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
         e.printStackTrace();
       }
     }
-    String requestId = taskIdToRequestId.get(status.getTaskId().getValue());
+    String requestId = fullId.requestId;
 
     try {
       client.sendFrontendMessage(appName, requestId, 
@@ -181,7 +182,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {
     activeTaskIds.add(taskId);
-    taskIdToRequestId.put(taskId.taskId, taskId.requestId);
+    taskIdToFullTaskId.put(taskId.taskId, taskId);
     TaskID id = TaskID.newBuilder().setValue(taskId.taskId).build();
     SlaveID sId = SlaveID.newBuilder().setValue("slave").build();
     TaskDescription task = TaskDescription.newBuilder()
