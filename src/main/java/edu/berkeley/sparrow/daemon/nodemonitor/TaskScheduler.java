@@ -92,22 +92,13 @@ public abstract class TaskScheduler {
     return runnableTaskQueue.size();
   }
   
-  synchronized void noteCompletedTasks(List<TFullTaskId> runningTasks) {
-  List<TFullTaskId> toRemove = new LinkedList<TFullTaskId>();
-  List<TFullTaskId> completed = new LinkedList<TFullTaskId>();
-    for (TFullTaskId taskId : runnableTaskIds) {
-      if (!runningTasks.contains(taskId)) {
-        completed.add(taskId);
-        toRemove.add(taskId);
-      }
-    }
-    runnableTaskIds.removeAll(toRemove);
-    for (TFullTaskId t : completed) {
+  synchronized void tasksFinished(List<TFullTaskId> finishedTasks) {
+    for (TFullTaskId t : finishedTasks) {
       taskCompleted(t);
     }
   }
   
-  void makeTaskRunnable(TaskDescription task) {
+  protected void makeTaskRunnable(TaskDescription task) {
     runnableTaskIds.add(task.taskId);
     AUDIT_LOG.info(
         Logging.auditEventString("nodemonitor_task_runnable", ipAddress, 
@@ -118,7 +109,7 @@ public abstract class TaskScheduler {
       LOG.fatal(e);
     }
   }
-  synchronized void taskCompleted(TFullTaskId taskId) {
+  protected synchronized void taskCompleted(TFullTaskId taskId) {
     AUDIT_LOG.info(
         Logging.auditEventString("nodemonitor_task_completed", taskId.requestId, 
             taskId.taskId));
