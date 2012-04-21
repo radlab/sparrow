@@ -414,16 +414,16 @@ public class SchedulerStateStoreService {
           case 1: // SNAPSHOT
             if (field.type == org.apache.thrift.protocol.TType.MAP) {
               {
-                org.apache.thrift.protocol.TMap _map23 = iprot.readMapBegin();
-                this.snapshot = new HashMap<String,edu.berkeley.sparrow.thrift.TNodeState>(2*_map23.size);
-                for (int _i24 = 0; _i24 < _map23.size; ++_i24)
+                org.apache.thrift.protocol.TMap _map27 = iprot.readMapBegin();
+                this.snapshot = new HashMap<String,edu.berkeley.sparrow.thrift.TNodeState>(2*_map27.size);
+                for (int _i28 = 0; _i28 < _map27.size; ++_i28)
                 {
-                  String _key25; // required
-                  edu.berkeley.sparrow.thrift.TNodeState _val26; // required
-                  _key25 = iprot.readString();
-                  _val26 = new edu.berkeley.sparrow.thrift.TNodeState();
-                  _val26.read(iprot);
-                  this.snapshot.put(_key25, _val26);
+                  String _key29; // required
+                  edu.berkeley.sparrow.thrift.TNodeState _val30; // required
+                  _key29 = iprot.readString();
+                  _val30 = new edu.berkeley.sparrow.thrift.TNodeState();
+                  _val30.read(iprot);
+                  this.snapshot.put(_key29, _val30);
                 }
                 iprot.readMapEnd();
               }
@@ -450,10 +450,10 @@ public class SchedulerStateStoreService {
         oprot.writeFieldBegin(SNAPSHOT_FIELD_DESC);
         {
           oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, this.snapshot.size()));
-          for (Map.Entry<String, edu.berkeley.sparrow.thrift.TNodeState> _iter27 : this.snapshot.entrySet())
+          for (Map.Entry<String, edu.berkeley.sparrow.thrift.TNodeState> _iter31 : this.snapshot.entrySet())
           {
-            oprot.writeString(_iter27.getKey());
-            _iter27.getValue().write(oprot);
+            oprot.writeString(_iter31.getKey());
+            _iter31.getValue().write(oprot);
           }
           oprot.writeMapEnd();
         }

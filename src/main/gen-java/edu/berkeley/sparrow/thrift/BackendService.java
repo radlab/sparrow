@@ -499,17 +499,17 @@ public class BackendService {
           case 1: // RESOURCES
             if (field.type == org.apache.thrift.protocol.TType.MAP) {
               {
-                org.apache.thrift.protocol.TMap _map13 = iprot.readMapBegin();
-                this.resources = new HashMap<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector>(2*_map13.size);
-                for (int _i14 = 0; _i14 < _map13.size; ++_i14)
+                org.apache.thrift.protocol.TMap _map17 = iprot.readMapBegin();
+                this.resources = new HashMap<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector>(2*_map17.size);
+                for (int _i18 = 0; _i18 < _map17.size; ++_i18)
                 {
-                  edu.berkeley.sparrow.thrift.TUserGroupInfo _key15; // required
-                  edu.berkeley.sparrow.thrift.TResourceVector _val16; // required
-                  _key15 = new edu.berkeley.sparrow.thrift.TUserGroupInfo();
-                  _key15.read(iprot);
-                  _val16 = new edu.berkeley.sparrow.thrift.TResourceVector();
-                  _val16.read(iprot);
-                  this.resources.put(_key15, _val16);
+                  edu.berkeley.sparrow.thrift.TUserGroupInfo _key19; // required
+                  edu.berkeley.sparrow.thrift.TResourceVector _val20; // required
+                  _key19 = new edu.berkeley.sparrow.thrift.TUserGroupInfo();
+                  _key19.read(iprot);
+                  _val20 = new edu.berkeley.sparrow.thrift.TResourceVector();
+                  _val20.read(iprot);
+                  this.resources.put(_key19, _val20);
                 }
                 iprot.readMapEnd();
               }
@@ -536,10 +536,10 @@ public class BackendService {
         oprot.writeFieldBegin(RESOURCES_FIELD_DESC);
         {
           oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRUCT, org.apache.thrift.protocol.TType.STRUCT, this.resources.size()));
-          for (Map.Entry<edu.berkeley.sparrow.thrift.TUserGroupInfo, edu.berkeley.sparrow.thrift.TResourceVector> _iter17 : this.resources.entrySet())
+          for (Map.Entry<edu.berkeley.sparrow.thrift.TUserGroupInfo, edu.berkeley.sparrow.thrift.TResourceVector> _iter21 : this.resources.entrySet())
           {
-            _iter17.getKey().write(oprot);
-            _iter17.getValue().write(oprot);
+            _iter21.getKey().write(oprot);
+            _iter21.getValue().write(oprot);
           }
           oprot.writeMapEnd();
         }

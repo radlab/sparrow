@@ -28,6 +28,8 @@ public class NodeMonitorService {
 
     public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds) throws org.apache.thrift.TException;
 
+    public void tasksFinished(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks) throws org.apache.thrift.TException;
+
     public void sendFrontendMessage(String app, String requestId, ByteBuffer message) throws org.apache.thrift.TException;
 
   }
@@ -37,6 +39,8 @@ public class NodeMonitorService {
     public void registerBackend(String app, String listenSocket, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.registerBackend_call> resultHandler) throws org.apache.thrift.TException;
 
     public void updateResourceUsage(String app, Map<edu.berkeley.sparrow.thrift.TUserGroupInfo,edu.berkeley.sparrow.thrift.TResourceVector> usage, List<edu.berkeley.sparrow.thrift.TFullTaskId> activeTaskIds, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.updateResourceUsage_call> resultHandler) throws org.apache.thrift.TException;
+
+    public void tasksFinished(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.tasksFinished_call> resultHandler) throws org.apache.thrift.TException;
 
     public void sendFrontendMessage(String app, String requestId, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException;
 
@@ -105,6 +109,26 @@ public class NodeMonitorService {
     {
       updateResourceUsage_result result = new updateResourceUsage_result();
       receiveBase(result, "updateResourceUsage");
+      return;
+    }
+
+    public void tasksFinished(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks) throws org.apache.thrift.TException
+    {
+      send_tasksFinished(tasks);
+      recv_tasksFinished();
+    }
+
+    public void send_tasksFinished(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks) throws org.apache.thrift.TException
+    {
+      tasksFinished_args args = new tasksFinished_args();
+      args.setTasks(tasks);
+      sendBase("tasksFinished", args);
+    }
+
+    public void recv_tasksFinished() throws org.apache.thrift.TException
+    {
+      tasksFinished_result result = new tasksFinished_result();
+      receiveBase(result, "tasksFinished");
       return;
     }
 
@@ -221,6 +245,38 @@ public class NodeMonitorService {
       }
     }
 
+    public void tasksFinished(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks, org.apache.thrift.async.AsyncMethodCallback<tasksFinished_call> resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      tasksFinished_call method_call = new tasksFinished_call(tasks, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class tasksFinished_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks;
+      public tasksFinished_call(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks, org.apache.thrift.async.AsyncMethodCallback<tasksFinished_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.tasks = tasks;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("tasksFinished", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        tasksFinished_args args = new tasksFinished_args();
+        args.setTasks(tasks);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public void getResult() throws org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        (new Client(prot)).recv_tasksFinished();
+      }
+    }
+
     public void sendFrontendMessage(String app, String requestId, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
       sendFrontendMessage_call method_call = new sendFrontendMessage_call(app, requestId, message, resultHandler, this, ___protocolFactory, ___transport);
@@ -274,6 +330,7 @@ public class NodeMonitorService {
     private static <I extends Iface> Map<String,  org.apache.thrift.ProcessFunction<I, ? extends  org.apache.thrift.TBase>> getProcessMap(Map<String,  org.apache.thrift.ProcessFunction<I, ? extends  org.apache.thrift.TBase>> processMap) {
       processMap.put("registerBackend", new registerBackend());
       processMap.put("updateResourceUsage", new updateResourceUsage());
+      processMap.put("tasksFinished", new tasksFinished());
       processMap.put("sendFrontendMessage", new sendFrontendMessage());
       return processMap;
     }
@@ -307,6 +364,22 @@ public class NodeMonitorService {
       protected updateResourceUsage_result getResult(I iface, updateResourceUsage_args args) throws org.apache.thrift.TException {
         updateResourceUsage_result result = new updateResourceUsage_result();
         iface.updateResourceUsage(args.app, args.usage, args.activeTaskIds);
+        return result;
+      }
+    }
+
+    private static class tasksFinished<I extends Iface> extends org.apache.thrift.ProcessFunction<I, tasksFinished_args> {
+      public tasksFinished() {
+        super("tasksFinished");
+      }
+
+      protected tasksFinished_args getEmptyArgsInstance() {
+        return new tasksFinished_args();
+      }
+
+      protected tasksFinished_result getResult(I iface, tasksFinished_args args) throws org.apache.thrift.TException {
+        tasksFinished_result result = new tasksFinished_result();
+        iface.tasksFinished(args.tasks);
         return result;
       }
     }
@@ -1740,6 +1813,540 @@ public class NodeMonitorService {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("updateResourceUsage_result(");
+      boolean first = true;
+
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+  }
+
+  public static class tasksFinished_args implements org.apache.thrift.TBase<tasksFinished_args, tasksFinished_args._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("tasksFinished_args");
+
+    private static final org.apache.thrift.protocol.TField TASKS_FIELD_DESC = new org.apache.thrift.protocol.TField("tasks", org.apache.thrift.protocol.TType.LIST, (short)1);
+
+    public List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      TASKS((short)1, "tasks");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // TASKS
+            return TASKS;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.TASKS, new org.apache.thrift.meta_data.FieldMetaData("tasks", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TFullTaskId.class))));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(tasksFinished_args.class, metaDataMap);
+    }
+
+    public tasksFinished_args() {
+    }
+
+    public tasksFinished_args(
+      List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks)
+    {
+      this();
+      this.tasks = tasks;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public tasksFinished_args(tasksFinished_args other) {
+      if (other.isSetTasks()) {
+        List<edu.berkeley.sparrow.thrift.TFullTaskId> __this__tasks = new ArrayList<edu.berkeley.sparrow.thrift.TFullTaskId>();
+        for (edu.berkeley.sparrow.thrift.TFullTaskId other_element : other.tasks) {
+          __this__tasks.add(new edu.berkeley.sparrow.thrift.TFullTaskId(other_element));
+        }
+        this.tasks = __this__tasks;
+      }
+    }
+
+    public tasksFinished_args deepCopy() {
+      return new tasksFinished_args(this);
+    }
+
+    public void clear() {
+      this.tasks = null;
+    }
+
+    public int getTasksSize() {
+      return (this.tasks == null) ? 0 : this.tasks.size();
+    }
+
+    public java.util.Iterator<edu.berkeley.sparrow.thrift.TFullTaskId> getTasksIterator() {
+      return (this.tasks == null) ? null : this.tasks.iterator();
+    }
+
+    public void addToTasks(edu.berkeley.sparrow.thrift.TFullTaskId elem) {
+      if (this.tasks == null) {
+        this.tasks = new ArrayList<edu.berkeley.sparrow.thrift.TFullTaskId>();
+      }
+      this.tasks.add(elem);
+    }
+
+    public List<edu.berkeley.sparrow.thrift.TFullTaskId> getTasks() {
+      return this.tasks;
+    }
+
+    public tasksFinished_args setTasks(List<edu.berkeley.sparrow.thrift.TFullTaskId> tasks) {
+      this.tasks = tasks;
+      return this;
+    }
+
+    public void unsetTasks() {
+      this.tasks = null;
+    }
+
+    /** Returns true if field tasks is set (has been assigned a value) and false otherwise */
+    public boolean isSetTasks() {
+      return this.tasks != null;
+    }
+
+    public void setTasksIsSet(boolean value) {
+      if (!value) {
+        this.tasks = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case TASKS:
+        if (value == null) {
+          unsetTasks();
+        } else {
+          setTasks((List<edu.berkeley.sparrow.thrift.TFullTaskId>)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case TASKS:
+        return getTasks();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case TASKS:
+        return isSetTasks();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof tasksFinished_args)
+        return this.equals((tasksFinished_args)that);
+      return false;
+    }
+
+    public boolean equals(tasksFinished_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_tasks = true && this.isSetTasks();
+      boolean that_present_tasks = true && that.isSetTasks();
+      if (this_present_tasks || that_present_tasks) {
+        if (!(this_present_tasks && that_present_tasks))
+          return false;
+        if (!this.tasks.equals(that.tasks))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(tasksFinished_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      tasksFinished_args typedOther = (tasksFinished_args)other;
+
+      lastComparison = Boolean.valueOf(isSetTasks()).compareTo(typedOther.isSetTasks());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetTasks()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.tasks, typedOther.tasks);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      org.apache.thrift.protocol.TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == org.apache.thrift.protocol.TType.STOP) { 
+          break;
+        }
+        switch (field.id) {
+          case 1: // TASKS
+            if (field.type == org.apache.thrift.protocol.TType.LIST) {
+              {
+                org.apache.thrift.protocol.TList _list13 = iprot.readListBegin();
+                this.tasks = new ArrayList<edu.berkeley.sparrow.thrift.TFullTaskId>(_list13.size);
+                for (int _i14 = 0; _i14 < _list13.size; ++_i14)
+                {
+                  edu.berkeley.sparrow.thrift.TFullTaskId _elem15; // required
+                  _elem15 = new edu.berkeley.sparrow.thrift.TFullTaskId();
+                  _elem15.read(iprot);
+                  this.tasks.add(_elem15);
+                }
+                iprot.readListEnd();
+              }
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      if (this.tasks != null) {
+        oprot.writeFieldBegin(TASKS_FIELD_DESC);
+        {
+          oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, this.tasks.size()));
+          for (edu.berkeley.sparrow.thrift.TFullTaskId _iter16 : this.tasks)
+          {
+            _iter16.write(oprot);
+          }
+          oprot.writeListEnd();
+        }
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("tasksFinished_args(");
+      boolean first = true;
+
+      sb.append("tasks:");
+      if (this.tasks == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.tasks);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+  }
+
+  public static class tasksFinished_result implements org.apache.thrift.TBase<tasksFinished_result, tasksFinished_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("tasksFinished_result");
+
+
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+;
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(tasksFinished_result.class, metaDataMap);
+    }
+
+    public tasksFinished_result() {
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public tasksFinished_result(tasksFinished_result other) {
+    }
+
+    public tasksFinished_result deepCopy() {
+      return new tasksFinished_result(this);
+    }
+
+    public void clear() {
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof tasksFinished_result)
+        return this.equals((tasksFinished_result)that);
+      return false;
+    }
+
+    public boolean equals(tasksFinished_result that) {
+      if (that == null)
+        return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(tasksFinished_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      tasksFinished_result typedOther = (tasksFinished_result)other;
+
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      org.apache.thrift.protocol.TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == org.apache.thrift.protocol.TType.STOP) { 
+          break;
+        }
+        switch (field.id) {
+          default:
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("tasksFinished_result(");
       boolean first = true;
 
       sb.append(")");
