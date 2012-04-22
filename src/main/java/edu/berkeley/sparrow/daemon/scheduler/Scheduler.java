@@ -268,8 +268,7 @@ public class Scheduler {
     }
 
     public void onError(Exception exception) {
-      try { frontendClientPool.returnClient(frontendSocket, client); } 
-      catch (Exception e) { LOG.error(e); }
+      // Do not return error client to pool
       LOG.error(exception);
     }
   }

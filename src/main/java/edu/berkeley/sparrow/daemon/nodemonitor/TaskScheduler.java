@@ -109,12 +109,17 @@ public abstract class TaskScheduler {
       LOG.fatal(e);
     }
   }
-  protected synchronized void taskCompleted(TFullTaskId taskId) {
+  protected void taskCompleted(TFullTaskId taskId) {
     AUDIT_LOG.info(
         Logging.auditEventString("nodemonitor_task_completed", taskId.requestId, 
             taskId.taskId));
-    freeResourceInUse(resourcesPerTask.get(taskId));
+    TResourceVector res = resourcesPerTask.get(taskId);
+    if (res == null) {
+      LOG.error("Missing resources for task :" + taskId);
+      res = TResources.createResourceVector(0, 1);
+    }
     resourcesPerTask.remove(taskId);
+    freeResourceInUse(res);
     handleTaskCompleted(taskId);
   }
   
