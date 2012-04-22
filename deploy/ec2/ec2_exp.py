@@ -113,6 +113,7 @@ def parallel_commands(commands, tolerable_failures):
     (stdout, stderr) = p.communicate()
     if p.poll() != 0:
       failures.append((stdout, stderr, processes[p]))
+    print stdout
 
   if len(failures) > tolerable_failures:
     out = "Parallel commands failed:\n"
@@ -317,11 +318,12 @@ def start_spark(frontends, backends, opts):
   if opts.scheduler == "sparrow":
     print "Starting Spark backends..."
     ssh_all([be.public_dns_name for be in backends], opts,
-           "/root/start_spark_backend.sh")
+            "/root/start_spark_backend.sh")
   print "Starting Spark frontends..."
+  print opts.max_queries
   ssh_all([fe.public_dns_name for fe in frontends], opts,
           "/root/start_spark_frontend.sh %s %s %s" % (
-            opts.scheduler, opts.query_rate, opts.max_queries))
+           opts.scheduler, opts.query_rate, opts.max_queries))
 
 def stop_spark(frontends, backends, opts):
   print "Stopping spark frontends..."

@@ -119,6 +119,7 @@ public abstract class TaskScheduler {
       res = TResources.createResourceVector(0, 1);
     }
     resourcesPerTask.remove(taskId);
+    freeResourceInUse(res);
     handleTaskCompleted(taskId);
   }
   

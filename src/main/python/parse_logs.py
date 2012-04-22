@@ -341,9 +341,10 @@ class Request:
           tasks randomly. """
       probe_times = self.probe_times()
       num_tasks = len(self.__tasks)
-      result = sorted(probe_times)[num_tasks - 1]
-      if result > 8:
-        print self.__id
+      if len(probe_times) < num_tasks:
+        self.__logger.warn("Fewer probes send than tasks for task %s." 
+                           % self.__id)
+      result = sorted(probe_times)[min(num_tasks - 1, len(probe_times) - 1)]
       return result
 
     def response_time(self, incorporate_skew=True):
