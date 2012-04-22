@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -15,6 +16,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Hostname;
@@ -50,8 +52,8 @@ public class NodeMonitor {
   private HashMap<String, List<TFullTaskId>> appTasks = 
       new HashMap<String, List<TFullTaskId>>();
   // Map to scheduler socket address for each request id.
-  private HashMap<String, InetSocketAddress> appSchedulers =
-      new HashMap<String, InetSocketAddress>();
+  private ConcurrentMap<String, InetSocketAddress> appSchedulers =
+      Maps.newConcurrentMap();
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool = 
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
