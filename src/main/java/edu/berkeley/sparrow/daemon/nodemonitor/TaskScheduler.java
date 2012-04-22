@@ -109,7 +109,7 @@ public abstract class TaskScheduler {
       LOG.fatal(e);
     }
   }
-  protected synchronized void taskCompleted(TFullTaskId taskId) {
+  protected void taskCompleted(TFullTaskId taskId) {
     AUDIT_LOG.info(
         Logging.auditEventString("nodemonitor_task_completed", taskId.requestId, 
             taskId.taskId));

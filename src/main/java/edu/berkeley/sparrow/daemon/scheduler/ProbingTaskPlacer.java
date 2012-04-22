@@ -69,14 +69,16 @@ public class ProbingTaskPlacer implements TaskPlacer {
       // TODO: Include the port, as well as the address, in the log message, so this
       // works properly when multiple daemons are running on the same machine.
       int queueLength = -1;
+      int cores = -1;
       try {
         queueLength = response.getResult().get(appId).queueLength;
+        cores = response.getResult().get(appId).resources.cores;
       } catch (TException e1) {
         LOG.error("Probe returned no information for " + appId);
       }
       AUDIT_LOG.info(Logging.auditEventString("probe_completion", requestId,
                                               socket.getAddress().getHostAddress(),
-                                              queueLength));
+                                              queueLength, cores));
       try {
         clientPool.returnClient(socket, client);
         Map<String, TResourceUsage> resp = response.getResult();
