@@ -24,10 +24,11 @@ import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
-  public static int PROBES_PER_TASK = 2; // TODO make this configurable
+  public static int PROBES_PER_TASK = 3; // TODO make this configurable
   
   private final static Logger LOG = 
       Logger.getLogger(ConstraintObservingProbingTaskPlacer.class);
@@ -44,7 +45,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
       String requestId, Collection<InetSocketAddress> nodes,
-      Collection<TTaskSpec> tasks) throws IOException {
+      Collection<TTaskSpec> tasks, TSchedulingPref schedulingPref) throws IOException {
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks);
     CountDownLatch latch = new CountDownLatch(machinesToProbe.size());
     Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();

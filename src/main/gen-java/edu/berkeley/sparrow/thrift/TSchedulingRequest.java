@@ -27,18 +27,29 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
   private static final org.apache.thrift.protocol.TField TASKS_FIELD_DESC = new org.apache.thrift.protocol.TField("tasks", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)3);
   private static final org.apache.thrift.protocol.TField RESERVE_FIELD_DESC = new org.apache.thrift.protocol.TField("reserve", org.apache.thrift.protocol.TType.BOOL, (short)4);
+  private static final org.apache.thrift.protocol.TField SCHEDULING_PREF_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulingPref", org.apache.thrift.protocol.TType.I32, (short)5);
 
   public String app; // required
   public List<TTaskSpec> tasks; // required
   public TUserGroupInfo user; // required
   public boolean reserve; // required
+  /**
+   * 
+   * @see TSchedulingPref
+   */
+  public TSchedulingPref schedulingPref; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     APP((short)1, "app"),
     TASKS((short)2, "tasks"),
     USER((short)3, "user"),
-    RESERVE((short)4, "reserve");
+    RESERVE((short)4, "reserve"),
+    /**
+     * 
+     * @see TSchedulingPref
+     */
+    SCHEDULING_PREF((short)5, "schedulingPref");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -61,6 +72,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
           return USER;
         case 4: // RESERVE
           return RESERVE;
+        case 5: // SCHEDULING_PREF
+          return SCHEDULING_PREF;
         default:
           return null;
       }
@@ -116,6 +129,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TUserGroupInfo.class)));
     tmpMap.put(_Fields.RESERVE, new org.apache.thrift.meta_data.FieldMetaData("reserve", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+    tmpMap.put(_Fields.SCHEDULING_PREF, new org.apache.thrift.meta_data.FieldMetaData("schedulingPref", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TSchedulingPref.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TSchedulingRequest.class, metaDataMap);
   }
@@ -154,6 +169,9 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       this.user = new TUserGroupInfo(other.user);
     }
     this.reserve = other.reserve;
+    if (other.isSetSchedulingPref()) {
+      this.schedulingPref = other.schedulingPref;
+    }
   }
 
   public TSchedulingRequest deepCopy() {
@@ -166,6 +184,7 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     this.user = null;
     setReserveIsSet(false);
     this.reserve = false;
+    this.schedulingPref = null;
   }
 
   public String getApp() {
@@ -278,6 +297,38 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     __isset_bit_vector.set(__RESERVE_ISSET_ID, value);
   }
 
+  /**
+   * 
+   * @see TSchedulingPref
+   */
+  public TSchedulingPref getSchedulingPref() {
+    return this.schedulingPref;
+  }
+
+  /**
+   * 
+   * @see TSchedulingPref
+   */
+  public TSchedulingRequest setSchedulingPref(TSchedulingPref schedulingPref) {
+    this.schedulingPref = schedulingPref;
+    return this;
+  }
+
+  public void unsetSchedulingPref() {
+    this.schedulingPref = null;
+  }
+
+  /** Returns true if field schedulingPref is set (has been assigned a value) and false otherwise */
+  public boolean isSetSchedulingPref() {
+    return this.schedulingPref != null;
+  }
+
+  public void setSchedulingPrefIsSet(boolean value) {
+    if (!value) {
+      this.schedulingPref = null;
+    }
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case APP:
@@ -312,6 +363,14 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       }
       break;
 
+    case SCHEDULING_PREF:
+      if (value == null) {
+        unsetSchedulingPref();
+      } else {
+        setSchedulingPref((TSchedulingPref)value);
+      }
+      break;
+
     }
   }
 
@@ -328,6 +387,9 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
 
     case RESERVE:
       return Boolean.valueOf(isReserve());
+
+    case SCHEDULING_PREF:
+      return getSchedulingPref();
 
     }
     throw new IllegalStateException();
@@ -348,6 +410,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       return isSetUser();
     case RESERVE:
       return isSetReserve();
+    case SCHEDULING_PREF:
+      return isSetSchedulingPref();
     }
     throw new IllegalStateException();
   }
@@ -398,6 +462,15 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       if (!(this_present_reserve && that_present_reserve))
         return false;
       if (this.reserve != that.reserve)
+        return false;
+    }
+
+    boolean this_present_schedulingPref = true && this.isSetSchedulingPref();
+    boolean that_present_schedulingPref = true && that.isSetSchedulingPref();
+    if (this_present_schedulingPref || that_present_schedulingPref) {
+      if (!(this_present_schedulingPref && that_present_schedulingPref))
+        return false;
+      if (!this.schedulingPref.equals(that.schedulingPref))
         return false;
     }
 
@@ -453,6 +526,16 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     }
     if (isSetReserve()) {
       lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.reserve, typedOther.reserve);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetSchedulingPref()).compareTo(typedOther.isSetSchedulingPref());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetSchedulingPref()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.schedulingPref, typedOther.schedulingPref);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -515,6 +598,13 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
           }
           break;
+        case 5: // SCHEDULING_PREF
+          if (field.type == org.apache.thrift.protocol.TType.I32) {
+            this.schedulingPref = TSchedulingPref.findByValue(iprot.readI32());
+          } else { 
+            org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
       }
@@ -557,6 +647,13 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       oprot.writeBool(this.reserve);
       oprot.writeFieldEnd();
     }
+    if (this.schedulingPref != null) {
+      if (isSetSchedulingPref()) {
+        oprot.writeFieldBegin(SCHEDULING_PREF_FIELD_DESC);
+        oprot.writeI32(this.schedulingPref.getValue());
+        oprot.writeFieldEnd();
+      }
+    }
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
@@ -593,6 +690,16 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       if (!first) sb.append(", ");
       sb.append("reserve:");
       sb.append(this.reserve);
+      first = false;
+    }
+    if (isSetSchedulingPref()) {
+      if (!first) sb.append(", ");
+      sb.append("schedulingPref:");
+      if (this.schedulingPref == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.schedulingPref);
+      }
       first = false;
     }
     sb.append(")");

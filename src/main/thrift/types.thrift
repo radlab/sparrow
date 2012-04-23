@@ -38,11 +38,17 @@ struct TTaskSpec {
   4: optional binary message;
 }
 
+enum TSchedulingPref {
+  DEFAULT,
+  SPREAD # Try to spread tasks across machines
+}
+
 struct TSchedulingRequest {
   1: string app;
   2: list<TTaskSpec> tasks;
   3: TUserGroupInfo user;
   4: optional bool reserve;
+  5: optional TSchedulingPref schedulingPref; 
 }
 
 struct TTaskPlacement {
