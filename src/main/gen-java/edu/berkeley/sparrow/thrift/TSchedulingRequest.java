@@ -27,16 +27,12 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
   private static final org.apache.thrift.protocol.TField TASKS_FIELD_DESC = new org.apache.thrift.protocol.TField("tasks", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)3);
   private static final org.apache.thrift.protocol.TField RESERVE_FIELD_DESC = new org.apache.thrift.protocol.TField("reserve", org.apache.thrift.protocol.TType.BOOL, (short)4);
-  private static final org.apache.thrift.protocol.TField SCHEDULING_PREF_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulingPref", org.apache.thrift.protocol.TType.I32, (short)5);
+  private static final org.apache.thrift.protocol.TField SCHEDULING_PREF_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulingPref", org.apache.thrift.protocol.TType.STRUCT, (short)5);
 
   public String app; // required
   public List<TTaskSpec> tasks; // required
   public TUserGroupInfo user; // required
   public boolean reserve; // required
-  /**
-   * 
-   * @see TSchedulingPref
-   */
   public TSchedulingPref schedulingPref; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
@@ -45,10 +41,6 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     TASKS((short)2, "tasks"),
     USER((short)3, "user"),
     RESERVE((short)4, "reserve"),
-    /**
-     * 
-     * @see TSchedulingPref
-     */
     SCHEDULING_PREF((short)5, "schedulingPref");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
@@ -130,7 +122,7 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     tmpMap.put(_Fields.RESERVE, new org.apache.thrift.meta_data.FieldMetaData("reserve", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
     tmpMap.put(_Fields.SCHEDULING_PREF, new org.apache.thrift.meta_data.FieldMetaData("schedulingPref", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.EnumMetaData(org.apache.thrift.protocol.TType.ENUM, TSchedulingPref.class)));
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TSchedulingPref.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TSchedulingRequest.class, metaDataMap);
   }
@@ -170,7 +162,7 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     }
     this.reserve = other.reserve;
     if (other.isSetSchedulingPref()) {
-      this.schedulingPref = other.schedulingPref;
+      this.schedulingPref = new TSchedulingPref(other.schedulingPref);
     }
   }
 
@@ -297,18 +289,10 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     __isset_bit_vector.set(__RESERVE_ISSET_ID, value);
   }
 
-  /**
-   * 
-   * @see TSchedulingPref
-   */
   public TSchedulingPref getSchedulingPref() {
     return this.schedulingPref;
   }
 
-  /**
-   * 
-   * @see TSchedulingPref
-   */
   public TSchedulingRequest setSchedulingPref(TSchedulingPref schedulingPref) {
     this.schedulingPref = schedulingPref;
     return this;
@@ -599,8 +583,9 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
           }
           break;
         case 5: // SCHEDULING_PREF
-          if (field.type == org.apache.thrift.protocol.TType.I32) {
-            this.schedulingPref = TSchedulingPref.findByValue(iprot.readI32());
+          if (field.type == org.apache.thrift.protocol.TType.STRUCT) {
+            this.schedulingPref = new TSchedulingPref();
+            this.schedulingPref.read(iprot);
           } else { 
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, field.type);
           }
@@ -650,7 +635,7 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     if (this.schedulingPref != null) {
       if (isSetSchedulingPref()) {
         oprot.writeFieldBegin(SCHEDULING_PREF_FIELD_DESC);
-        oprot.writeI32(this.schedulingPref.getValue());
+        this.schedulingPref.write(oprot);
         oprot.writeFieldEnd();
       }
     }

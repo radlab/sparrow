@@ -38,9 +38,10 @@ struct TTaskSpec {
   4: optional binary message;
 }
 
-enum TSchedulingPref {
-  DEFAULT,
-  SPREAD # Try to spread tasks across machines
+// This temporarily lets us specify the probe ratio for certain
+// types of requests. This is a hack.
+struct TSchedulingPref {
+  1: i32 probeRatio;
 }
 
 struct TSchedulingRequest {

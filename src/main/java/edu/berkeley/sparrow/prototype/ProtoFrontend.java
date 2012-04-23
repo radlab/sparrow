@@ -59,7 +59,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       user.setUser("*");
       user.setGroup("*");
       try {
-        client.submitJob("testApp", request, user, TSchedulingPref.DEFAULT);
+        client.submitJob("testApp", request, user, new TSchedulingPref());
         LOG.debug("Submitted job: " + request);
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);

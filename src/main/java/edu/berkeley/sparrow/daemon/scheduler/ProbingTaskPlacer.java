@@ -107,8 +107,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
   @Override
   public void initialize(Configuration conf, ThriftClientPool<AsyncClient> clientPool) {
-    probeRatio = conf.getDouble(SparrowConf.PROBE_RATIO, 
-        SparrowConf.DEFAULT_PROBE_MULTIPLIER);
+    probeRatio = conf.getDouble(SparrowConf.SAMPLE_RATIO, 
+        SparrowConf.DEFAULT_SAMPLE_RATIO);
     this.clientPool = clientPool;
   }
   

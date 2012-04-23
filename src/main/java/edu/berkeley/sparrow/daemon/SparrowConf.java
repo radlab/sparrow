@@ -50,8 +50,12 @@ public class SparrowConf {
   public final static int DEFAULT_STATE_STORE_PORT = 20506;
   
   /** The ratio of probes used in a scheduling decision to tasks. */
-  public final static String PROBE_RATIO = "probe.ratio";
-  public final static double DEFAULT_PROBE_MULTIPLIER = 1.05;
+  // For requests w/o constraints...
+  public final static String SAMPLE_RATIO = "sample.ratio";
+  public final static double DEFAULT_SAMPLE_RATIO = 1.05;
+  // For requests w/ constraints...
+  public final static String SAMPLE_RATIO_CONSTRAINED = "sample.ratio.constrained";
+  public final static int DEFAULT_SAMPLE_RATIO_CONSTRAINED = 2;
   
   /** The hostname of this machine. */
   public final static String HOSTNAME = "hostname";

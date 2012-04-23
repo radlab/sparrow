@@ -44,8 +44,10 @@ def parse_args():
       help="Which benchmark to run")
   parser.add_option("-e", "--benchmark-iterations", type="int", default=4,
       help="Iterations of benchmark to run")
-  parser.add_option("-p", "--probe-ratio", type="float", default=1.05,
-      help="Probe ratio")
+  parser.add_option("-p", "--sample-ratio", type="float", default=1.05,
+      help="Sample ratio for unconstrained tasks")
+  parser.add_option("-z", "--sample-ratio-constrained", type=int, default=2,
+      help="Sample ratio for constrained tasks")
   parser.add_option("-y", "--kill-delay", type="int", default=1,
       help="Time to wait between killing backends and frontends")
   parser.add_option("-m", "--scheduler", type="string", default="mesos",
@@ -247,7 +249,8 @@ def deploy_cluster(frontends, backends, opts):
     "benchmark_iterations": "%s" % opts.benchmark_iterations,
     "benchmark_id": "%s" % opts.benchmark_id,
     "tasks_per_job": "%s" % opts.tasks_per_job,
-    "probe_ratio": "%s" % opts.probe_ratio,
+    "sample_ratio": "%s" % opts.sample_ratio,
+    "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
