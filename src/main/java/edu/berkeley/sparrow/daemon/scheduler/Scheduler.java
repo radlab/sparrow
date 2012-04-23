@@ -123,9 +123,11 @@ public class Scheduler {
       constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
       unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("configbased")) {
+      state = new ConfigSchedulerState();
       constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
       unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("production")) {
+      state = new StateStoreSchedulerState();
       constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
       unconstrainedPlacer = new ProbingTaskPlacer();
     } else {
@@ -241,7 +243,7 @@ public class Scheduler {
     }
     boolean constrained = false;
     for (TTaskSpec task : tasks) {
-      constrained = constrained && (task.preference.nodes != null && !task.preference.nodes.isEmpty()); 
+      constrained = constrained || (task.preference.nodes != null && !task.preference.nodes.isEmpty()); 
     }
     if (constrained) {
       return constrainedPlacer.placeTasks(
