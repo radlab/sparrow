@@ -243,7 +243,10 @@ public class Scheduler {
     }
     boolean constrained = false;
     for (TTaskSpec task : tasks) {
-      constrained = constrained || (task.preference.nodes != null && !task.preference.nodes.isEmpty()); 
+      constrained = constrained || (
+          task.preference != null &&
+          task.preference.nodes != null && 
+          !task.preference.nodes.isEmpty()); 
     }
     if (constrained) {
       return constrainedPlacer.placeTasks(
