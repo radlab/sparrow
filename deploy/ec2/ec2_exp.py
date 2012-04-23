@@ -46,7 +46,7 @@ def parse_args():
       help="Iterations of benchmark to run")
   parser.add_option("-p", "--sample-ratio", type="float", default=1.05,
       help="Sample ratio for unconstrained tasks")
-  parser.add_option("-z", "--sample-ratio-constrained", type=int, default=2,
+  parser.add_option("-q", "--sample-ratio-constrained", type=int, default=2,
       help="Sample ratio for constrained tasks")
   parser.add_option("-y", "--kill-delay", type="int", default=1,
       help="Time to wait between killing backends and frontends")
@@ -383,6 +383,10 @@ def collect_logs(frontends, backends, opts):
     "*.log", opts.log_dir, len(frontends))
   rsync_from_all([be.public_dns_name for be in backends], opts,
     "*.log", opts.log_dir, len(backends))
+  f = open(opts.log_dir + "params.txt", 'w')
+  for (k, v) in opts.__dict__.items():
+    f.write("%s\t%s\n" % (k, v))
+  f.close()
   ssh_all([fe.public_dns_name for fe in frontends], opts,
           "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
   ssh_all([be.public_dns_name for be in backends], opts,
