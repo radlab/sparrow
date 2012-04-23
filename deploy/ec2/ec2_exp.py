@@ -5,6 +5,7 @@ import tempfile
 import time
 import subprocess
 import shutil
+import random
 
 from optparse import OptionParser
 
@@ -49,9 +50,9 @@ def parse_args():
       help="Time to wait between killing backends and frontends")
   parser.add_option("-m", "--scheduler", type="string", default="mesos",
       help="Which scheduler to use for running spark (mesos/sparrow)")
-  parser.add_option("-j", "--max-queries", type=int, default=60,
+  parser.add_option("-j", "--max-queries", type="int", default=60,
       help="How many spark queries to run before shutting down")
-  parser.add_option("-v", "--query-rate", type=int, default=1,
+  parser.add_option("-v", "--query-rate", type="float", default=1.0,
       help="What rate to run spark queries at (queries per second)")
 
   (opts, args) = parser.parse_args()
@@ -321,9 +322,12 @@ def start_spark(frontends, backends, opts):
             "/root/start_spark_backend.sh")
   print "Starting Spark frontends..."
   print opts.max_queries
-  ssh_all([fe.public_dns_name for fe in frontends], opts,
+  for fe in frontends:
+    ssh(fe.public_dns_name, opts,
           "/root/start_spark_frontend.sh %s %s %s" % (
            opts.scheduler, opts.query_rate, opts.max_queries))
+    print "Sleeping to let spark pull into cache on %s" % fe.public_dns_name
+    time.sleep(10 + random.random()) # add some random to avoid synchronization
 
 def stop_spark(frontends, backends, opts):
   print "Stopping spark frontends..."

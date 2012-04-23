@@ -562,7 +562,7 @@ class LogParser:
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
-        
+"""        
         # Output data about clock skews.  Currently this writes a different
         # file for each pair of machines; we may want to change this when
         # we do larger experiments.
@@ -578,7 +578,7 @@ class LogParser:
                 percentile = (i + 1) * stride * 1.0 / len(skews)
                 file.write("%f\t%d\t%d\n" % (percentile, skew, time))
         self.plot_skew_cdf(skew_filenames, file_prefix)
-    
+"""    
         summary_file = open("%s_response_time_summary" % file_prefix, 'w')
         summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
                                          get_percentile(response_times, .95),
