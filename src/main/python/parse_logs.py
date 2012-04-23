@@ -15,11 +15,12 @@ import os
 import sys
 import stats
 import time
+import subprocess
 
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
-EXCLUDE_SECS = 0
+EXCLUDE_SECS = 60
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -562,7 +563,7 @@ class LogParser:
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
-"""        
+        """        
         # Output data about clock skews.  Currently this writes a different
         # file for each pair of machines; we may want to change this when
         # we do larger experiments.
@@ -578,24 +579,47 @@ class LogParser:
                 percentile = (i + 1) * stride * 1.0 / len(skews)
                 file.write("%f\t%d\t%d\n" % (percentile, skew, time))
         self.plot_skew_cdf(skew_filenames, file_prefix)
-"""    
+        """    
         summary_file = open("%s_response_time_summary" % file_prefix, 'w')
         summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
                                          get_percentile(response_times, .95),
                                          get_percentile(response_times, .99)))
         summary_file.close()
 
-        # Queue length vs response time scatter plot
+        # Queue length vs response time
         scatter_file = open("queue_vs_wait_time.txt", 'w')
+        wait_times_per_queue_len = {}
         for request in considered_requests:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
             queue_length = request._Request__probes[task.address].queue_length
             scatter_file.write("%s\t%s\t%s\t%s\n" % (
               queue_length, wait_time, task.address, task.id))
+            arr = wait_times_per_queue_len.get(queue_length, [])
+            arr.append(wait_time)
+            wait_times_per_queue_len[queue_length] = arr
         scatter_file.close
-
-
+        files = [] # (file name, queue length, # items)
+        for (queue_len, waits) in wait_times_per_queue_len.items():
+          fname = "queue_waits_%s.txt" % queue_len
+          files.append((fname, queue_len, len(waits)))
+          f = open(fname, 'w')
+          waits.sort()
+          for (i, wait) in enumerate(waits):
+            f.write("%s\t%s\n" % (float(i)/len(waits), wait))
+          f.close()
+        plot_fname = "wait_time.gp"
+        plot_file = open(plot_fname, 'w')
+        plot_file.write("set terminal postscript color\n")
+        plot_file.write("set output 'wait_time.ps'\n")
+        parts = map(lambda x: "'%s' using 2:1 with lines lw 3 title '%s (n=%s)'"
+          % (x[0], x[1], x[2]), files)
+        plot = "plot " + ",\\\n".join(parts)
+        plot_file.write(plot + "\n")
+        plot_file.close()
+        subprocess.check_call("gnuplot %s" % plot_fname, shell=True)
+        subprocess.check_call("rm queue_waits*.txt", shell=True)
+ 
     def plot_skew_cdf(self, skew_filenames, file_prefix):
         gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")
         gnuplot_file.write("set terminal postscript color\n")
