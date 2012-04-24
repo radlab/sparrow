@@ -506,7 +506,6 @@ class LogParser:
         clock_skews = {}
         start_time = self.__earliest_time + (START_SEC * 1000)
         end_time = self.__earliest_time + (END_SEC * 1000)
-        print END_SEC
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time, 
                                      self.__requests.values())
@@ -602,11 +601,14 @@ class LogParser:
               queue_length, wait_time, task.address, task.id))
             arr = wait_times_per_queue_len.get(queue_length, [])
             arr.append(wait_time)
+            if queue_length is 0 and wait_time > 100:
+              print task.id
+              print request._Request__id
             wait_times_per_queue_len[queue_length] = arr
         scatter_file.close
         files = [] # (file name, queue length, # items)
         for (queue_len, waits) in wait_times_per_queue_len.items():
-          fname = "queue_waits_%s.txt" % queue_len
+          fname = "data/queue_waits_%s.txt" % queue_len
           files.append((fname, queue_len, len(waits)))
           f = open(fname, 'w')
           waits.sort()
@@ -617,13 +619,14 @@ class LogParser:
         plot_file = open(plot_fname, 'w')
         plot_file.write("set terminal postscript color\n")
         plot_file.write("set output 'wait_time.ps'\n")
+        plot_file.write("set xrange [0:500]\n")
         parts = map(lambda x: "'%s' using 2:1 with lines lw 3 title '%s (n=%s)'"
           % (x[0], x[1], x[2]), files)
         plot = "plot " + ",\\\n".join(parts)
         plot_file.write(plot + "\n")
         plot_file.close()
         subprocess.check_call("gnuplot %s" % plot_fname, shell=True)
-        subprocess.check_call("rm queue_waits*.txt", shell=True)
+        #subprocess.check_call("rm queue_waits*.txt", shell=True)
  
     def plot_skew_cdf(self, skew_filenames, file_prefix):
         gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")

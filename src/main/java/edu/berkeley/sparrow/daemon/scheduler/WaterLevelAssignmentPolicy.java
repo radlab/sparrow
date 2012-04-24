@@ -50,6 +50,10 @@ public class WaterLevelAssignmentPolicy implements AssignmentPolicy {
   }
   
   @Override
+  /**
+   * Note that this will actually modify in-place the TResourceUsage of the nodes as
+   * tasks are assigned.
+   */
   public Collection<TaskPlacementResponse> assignTasks(
       Collection<TTaskSpec> tasks, Map<InetSocketAddress, TResourceUsage> nodes) {
     SortedSet<EntryWrapper> nodeSet = new TreeSet<EntryWrapper>();

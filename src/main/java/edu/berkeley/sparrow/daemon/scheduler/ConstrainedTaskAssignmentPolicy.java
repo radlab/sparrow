@@ -24,19 +24,20 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
-
   private final static Logger LOG = 
       Logger.getLogger(ConstrainedTaskAssignmentPolicy.class);
+  
+  private AssignmentPolicy delegate = new WaterLevelAssignmentPolicy();
   
   /**
    * Task assigner that takes into account tasks which may have constraints. This 
    * implements a heuristic for finding the optimal assignment as follows:
    * 
    * 1) For each task which has constraints:
-   *    - Choose the least loaded node which is in the constraint set for the task
-   *    - Assign the task to that node an increment the node's load accordingly
+   *    - Assign that task to the optimal choice amongst its feasible set.
+   *    - Update the node selected (happens in the assignment policy)
    * 2) For all remaining tasks:
-   *    - Assign to nodes based on {@link MinCpuAssignmentPolicy}.
+   *    - Assign to nodes based on {@link WaterLevelAssignmentPolicy}.
    */
   public Collection<TaskPlacementResponse> assignTasks(
       Collection<TTaskSpec> tasks, Map<InetSocketAddress, TResourceUsage> nodes) {
@@ -71,17 +72,9 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
             choices.put(node, nodes.get(node));
           }
         }
-        List<Entry<InetSocketAddress, TResourceUsage>> results = 
-            new ArrayList<Entry<InetSocketAddress, TResourceUsage>>(choices.entrySet());
-        Collections.sort(results, TResources.makeEntryComparator(
-            new TResources.CPUThenQueueComparator()));
-        
         // TODO: this should really return something saying the constraints are unsatisfiable
-        if (results.size() == 0) LOG.fatal("No information pertaining to task: " + task); 
-        
-        Entry<InetSocketAddress, TResourceUsage> entry = results.get(0);
-        out.add(new TaskPlacementResponse(task, entry.getKey()));
-        TResources.addTo(entry.getValue().getResources(), task.estimatedResources);
+        if (choices.size() == 0) LOG.fatal("No information pertaining to task: " + task); 
+        out.addAll(delegate.assignTasks(Lists.newArrayList(task), choices));
         
         } else { // We are not constrained
         unconstrainedTasks.add(task);
