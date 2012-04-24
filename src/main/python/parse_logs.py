@@ -20,7 +20,9 @@ import subprocess
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
-EXCLUDE_SECS = 60
+
+START_SEC = 0
+END_SEC = 100000000
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -502,8 +504,11 @@ class LogParser:
         # (clock skew, time) pairs. Store addresses in tuple in increasing
         # order, so that we get the clock skew calculated in both directions.
         clock_skews = {}
-        cutoff_time = self.__earliest_time + (EXCLUDE_SECS * 1000)
-        considered_requests = filter(lambda k: k.arrival_time() >= cutoff_time, 
+        start_time = self.__earliest_time + (START_SEC * 1000)
+        end_time = self.__earliest_time + (END_SEC * 1000)
+        print END_SEC
+        considered_requests = filter(lambda k: k.arrival_time() >= start_time and
+                                     k.arrival_time() <= end_time, 
                                      self.__requests.values())
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
@@ -683,7 +688,7 @@ class LogParser:
         request.add_task_completion(task_id, time)
 
 def main(argv):
-    PARAMS = ["log_dir", "output_file"]
+    PARAMS = ["log_dir", "output_file", "start_sec", "end_sec"]
     if "help" in argv[0]:
         print ("Usage: python parse_logs.py " +
                " ".join(["[%s=v]" % k for k in PARAMS]))
@@ -703,6 +708,12 @@ def main(argv):
                          filename in unqualified_log_files]
         elif kv[0] == PARAMS[1]:
             output_filename = kv[1]
+        elif kv[0] == PARAMS[2]:
+            global START_SEC
+            START_SEC = int(kv[1])
+        elif kv[0] == PARAMS[3]:
+            global END_SEC
+            END_SEC = int(kv[1])
         else:
             print "Warning: ignoring parameter %s" % kv[0]
             

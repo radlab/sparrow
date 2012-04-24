@@ -87,15 +87,8 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
         unconstrainedTasks.add(task);
       }
     }
-    /**
-     * NOTE,TODO: This may have undesired consequences. One issue is that this policy
-     * ranks all nodes in terms of (CPU, queue length) ordering. That means a node with
-     * a positive queue length might be assigned over one which has an extra free queue
-     * (but does have a queue which has already been assigned). This might be a place
-     * to look if we are seeing below-expected performance.
-     */
-    AssignmentPolicy delegate = new ComparatorAssignmentPolicy(
-        new TResources.CPUThenQueueComparator());
+
+    AssignmentPolicy delegate = new WaterLevelAssignmentPolicy();
     out.addAll(delegate.assignTasks(unconstrainedTasks, nodes));
     return out;
   }

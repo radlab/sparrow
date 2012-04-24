@@ -77,7 +77,7 @@ public class SparrowFrontendClient {
     clients.peek().registerFrontend(app, "localhost:" + listenPort); 
   }
   
-  public synchronized boolean submitJob(String app, 
+  public boolean submitJob(String app, 
       List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user,
       TSchedulingPref pref) 
           throws TException {
@@ -97,7 +97,7 @@ public class SparrowFrontendClient {
     return result;
   }
   
-  public synchronized List<TTaskPlacement> getJobPlacement(String app,
+  public List<TTaskPlacement> getJobPlacement(String app,
       List<TTaskSpec> tasks, TUserGroupInfo user) throws TException {
     TSchedulingRequest request = new TSchedulingRequest();
     request.setTasks(tasks);
