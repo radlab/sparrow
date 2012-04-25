@@ -112,8 +112,8 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     if (isRunning) { 
       return Status.DRIVER_ALREADY_RUNNING; 
     }
-    try {
-      client = TClients.createBlockingNmClient("localhost", 20501);
+    try { // TODO switch to client pool here
+      client = TClients.createBlockingNmClient("localhost", 20501, 500);
     } catch (IOException e) {
       System.err.println("Failed to create connection to Sparrow:");
       e.printStackTrace(System.err);
