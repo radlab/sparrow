@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
@@ -256,6 +258,29 @@ public class Scheduler {
           task.preference != null &&
           task.preference.nodes != null && 
           !task.preference.nodes.isEmpty()); 
+    }
+    
+    /* TESTING SOMETHING --- REMOVE THIS */
+    if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
+      if (tasks.get(0).preference.nodes != null &&
+          (tasks.get(0).preference.nodes.size() == 1 ||
+          tasks.get(0).preference.nodes.size() == 2)) {
+        
+        // Explicitly avoid nodes with preferences so spark RDD's get spread out
+        List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
+        List<InetSocketAddress> toRemove = Lists.newArrayList();
+        for (TTaskSpec task : tasks) {
+          for (String node : task.preference.nodes) {
+           InetAddress addr = InetAddress.getByName(node);
+           for (InetSocketAddress backend : subBackends) {
+             if (backend.getAddress().equals(addr)) { toRemove.add(backend); }
+           }
+          }
+        }
+       subBackends.removeAll(toRemove);
+       return new RandomTaskPlacer().placeTasks(
+           app, requestId, subBackends, tasks, req.schedulingPref);
+      }
     }
     if (constrained) {
       return constrainedPlacer.placeTasks(

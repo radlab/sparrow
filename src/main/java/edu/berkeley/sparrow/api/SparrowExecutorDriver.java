@@ -114,7 +114,9 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       }
     }
 
-    public void onError(Exception exception) { /* Do nothing */  }
+    public void onError(Exception exception) {
+      exception.printStackTrace(System.err);
+    }
   }
   
   private class SendFrontendMessageCallback implements AsyncMethodCallback<sendFrontendMessage_call> { 
@@ -130,7 +132,9 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       }
     }
 
-    public void onError(Exception exception) { /* Do nothing */  }
+    public void onError(Exception exception) {
+      exception.printStackTrace(System.err);
+    }
   }
   
   @Override
