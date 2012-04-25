@@ -18,6 +18,7 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
@@ -247,6 +248,19 @@ public class Scheduler {
           task.preference != null &&
           task.preference.nodes != null && 
           !task.preference.nodes.isEmpty()); 
+    }
+    
+    /* TESTING SOMETHING  */
+    if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
+      List<InetSocketAddress> subBackends = Lists.newArrayList();
+      int offset = counter % 3;
+      for (int i = 0; i < backendList.size(); i++) {
+        if (i % 3 == offset) {
+          subBackends.add(backendList.get(i));
+        }
+      }
+      return new RandomTaskPlacer().placeTasks(app, requestId, subBackends, 
+          tasks, req.schedulingPref);
     }
     if (constrained) {
       return constrainedPlacer.placeTasks(
