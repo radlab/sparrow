@@ -38,7 +38,7 @@ public class FifoTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected synchronized void handleTaskCompleted(TFullTaskId taskId) {
+  protected void handleTaskCompleted(TFullTaskId taskId) {
     activeTasks.decrementAndGet();
     if (!tasks.isEmpty()) {
       makeTaskRunnable(tasks.poll());

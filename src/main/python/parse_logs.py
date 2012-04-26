@@ -532,8 +532,6 @@ class LogParser:
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
             probe_times.extend(request.probe_times())
-            if request.probing_time() > 40:
-              print request._Request__id
             probing_times.append(request.probing_time())
             queue_lengths.extend(request.queue_lengths())
             rcv_probing_times.append(request.receive_and_probing_time())
@@ -599,6 +597,8 @@ class LogParser:
         for request in considered_requests:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
+            if task.address not in request._Request__probes:
+              continue
             queue_length = request._Request__probes[task.address].queue_length
             arr = wait_times_per_queue_len.get(queue_length, [])
             arr.append(wait_time)
