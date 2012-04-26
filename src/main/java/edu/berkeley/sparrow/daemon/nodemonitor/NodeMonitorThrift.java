@@ -30,7 +30,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
                                           InternalService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_NM_THRIFT_PORT = 20501;
-  public final static int DEFAULT_NM_THRIFT_THREADS = 16;
+  public final static int DEFAULT_NM_THRIFT_THREADS = 64;
   public final static int DEFAULT_INTERNAL_THRIFT_PORT = 20502;
   public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 8;
  

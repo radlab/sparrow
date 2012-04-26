@@ -347,8 +347,10 @@ class Request:
       if len(probe_times) < num_tasks:
         self.__logger.warn("Fewer probes send than tasks for task %s." 
                            % self.__id)
-      result = sorted(probe_times)[min(num_tasks - 1, len(probe_times) - 1)]
-      return result
+      
+      if len(probe_times) == 0:
+        return 0
+      return sorted(probe_times)[min(num_tasks - 1, len(probe_times) - 1)]
 
     def response_time(self, incorporate_skew=True):
         """ Returns the time from when the task arrived to when it completed.
@@ -530,6 +532,8 @@ class LogParser:
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
             probe_times.extend(request.probe_times())
+            if request.probing_time() > 40:
+              print request._Request__id
             probing_times.append(request.probing_time())
             queue_lengths.extend(request.queue_lengths())
             rcv_probing_times.append(request.receive_and_probing_time())
@@ -590,22 +594,17 @@ class LogParser:
                                          get_percentile(response_times, .99)))
         summary_file.close()
 
-        # Queue length vs response time
-        scatter_file = open("queue_vs_wait_time.txt", 'w')
+
         wait_times_per_queue_len = {}
         for request in considered_requests:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
             queue_length = request._Request__probes[task.address].queue_length
-            scatter_file.write("%s\t%s\t%s\t%s\n" % (
-              queue_length, wait_time, task.address, task.id))
             arr = wait_times_per_queue_len.get(queue_length, [])
             arr.append(wait_time)
-            if queue_length is 0 and wait_time > 100:
-              print task.id
-              print request._Request__id
             wait_times_per_queue_len[queue_length] = arr
-        scatter_file.close
+        
+        # Queue length vs response time
         files = [] # (file name, queue length, # items)
         for (queue_len, waits) in wait_times_per_queue_len.items():
           fname = "data/queue_waits_%s.txt" % queue_len
@@ -627,7 +626,7 @@ class LogParser:
         plot_file.close()
         subprocess.check_call("gnuplot %s" % plot_fname, shell=True)
         #subprocess.check_call("rm queue_waits*.txt", shell=True)
- 
+
     def plot_skew_cdf(self, skew_filenames, file_prefix):
         gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")
         gnuplot_file.write("set terminal postscript color\n")
