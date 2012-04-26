@@ -17,6 +17,7 @@ import org.apache.thrift.transport.TNonblockingTransport;
 
 import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.InternalService;
+import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 
 /** A pool of nonblocking thrift async connections. */
@@ -54,6 +55,15 @@ public class ThriftClientPool<T extends TAsyncClient> {
     public InternalService.AsyncClient create(TNonblockingTransport tr, 
         TAsyncClientManager mgr, TProtocolFactory factory) {
       return new InternalService.AsyncClient(factory, mgr, tr);
+    }
+  }
+  
+  public static class NodeMonitorServiceMakerFactory 
+    implements MakerFactory<NodeMonitorService.AsyncClient> {
+    @Override
+    public NodeMonitorService.AsyncClient create(TNonblockingTransport tr, 
+        TAsyncClientManager mgr, TProtocolFactory factory) {
+      return new NodeMonitorService.AsyncClient(factory, mgr, tr);
     }
   }
   
