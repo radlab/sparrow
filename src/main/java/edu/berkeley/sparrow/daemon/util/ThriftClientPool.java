@@ -26,7 +26,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int MIN_IDLE_CLIENTS_PER_ADDR = 0;
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int EVICTABLE_IDLE_TIME_MS = 1000;
+  public static int EVICTABLE_IDLE_TIME_MS = 60000;
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = 1000;
   /** See {@link GenericKeyedObjectPool.Config} */
@@ -41,6 +41,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
     conf.minEvictableIdleTimeMillis = EVICTABLE_IDLE_TIME_MS;
     conf.timeBetweenEvictionRunsMillis = TIME_BETWEEN_EVICTION_RUNS_MILLIS;
     conf.maxActive = MAX_ACTIVE_CLIENTS_PER_ADDR;
+    conf.whenExhaustedAction = GenericKeyedObjectPool.WHEN_EXHAUSTED_GROW;
     return conf;
   }
   
@@ -140,8 +141,8 @@ public class ThriftClientPool<T extends TAsyncClient> {
   private GenericKeyedObjectPool<InetSocketAddress, T> pool;
   
   public ThriftClientPool(MakerFactory<T> maker) {
-    pool = new GenericKeyedObjectPool<InetSocketAddress, T>(new PoolFactory(maker));
-    pool.setConfig(getPoolConfig());
+    pool = new GenericKeyedObjectPool<InetSocketAddress, T>(new PoolFactory(maker), 
+        getPoolConfig());
     try {
       clientManager = new TAsyncClientManager();
     } catch (IOException e) {
