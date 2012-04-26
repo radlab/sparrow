@@ -197,12 +197,15 @@ public class Scheduler {
           req.getUser(), response.getTaskSpec().getEstimatedResources(),          
           new TaskLaunchCallback(latch, client, response.getNodeAddr()));
     }
+    // NOTE: Currently we just return rather than waiting for all tasks to launch
+    /*
     try {
       LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");
       latch.await();
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+    */
     long end = System.currentTimeMillis();
     LOG.debug("All tasks launched, returning. Total time: " + (end - start) + 
         "Probe time: " + (probeFinish - start));
