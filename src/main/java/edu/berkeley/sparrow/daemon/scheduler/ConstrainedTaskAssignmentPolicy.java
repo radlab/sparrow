@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -19,7 +18,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
@@ -48,6 +46,8 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
     }
     Set<TaskPlacementResponse> out = Sets.newHashSet();
     List<TTaskSpec> unconstrainedTasks = Lists.newLinkedList();
+    ArrayList<TTaskSpec> taskShuffled = Lists.newArrayList(tasks);
+    Collections.shuffle(taskShuffled);
     for (TTaskSpec task : tasks) {
       List<InetSocketAddress> interests = Lists.newLinkedList();
       if (task.preference != null && task.preference.nodes != null) {
