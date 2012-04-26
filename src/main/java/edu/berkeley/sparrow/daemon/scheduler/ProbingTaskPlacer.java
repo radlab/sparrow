@@ -18,7 +18,6 @@ import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
@@ -37,6 +36,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
   private double probeRatio;
   
   private ThriftClientPool<AsyncClient> clientPool;
+  private RandomTaskPlacer randomPlacer;
   
   /**
    * This acts as a callback for the asynchronous Thrift interface.
@@ -110,6 +110,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
     probeRatio = conf.getDouble(SparrowConf.SAMPLE_RATIO, 
         SparrowConf.DEFAULT_SAMPLE_RATIO);
     this.clientPool = clientPool;
+    randomPlacer = new RandomTaskPlacer();
+    randomPlacer.initialize(conf, clientPool);
   }
   
   @Override
@@ -118,6 +120,11 @@ public class ProbingTaskPlacer implements TaskPlacer {
       Collection<TTaskSpec> tasks, TSchedulingPref schedulingPref) 
           throws IOException {
     LOG.debug(Logging.functionCall(appId, nodes, tasks));
+    
+    if (probeRatio < 1.0) {
+      return randomPlacer.placeTasks(appId, requestId, nodes, tasks, schedulingPref);
+    }
+    
     Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
     
     // This latch decides how many nodes need to respond for us to make a decision.

@@ -70,7 +70,9 @@ public class WaterLevelAssignmentPolicy implements AssignmentPolicy {
 
       int nodeLevel = getNodeLevel(entry.getResUsage());
 
-      TResources.addTo(entry.getResUsage().getResources(), task.estimatedResources);
+      if (task.estimatedResources != null) {
+        TResources.addTo(entry.getResUsage().getResources(), task.estimatedResources);
+      }
       if (nodeSet.size() > 0 && 
           getNodeLevel(entry.getResUsage()) >= getNodeLevel(nodeSet.first().getResUsage())) {
         waiting.add(entry);

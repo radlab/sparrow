@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
@@ -35,6 +36,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       Logger.getLogger(ConstraintObservingProbingTaskPlacer.class);
   
   private ThriftClientPool<AsyncClient> clientPool;
+  private AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy(); 
   
   @Override
   public void initialize(Configuration conf,
@@ -50,9 +52,26 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       String requestId, Collection<InetSocketAddress> nodes,
       Collection<TTaskSpec> tasks, TSchedulingPref schedulingPref) throws IOException {
     int probeRatio = Math.max(schedulingPref.probeRatio, probesPerTask);
+
+    LOG.debug("Placing constrained tasks with probe ratio: " + probeRatio); 
+    
+    // This approximates a "randomized over constraints" approach if we get a trivial
+    // probe ratio.
+    if (probeRatio < 1.0) {
+      Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 3);
+      Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
+      // All machines have uniform resources
+      for (InetSocketAddress socket : machinesToProbe) {
+        TResourceUsage usage = new TResourceUsage();
+        usage.queueLength = 0;
+        usage.resources = TResources.createResourceVector(0, 0);
+        mockedResources.put(socket, usage);
+      }
+      return policy.assignTasks(tasks, mockedResources);
+    }
+    
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
         probeRatio);
-    LOG.debug("Placing constrained tasks with probe ratio: " + probeRatio); 
     CountDownLatch latch = new CountDownLatch(machinesToProbe.size());
     Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
     for (InetSocketAddress machine: machinesToProbe) {
@@ -76,7 +95,6 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-    AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy();
     return policy.assignTasks(tasks, loads);
   }
 
@@ -96,7 +114,6 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       List<InetSocketAddress> interests = Lists.newLinkedList();
       if (task.preference != null && task.preference.nodes != null) {
         List<String> prefs = task.preference.nodes;
-        Collections.shuffle(prefs);
         for (String node : task.preference.nodes) {
           try {
             InetAddress addr = InetAddress.getByName(node);
