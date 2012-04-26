@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.api;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import org.apache.mesos.Protos.TaskID;
 import org.apache.mesos.Protos.TaskState;
 import org.apache.mesos.Protos.TaskStatus;
 import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -24,8 +26,14 @@ import com.google.protobuf.ByteString;
 
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TServers;
+import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.BackendService;
+import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.AsyncClient;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.AsyncClient.sendFrontendMessage_call;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.AsyncClient.tasksFinished_call;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.Client;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
@@ -44,9 +52,17 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  */
 public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Iface {
   private Executor executor;
-  private NodeMonitorService.Client client;
+  
+  ThriftClientPool<NodeMonitorService.AsyncClient> clientPool = // Async clients for
+                                                                // messages 
+      new ThriftClientPool<NodeMonitorService.AsyncClient>(
+      new ThriftClientPool.NodeMonitorServiceMakerFactory());
+  
+  Client client; // Sync client for registration
+  
   private HashMap<String, TFullTaskId> taskIdToFullTaskId = Maps.newHashMap();
 
+  private InetSocketAddress localhost = new InetSocketAddress("localhost", 20501);
   private boolean isRunning = false;
   private Status stopStatus = Status.OK;
   private Lock runLock = new ReentrantLock();
@@ -85,22 +101,62 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     return abort();
   }
 
+  private class TaskFinishedCallback implements AsyncMethodCallback<tasksFinished_call> { 
+    private AsyncClient client;
+    
+    TaskFinishedCallback(AsyncClient client) { this.client = client; }
+      
+    public void onComplete(tasksFinished_call response) {
+      try {
+        clientPool.returnClient(localhost, client);
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
+      }
+    }
+
+    public void onError(Exception exception) { /* Do nothing */  }
+  }
+  
+  private class SendFrontendMessageCallback implements AsyncMethodCallback<sendFrontendMessage_call> { 
+    private AsyncClient client;
+    
+    SendFrontendMessageCallback(AsyncClient client) { this.client = client; }
+      
+    public void onComplete(sendFrontendMessage_call response) {
+      try {
+        clientPool.returnClient(localhost, client);
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
+      }
+    }
+
+    public void onError(Exception exception) { /* Do nothing */  }
+  }
+  
   @Override
   public synchronized Status sendStatusUpdate(TaskStatus status) {
     TFullTaskId fullId = taskIdToFullTaskId.get(status.getTaskId().getValue());
+    AsyncClient client1 = null;
+    AsyncClient client2 = null;
+    try {
+      client1 = clientPool.borrowClient(localhost);
+      client2 = clientPool.borrowClient(localhost);
+    } catch (Exception e) {
+      e.printStackTrace(System.err);
+    }
     if (status.getState() == TaskState.TASK_FINISHED) {
       try {
-        client.tasksFinished(Lists.newArrayList(fullId));
+        client1.tasksFinished(Lists.newArrayList(fullId),  new TaskFinishedCallback(client1));
       } catch (TException e) {
-        e.printStackTrace();
+        e.printStackTrace(System.err);
       }
     }
     // TODO check if null
     String requestId = fullId.requestId;
 
     try {
-      client.sendFrontendMessage(appName, requestId, 
-          ByteBuffer.wrap(status.toByteArray()));
+      client2.sendFrontendMessage(appName, requestId, 
+          ByteBuffer.wrap(status.toByteArray()), new SendFrontendMessageCallback(client2));
     } catch (TException e) {
       e.printStackTrace();
       return abort();
