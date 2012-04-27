@@ -39,7 +39,10 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       Logger.getLogger(ConstraintObservingProbingTaskPlacer.class);
   
   private ThriftClientPool<AsyncClient> clientPool;
-  private AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy(); 
+  private AssignmentPolicy waterLevelPolicy = new ConstrainedTaskAssignmentPolicy(
+      new WaterLevelAssignmentPolicy());
+  private AssignmentPolicy randomPolicy = new ConstrainedTaskAssignmentPolicy(
+      new RandomAssignmentPolicy());
   
   @Override
   public void initialize(Configuration conf,
@@ -63,14 +66,14 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     if (probeRatio < 1.0) {
       Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 3);
       Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
-      // All machines have uniform resources
       for (InetSocketAddress socket : machinesToProbe) {
         TResourceUsage usage = new TResourceUsage();
+        // Resource info is ignored by random policy
         usage.queueLength = 0;
         usage.resources = TResources.createResourceVector(0, 0);
         mockedResources.put(socket, usage);
       }
-      return policy.assignTasks(tasks, mockedResources);
+      return randomPolicy.assignTasks(tasks, mockedResources);
     }
     
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
@@ -107,7 +110,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
                 TResources.createResourceVector(1000, 4), 100));
       }
     }
-    return policy.assignTasks(tasks, loads);
+    return waterLevelPolicy.assignTasks(tasks, loads);
   }
 
   
