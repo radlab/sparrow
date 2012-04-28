@@ -24,11 +24,11 @@ import edu.berkeley.sparrow.thrift.SchedulerService;
 public class ThriftClientPool<T extends TAsyncClient> {
   // Default configurations for underlying pool
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int MIN_IDLE_CLIENTS_PER_ADDR = 0;
+  public static int MIN_IDLE_CLIENTS_PER_ADDR = 5;
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int EVICTABLE_IDLE_TIME_MS = -1;
+  public static int EVICTABLE_IDLE_TIME_MS = 1000;
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = -1;
+  public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = 10000;
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int MAX_ACTIVE_CLIENTS_PER_ADDR = -1;
   
