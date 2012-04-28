@@ -21,8 +21,8 @@ INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 
-START_SEC = 0
-END_SEC = 100000000
+START_SEC = 100
+END_SEC = 150
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -391,6 +391,13 @@ class Request:
 								self.__logger.warn("Task %s suggests clock skew: " % task_id)
             completion_time = max(completion_time, task_completion_time)
 
+        if (completion_time - self.__arrival_time) > 70:
+          print self.__id
+          print "TRUE: %s" % (completion_time - self.__arrival_time)
+          print self.network_delays()
+          print self.service_times()
+          print self.probing_time()
+          print "EST: %s" % (max(self.service_times()) + max(self.network_delays()) + self.probing_time())
         return completion_time - self.__arrival_time
         
     def complete(self):
