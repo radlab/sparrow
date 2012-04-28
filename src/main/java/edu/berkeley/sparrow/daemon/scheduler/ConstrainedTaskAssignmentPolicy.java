@@ -60,8 +60,6 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
             InetAddress addr = InetAddress.getByName(node);
             if (addrToSocket.containsKey(addr)) {
               interests.add(addrToSocket.get(addr));
-            } else {
-              LOG.warn("Got placement constraint for unknown node " + node);
             }
           } catch (UnknownHostException e) {
             LOG.warn("Got placement constraint for unresolvable node " + node);

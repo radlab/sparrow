@@ -128,14 +128,19 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     for (TTaskSpec task : tasks) {
       List<InetSocketAddress> interests = Lists.newLinkedList();
       if (task.preference != null && task.preference.nodes != null) {
-        List<String> prefs = task.preference.nodes;
         for (String node : task.preference.nodes) {
           try {
             InetAddress addr = InetAddress.getByName(node);
             if (addrToSocket.containsKey(addr)) {
               interests.add(addrToSocket.get(addr));
             } else {
-              LOG.warn("Got placement constraint for unknown node " + node);
+              LOG.warn("Placement constraint for unknown node " + node);
+              LOG.warn("Node address: " + addr);
+              String knownAddrs = "";
+              for (InetAddress add: addrToSocket.keySet()) {
+                knownAddrs += " " + add.getHostAddress();
+              }
+              LOG.warn("Know about: " + knownAddrs);
             }
           } catch (UnknownHostException e) {
             LOG.warn("Got placement constraint for unresolvable node " + node);
