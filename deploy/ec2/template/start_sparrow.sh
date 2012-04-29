@@ -1,5 +1,6 @@
 #!/bin/bash
 # Start Sparrow locally
+ulimit -n 16384
 
 LOG=/disk1/sparrow/sparrowDaemon.log
 IP=`ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`

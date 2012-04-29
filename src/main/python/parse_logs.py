@@ -21,8 +21,8 @@ INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 
-START_SEC = 200
-END_SEC = 300
+START_SEC = 120
+END_SEC = 140
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -211,7 +211,7 @@ class Request:
         
     def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
-        self.__num_tasks = num_tasks
+        self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
         
     def add_probe_launch(self, address, time):
@@ -290,6 +290,9 @@ class Request:
         service_times = []
         for task in self.__tasks.values():
             if task.complete():
+                x = task.service_time()
+                if x > 70:
+                  print self.__id
                 service_times.append(task.service_time())
         return service_times
 
@@ -391,13 +394,18 @@ class Request:
 								self.__logger.warn("Task %s suggests clock skew: " % task_id)
             completion_time = max(completion_time, task_completion_time)
 
-        if (completion_time - self.__arrival_time) > 70:
+        if (completion_time - self.__arrival_time) > 10000:
           print self.__id
+          print self.service_times()
+          print len(self.__probes)
+          print self.complete()
+          """
           print "TRUE: %s" % (completion_time - self.__arrival_time)
           print self.network_delays()
           print self.service_times()
           print self.probing_time()
           print "EST: %s" % (max(self.service_times()) + max(self.network_delays()) + self.probing_time())
+          """
         return completion_time - self.__arrival_time
         
     def complete(self):
@@ -409,9 +417,11 @@ class Request:
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
             return False
-        for task in self.__tasks:
+        for task in self.__tasks.values():
             if not task.complete():
                 return False
+        if len(self.__probes) == 0:
+          return False # Don't consider non-probing requests
         return True
     
     def __get_task(self, task_id):
@@ -515,12 +525,15 @@ class LogParser:
         clock_skews = {}
         start_time = self.__earliest_time + (START_SEC * 1000)
         end_time = self.__earliest_time + (END_SEC * 1000)
+        for request in self.__requests.values():
+          request.set_clock_skews()
+
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
-                                     k.arrival_time() <= end_time, 
+                                     k.arrival_time() <= end_time and
+                                     k.complete(), 
                                      self.__requests.values())
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
-            request.set_clock_skews()
             scheduler_address = request.scheduler_address()
             for address, probe_skew in request.clock_skews().items():
                 if address > scheduler_address:

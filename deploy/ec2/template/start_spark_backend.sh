@@ -1,5 +1,6 @@
 #!/bin/bash
 # Start Spark backend
+ulimit -n 16384
 FRONTENDS=`cat frontends.txt`
 
 

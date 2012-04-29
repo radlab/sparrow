@@ -56,6 +56,10 @@ def parse_args():
       help="How many spark queries to run before shutting down")
   parser.add_option("-v", "--query-rate", type="float", default=1.0,
       help="What rate to run spark queries at (queries per second)")
+  parser.add_option("-o", "--tpch-query", type="int", default=1,
+      help="Which TPC-H query to run.")
+  parser.add_option("-r", "--parallelism", type="int", default=8,
+      help="Level of parallelism for dummy queries.")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1:
@@ -327,8 +331,9 @@ def start_spark(frontends, backends, opts):
   print opts.max_queries
   for fe in frontends:
     ssh(fe.public_dns_name, opts,
-          "/root/start_spark_frontend.sh %s %s %s" % (
-           opts.scheduler, opts.query_rate, opts.max_queries))
+          "/root/start_spark_frontend.sh %s %s %s %s %s" % (
+           opts.scheduler, opts.query_rate, opts.max_queries, opts.tpch_query,
+           opts.parallelism))
     print "Sleeping to let spark pull into cache on %s" % fe.public_dns_name
     time.sleep(10 + random.random()) # add some random to avoid synchronization
 

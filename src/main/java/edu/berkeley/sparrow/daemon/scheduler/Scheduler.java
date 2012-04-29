@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -259,17 +260,28 @@ public class Scheduler {
           !task.preference.nodes.isEmpty()); 
     }
     
-    /* TESTING SOMETHING  */
+    /* TESTING SOMETHING --- REMOVE THIS */
     if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
-      List<InetSocketAddress> subBackends = Lists.newArrayList();
-      int offset = counter % 3;
-      for (int i = 0; i < backendList.size(); i++) {
-        if (i % 3 == offset) {
-          subBackends.add(backendList.get(i));
+      if (tasks.get(0).preference.nodes != null &&
+          (tasks.get(0).preference.nodes.size() == 1 ||
+          tasks.get(0).preference.nodes.size() == 2)) {
+        List<TaskPlacementResponse> out = Lists.newArrayList();
+        // Explicitly disobey preferences so spark RDD partitions are replicated
+        for (TTaskSpec task : tasks) {
+          List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
+          List<InetSocketAddress> toRemove = Lists.newArrayList();
+          for (String node : task.preference.nodes) {
+           InetAddress addr = InetAddress.getByName(node);
+           for (InetSocketAddress backend : subBackends) {
+             if (backend.getAddress().equals(addr)) { toRemove.add(backend); }
+           }
+          }
+         subBackends.removeAll(toRemove);
+         out.addAll(new RandomTaskPlacer().placeTasks(
+             app, requestId, subBackends, Lists.newArrayList(task), req.schedulingPref));
         }
+        return out;
       }
-      return new RandomTaskPlacer().placeTasks(app, requestId, subBackends, 
-          tasks, req.schedulingPref);
     }
     if (constrained) {
       return constrainedPlacer.placeTasks(
