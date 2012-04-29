@@ -125,9 +125,12 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     }
     List<TTaskSpec> unconstrainedTasks = Lists.newLinkedList();
     
-    for (TTaskSpec task : tasks) {
+    List<TTaskSpec> taskList = Lists.newArrayList(tasks);
+    Collections.shuffle(taskList);
+    for (TTaskSpec task : taskList) {
       List<InetSocketAddress> interests = Lists.newLinkedList();
       if (task.preference != null && task.preference.nodes != null) {
+        Collections.shuffle(task.preference.nodes);
         for (String node : task.preference.nodes) {
           try {
             InetAddress addr = InetAddress.getByName(node);
