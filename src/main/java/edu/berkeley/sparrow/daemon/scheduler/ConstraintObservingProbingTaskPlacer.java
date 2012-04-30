@@ -64,16 +64,25 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     // This approximates a "randomized over constraints" approach if we get a trivial
     // probe ratio.
     if (probeRatio < 1.0) {
-      Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 3);
-      Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
-      for (InetSocketAddress socket : machinesToProbe) {
-        TResourceUsage usage = new TResourceUsage();
+      Set<TaskPlacementResponse> responses = Sets.newHashSet();
+      for (TTaskSpec task: tasks) {
+        List<TTaskSpec> taskList = Lists.newArrayList(task);
+        // Should return three neighbors
+        Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(
+            nodes, taskList, 3);
+        
         // Resource info is ignored by random policy
-        usage.queueLength = 0;
-        usage.resources = TResources.createResourceVector(0, 0);
-        mockedResources.put(socket, usage);
+        Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
+        for (InetSocketAddress socket : machinesToProbe) {
+          TResourceUsage usage = new TResourceUsage();
+          // Resource info is ignored by random policy
+          usage.queueLength = 0;
+          usage.resources = TResources.createResourceVector(0, 0);
+          mockedResources.put(socket, usage);
+        }
+        responses.addAll(randomPolicy.assignTasks(taskList, mockedResources));
       }
-      return randomPolicy.assignTasks(tasks, mockedResources);
+      return responses;
     }
     
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
