@@ -335,7 +335,7 @@ def start_spark(frontends, backends, opts):
            opts.scheduler, opts.query_rate, opts.max_queries, opts.tpch_query,
            opts.parallelism))
     print "Sleeping to let spark pull into cache on %s" % fe.public_dns_name
-    time.sleep(10 + random.random()) # add some random to avoid synchronization
+    time.sleep(1 + random.random()) # add some random to avoid synchronization
 
 def stop_spark(frontends, backends, opts):
   print "Stopping spark frontends..."

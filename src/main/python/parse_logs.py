@@ -21,8 +21,8 @@ INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 
-START_SEC = 120
-END_SEC = 140
+START_SEC = 200
+END_SEC = 250
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -291,8 +291,6 @@ class Request:
         for task in self.__tasks.values():
             if task.complete():
                 x = task.service_time()
-                if x > 70:
-                  print self.__id
                 service_times.append(task.service_time())
         return service_times
 
@@ -394,7 +392,7 @@ class Request:
 								self.__logger.warn("Task %s suggests clock skew: " % task_id)
             completion_time = max(completion_time, task_completion_time)
 
-        if (completion_time - self.__arrival_time) > 10000:
+        if (completion_time - self.__arrival_time) > 2000:
           print self.__id
           print self.service_times()
           print len(self.__probes)

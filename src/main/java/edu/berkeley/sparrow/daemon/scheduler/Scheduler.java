@@ -265,22 +265,21 @@ public class Scheduler {
       if (tasks.get(0).preference.nodes != null &&
           (tasks.get(0).preference.nodes.size() == 1 ||
           tasks.get(0).preference.nodes.size() == 2)) {
-        List<TaskPlacementResponse> out = Lists.newArrayList();
-        // Explicitly disobey preferences so spark RDD partitions are replicated
+        
+        // Explicitly avoid nodes with preferences so spark RDD's get spread out
+        List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
+        List<InetSocketAddress> toRemove = Lists.newArrayList();
         for (TTaskSpec task : tasks) {
-          List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
-          List<InetSocketAddress> toRemove = Lists.newArrayList();
           for (String node : task.preference.nodes) {
            InetAddress addr = InetAddress.getByName(node);
            for (InetSocketAddress backend : subBackends) {
              if (backend.getAddress().equals(addr)) { toRemove.add(backend); }
            }
           }
-         subBackends.removeAll(toRemove);
-         out.addAll(new RandomTaskPlacer().placeTasks(
-             app, requestId, subBackends, Lists.newArrayList(task), req.schedulingPref));
         }
-        return out;
+       subBackends.removeAll(toRemove);
+       return new RandomTaskPlacer().placeTasks(
+           app, requestId, subBackends, tasks, req.schedulingPref);
       }
     }
     if (constrained) {

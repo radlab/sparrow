@@ -17,9 +17,10 @@ for fe in $FRONTENDS; do
   id=spark_$ip
   log=/disk1/sparrow/$id
   chmod 755 spark-run.sh
-  export SPARK_HOSTNAME=`hostname`.ec2.internal
+  HOSTNAME=`ec2metadata  | grep local-hostname  | cut -d " " -f 2`
+  export SPARK_HOSTNAME=$HOSTNAME
 
-  ./spark-run.sh -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=`hostname`.ec2.internal -Dspark.master.host=$ip -Dsparrow.app.name=$id -Dsparrow.app.port=$port spark.Executor > $log 2>&1 &
+  ./spark-run.sh -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=$HOSTNAME -Dspark.master.host=$ip -Dsparrow.app.name=$id -Dsparrow.app.port=$port spark.Executor > $log 2>&1 &
   ((port++))
   PID=$!
   echo "Logging to $log"

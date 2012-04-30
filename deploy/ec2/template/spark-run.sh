@@ -17,7 +17,7 @@ MESOS_CLASSPATH="$MESOS_HOME/lib/java/mesos.jar"
 MESOS_LIBRARY_PATH="$MESOS_HOME/lib/java"
 
 if [ "x$SPARK_MEM" == "x" ] ; then
-  SPARK_MEM="1024m"
+  SPARK_MEM="1300m"
 fi
 export SPARK_MEM  # So that the process sees it and can report it to Mesos
 

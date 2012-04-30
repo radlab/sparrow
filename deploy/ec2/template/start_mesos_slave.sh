@@ -20,7 +20,8 @@ if [ ! $APPCHK = '0' ]; then
 fi
 MASTER=`cat frontends.txt | head -n 1`
 LOG=/disk1/sparrow/mesosSlave.log
-export SPARK_HOSTNAME=`hostname`.ec2.internal
+HOSTNAME=`ec2metadata  | grep local-hostname  | cut -d " " -f 2`
+export SPARK_HOSTNAME=$HOSTNAME
 
 nohup /opt/mesos/bin/mesos-slave $RES_OPTS --isolation=lxc --master=mesos://master@$MASTER:5050> $LOG 2>&1 &
 PID=$!

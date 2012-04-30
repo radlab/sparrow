@@ -6,8 +6,8 @@ def run_cmd(cmd):
   subprocess.check_call(cmd, shell=True)
 
 trial_length = 300
-ratios = [(0, 0)]
-rates = [3.3]
+ratios = [(0, 0), (2, 2)]
+rates = [3.0]
 tpch_query = 1
 par_level = 23
 
