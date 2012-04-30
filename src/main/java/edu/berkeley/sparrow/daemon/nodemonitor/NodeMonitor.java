@@ -6,8 +6,10 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
@@ -19,6 +21,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitor.ProbeWithTime;
 import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Resources;
@@ -43,6 +46,7 @@ public class NodeMonitor {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
   private final static int DEFAULT_CORES = 8;        // Default CPU capacity
+  private final static int RESERVATION_MS = 5;
   
   /** How many blocking thrift clients to make for each registered backend. */ 
   
@@ -58,12 +62,19 @@ public class NodeMonitor {
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
   
+  private Map<String, ConcurrentLinkedQueue<ProbeWithTime>> pastProbes = 
+      Maps.newConcurrentMap();
   private TResourceVector capacity;
   private Configuration conf;
   private String ipAddress;
   private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
 
+  private class ProbeWithTime {
+    public long time;
+    public String requestId;
+  }
+  
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
@@ -123,6 +134,29 @@ public class NodeMonitor {
    */
   public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
+    
+    if (!pastProbes.containsKey(appId)) {
+      pastProbes.put(appId, new ConcurrentLinkedQueue<ProbeWithTime>());
+    }
+    ProbeWithTime record = new ProbeWithTime();
+    record.time = System.currentTimeMillis();
+    record.requestId = requestId;
+    pastProbes.get(appId).add(record);
+    ConcurrentLinkedQueue<ProbeWithTime> probes = pastProbes.get(appId);
+    int numToAccountFor = 0;
+    while (true) {
+      ProbeWithTime next = probes.peek();
+      if (next == null) {
+        break;
+      }
+      if (next.time < System.currentTimeMillis() - RESERVATION_MS) {
+        probes.remove(next);
+      }
+      else {
+        numToAccountFor++;
+      }
+    }
+    
     if (!requestId.equals("*")) { // Don't log state store request
       AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
                                               ipAddress));
