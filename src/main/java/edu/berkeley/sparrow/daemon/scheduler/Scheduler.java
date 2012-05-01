@@ -105,11 +105,6 @@ public class Scheduler {
     @Override
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
-      try {
-        schedulerClientPool.returnClient(socket, client);
-      } catch (Exception e) {
-        LOG.error(e);
-      }
       // TODO We need to have a story here, regarding the failure model when the
       //      probe doesn't succeed.
       latch.countDown();
