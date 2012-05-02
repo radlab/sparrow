@@ -6,9 +6,9 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
@@ -21,11 +21,11 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitor.ProbeWithTime;
 import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.Serialization;
+import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
@@ -46,7 +46,7 @@ public class NodeMonitor {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
   private final static int DEFAULT_CORES = 8;        // Default CPU capacity
-  private final static int RESERVATION_MS = 5;
+  private static int reservationMs;
   
   /** How many blocking thrift clients to make for each registered backend. */ 
   
@@ -108,6 +108,9 @@ public class NodeMonitor {
     scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler);
+    
+    reservationMs = conf.getInt(SparrowConf.RESERVATION_MS, 
+        SparrowConf.DEFAULT_RESERVATION_MS);
   }
   
   /**
@@ -138,24 +141,25 @@ public class NodeMonitor {
     if (!pastProbes.containsKey(appId)) {
       pastProbes.put(appId, new ConcurrentLinkedQueue<ProbeWithTime>());
     }
+    
+    // Return probes relating to all applications
+    int numToAccountFor = 0;
+    for (Entry<String, ConcurrentLinkedQueue<ProbeWithTime>> e : pastProbes.entrySet()) {
+      for (ProbeWithTime probe : e.getValue()) {
+        if (probe.time < System.currentTimeMillis() - reservationMs) {
+          e.getValue().remove(probe);
+        }
+        else {
+          numToAccountFor++;
+        }
+      }
+    }
+  
+    // Account for this guy
     ProbeWithTime record = new ProbeWithTime();
     record.time = System.currentTimeMillis();
     record.requestId = requestId;
     pastProbes.get(appId).add(record);
-    ConcurrentLinkedQueue<ProbeWithTime> probes = pastProbes.get(appId);
-    int numToAccountFor = 0;
-    while (true) {
-      ProbeWithTime next = probes.peek();
-      if (next == null) {
-        break;
-      }
-      if (next.time < System.currentTimeMillis() - RESERVATION_MS) {
-        probes.remove(next);
-      }
-      else {
-        numToAccountFor++;
-      }
-    }
     
     if (!requestId.equals("*")) { // Don't log state store request
       AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
@@ -168,6 +172,12 @@ public class NodeMonitor {
       }
     }
     else {
+      TResourceUsage usage = scheduler.getResourceUsage(appId);
+      if (numToAccountFor > 0) {
+        LOG.debug("Accounting for " + numToAccountFor + " probes in flight." );
+        TResources.addTo(usage.getResources(), 
+            TResources.createResourceVector(0, numToAccountFor));
+      }
       out.put(appId, scheduler.getResourceUsage(appId));
     }
     LOG.debug("Returning " + out);
@@ -200,6 +210,13 @@ public class NodeMonitor {
       TUserGroupInfo user, TResourceVector estimatedResources)
           throws TException {
     LOG.debug(Logging.functionCall(message, taskId, user, estimatedResources));
+    if (pastProbes.containsKey(taskId)) {
+      for (ProbeWithTime probe : pastProbes.get(taskId.appId)) {
+        if (probe.requestId.equals(taskId.requestId)) {
+        pastProbes.remove(probe);
+        }
+      }
+    }
     
     Optional<InetSocketAddress> schedAddr = Serialization.strToSocket(
         taskId.frontendSocket);

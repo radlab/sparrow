@@ -26,6 +26,8 @@ def main(argv):
   for filename in log_files:
     for line in open(filename):
       items = line[:-1].split("\t")
+      if len(items) < 2:
+        continue
       time = int(items[1]) 
 
       if SUBMITTED in items[2]:
@@ -80,6 +82,8 @@ def main(argv):
     init_time = events[0][0]
     for event in events:
       count = count + event[1]
+      #if count > 90:
+       # print "Super long queue: " + node
       out_file.write("%s\t%s\n" % (float(event[0] - init_time) / 1000, count))
     out_file.close()
 

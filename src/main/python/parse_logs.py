@@ -22,7 +22,7 @@ INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 
 START_SEC = 200
-END_SEC = 250
+END_SEC = 300
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -37,7 +37,7 @@ def get_percentile(N, percent, key=lambda x:x):
       The percentile of the values
     """
     if not N:
-        return None
+        return 0
     k = (len(N)-1) * percent
     f = math.floor(k)
     c = math.ceil(k)
@@ -249,9 +249,9 @@ class Request:
         """ Sets the clock skews for all tasks. """
         for task in self.__tasks.values():
             if task.address not in self.__probes:
-                print self.__probes.keys()
-                self.__logger.warn(("No probe information for request %s, "
-                                  "machine %s") % (self.__id, task.address))
+                #print self.__probes.keys()
+                #self.__logger.warn(("No probe information for request %s, "
+                #                  "machine %s") % (self.__id, task.address))
                 continue
             probe = self.__probes[task.address]
             if not probe.complete():
@@ -283,6 +283,14 @@ class Request:
         for task in self.__tasks.values():
             if task.complete():
                 network_delays.append(task.network_delay())
+                if task.network_delay() > 20:
+                  print "Long launch %s" % self.__id
+                  print task.node_monitor_submit_time
+                  print task.scheduler_launch_time
+                  print task.clock_skew
+                  print task.id
+                  print task.address
+                  print
         return network_delays
     
     def service_times(self):
@@ -307,6 +315,8 @@ class Request:
         probe_times = []
         for probe in self.__probes.values():
             if probe.complete():
+                if probe.round_trip_time() > 20:
+                  "Long probe: %s " %self.__id
                 probe_times.append(probe.round_trip_time())
         return probe_times
 
@@ -393,10 +403,7 @@ class Request:
             completion_time = max(completion_time, task_completion_time)
 
         if (completion_time - self.__arrival_time) > 2000:
-          print self.__id
-          print self.service_times()
-          print len(self.__probes)
-          print self.complete()
+          pass
           """
           print "TRUE: %s" % (completion_time - self.__arrival_time)
           print self.network_delays()
@@ -571,6 +578,7 @@ class LogParser:
         rcv_probing_times.sort()
         worst_probe_times.sort()
 
+
         for i in range(100):
             i = float(i) / 100
             file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i, 
@@ -616,6 +624,7 @@ class LogParser:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
             if task.address not in request._Request__probes:
+              print "Excluding"
               continue
             queue_length = request._Request__probes[task.address].queue_length
             arr = wait_times_per_queue_len.get(queue_length, [])

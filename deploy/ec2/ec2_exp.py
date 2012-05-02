@@ -327,6 +327,7 @@ def start_spark(frontends, backends, opts):
     print "Starting Spark backends..."
     ssh_all([be.public_dns_name for be in backends], opts,
             "/root/start_spark_backend.sh")
+  time.sleep(30)
   print "Starting Spark frontends..."
   print opts.max_queries
   for fe in frontends:
@@ -386,9 +387,9 @@ def stop_proto(frontends, backends, opts):
 def collect_logs(frontends, backends, opts):
   print "Zipping logs..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "gzip *.log")
+          "touch foo.log && gzip -f *.log")
   ssh_all([be.public_dns_name for be in backends], opts,
-          "gzip *.log")
+          "touch foo.log && gzip -f *.log")
   print "Hauling logs"
   rsync_from_all([fe.public_dns_name for fe in frontends], opts,
     "*.log.gz", opts.log_dir, len(frontends))
