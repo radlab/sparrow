@@ -237,6 +237,10 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {
+   
+    System.out.println(taskIdToFullTaskId);
+    System.out.println(taskId);
+    System.out.println(taskId.taskId);
     taskIdToFullTaskId.put(taskId.taskId, taskId);
     TaskID id = TaskID.newBuilder().setValue(taskId.taskId).build();
     SlaveID sId = SlaveID.newBuilder().setValue("slave").build();

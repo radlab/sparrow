@@ -219,6 +219,7 @@ def find_existing_cluster(conn, opts):
            (len(frontend_nodes), len(backend_nodes)))
 
     print "Frontends:"
+    frontend_nodes = filter(lambda k: k.public_dns_name != "", frontend_nodes)
     for fe in frontend_nodes:
       print fe.public_dns_name
     print "Backends:"
@@ -327,9 +328,25 @@ def start_spark(frontends, backends, opts):
     print "Starting Spark backends..."
     ssh_all([be.public_dns_name for be in backends], opts,
             "/root/start_spark_backend.sh")
-  time.sleep(30)
+    time.sleep(30)
   print "Starting Spark frontends..."
   print opts.max_queries
+
+  
+  # Adjustment to schedule all mesos work on one node
+  if opts.scheduler == "mesos":
+    driver = frontends[0]
+    adjusted_rate = opts.query_rate * len(frontends)
+    adjusted_max = opts.max_queries * len(frontends)
+    ssh(driver.public_dns_name, opts,
+          "/root/start_spark_frontend.sh %s %s %s %s %s" % (
+           opts.scheduler, adjusted_rate, adjusted_max, opts.tpch_query,
+           opts.parallelism))
+    print "WARNING: started spark with adjusted rate:%s and max:%s " % (
+      adjusted_rate, adjusted_max)
+    return
+  
+
   for fe in frontends:
     ssh(fe.public_dns_name, opts,
           "/root/start_spark_frontend.sh %s %s %s %s %s" % (
@@ -387,9 +404,9 @@ def stop_proto(frontends, backends, opts):
 def collect_logs(frontends, backends, opts):
   print "Zipping logs..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "touch foo.log && gzip -f *.log")
+          "/root/prepare_logs.sh")
   ssh_all([be.public_dns_name for be in backends], opts,
-          "touch foo.log && gzip -f *.log")
+          "/root/prepare_logs.sh")
   print "Hauling logs"
   rsync_from_all([fe.public_dns_name for fe in frontends], opts,
     "*.log.gz", opts.log_dir, len(frontends))

@@ -23,7 +23,7 @@ LOG=/disk1/sparrow/mesosSlave.log
 HOSTNAME=`ec2metadata  | grep local-hostname  | cut -d " " -f 2`
 export SPARK_HOSTNAME=$HOSTNAME
 
-nohup /opt/mesos/bin/mesos-slave $RES_OPTS --isolation=lxc --master=mesos://master@$MASTER:5050> $LOG 2>&1 &
+nohup /opt/mesos/bin/mesos-slave $RES_OPTS --master=mesos://master@$MASTER:5050> $LOG 2>&1 &
 PID=$!
 echo "Logging to $LOG"
 sleep 1

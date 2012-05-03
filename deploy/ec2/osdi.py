@@ -13,8 +13,8 @@ def run_cmd(cmd):
 
 trial_length = 300
 ratios = [(2, 2)]
-rates = [4, 4.5, 5, 5.5, 6]
-tpch_query = 6
+rates = [1]
+tpch_query = 1
 par_level = 20
 
 for ratio in ratios:
