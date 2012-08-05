@@ -27,25 +27,25 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TResourceVector implements org.apache.thrift.TBase<TResourceVector, TResourceVector._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TResourceVector");
+public class TResourceUsage implements org.apache.thrift.TBase<TResourceUsage, TResourceUsage._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TResourceUsage");
 
-  private static final org.apache.thrift.protocol.TField MEMORY_FIELD_DESC = new org.apache.thrift.protocol.TField("memory", org.apache.thrift.protocol.TType.I64, (short)1);
-  private static final org.apache.thrift.protocol.TField CORES_FIELD_DESC = new org.apache.thrift.protocol.TField("cores", org.apache.thrift.protocol.TType.I32, (short)2);
+  private static final org.apache.thrift.protocol.TField RESOURCES_FIELD_DESC = new org.apache.thrift.protocol.TField("resources", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+  private static final org.apache.thrift.protocol.TField QUEUE_LENGTH_FIELD_DESC = new org.apache.thrift.protocol.TField("queueLength", org.apache.thrift.protocol.TType.I32, (short)2);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new TResourceVectorStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new TResourceVectorTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new TResourceUsageStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new TResourceUsageTupleSchemeFactory());
   }
 
-  public long memory; // required
-  public int cores; // required
+  public TResourceVector resources; // required
+  public int queueLength; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    MEMORY((short)1, "memory"),
-    CORES((short)2, "cores");
+    RESOURCES((short)1, "resources"),
+    QUEUE_LENGTH((short)2, "queueLength");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -60,10 +60,10 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // MEMORY
-          return MEMORY;
-        case 2: // CORES
-          return CORES;
+        case 1: // RESOURCES
+          return RESOURCES;
+        case 2: // QUEUE_LENGTH
+          return QUEUE_LENGTH;
         default:
           return null;
       }
@@ -104,116 +104,116 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
   }
 
   // isset id assignments
-  private static final int __MEMORY_ISSET_ID = 0;
-  private static final int __CORES_ISSET_ID = 1;
-  private BitSet __isset_bit_vector = new BitSet(2);
+  private static final int __QUEUELENGTH_ISSET_ID = 0;
+  private BitSet __isset_bit_vector = new BitSet(1);
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.MEMORY, new org.apache.thrift.meta_data.FieldMetaData("memory", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I64)));
-    tmpMap.put(_Fields.CORES, new org.apache.thrift.meta_data.FieldMetaData("cores", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.RESOURCES, new org.apache.thrift.meta_data.FieldMetaData("resources", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TResourceVector.class)));
+    tmpMap.put(_Fields.QUEUE_LENGTH, new org.apache.thrift.meta_data.FieldMetaData("queueLength", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TResourceVector.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TResourceUsage.class, metaDataMap);
   }
 
-  public TResourceVector() {
+  public TResourceUsage() {
   }
 
-  public TResourceVector(
-    long memory,
-    int cores)
+  public TResourceUsage(
+    TResourceVector resources,
+    int queueLength)
   {
     this();
-    this.memory = memory;
-    setMemoryIsSet(true);
-    this.cores = cores;
-    setCoresIsSet(true);
+    this.resources = resources;
+    this.queueLength = queueLength;
+    setQueueLengthIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public TResourceVector(TResourceVector other) {
+  public TResourceUsage(TResourceUsage other) {
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
-    this.memory = other.memory;
-    this.cores = other.cores;
+    if (other.isSetResources()) {
+      this.resources = new TResourceVector(other.resources);
+    }
+    this.queueLength = other.queueLength;
   }
 
-  public TResourceVector deepCopy() {
-    return new TResourceVector(this);
+  public TResourceUsage deepCopy() {
+    return new TResourceUsage(this);
   }
 
   public void clear() {
-    setMemoryIsSet(false);
-    this.memory = 0;
-    setCoresIsSet(false);
-    this.cores = 0;
+    this.resources = null;
+    setQueueLengthIsSet(false);
+    this.queueLength = 0;
   }
 
-  public long getMemory() {
-    return this.memory;
+  public TResourceVector getResources() {
+    return this.resources;
   }
 
-  public TResourceVector setMemory(long memory) {
-    this.memory = memory;
-    setMemoryIsSet(true);
+  public TResourceUsage setResources(TResourceVector resources) {
+    this.resources = resources;
     return this;
   }
 
-  public void unsetMemory() {
-    __isset_bit_vector.clear(__MEMORY_ISSET_ID);
+  public void unsetResources() {
+    this.resources = null;
   }
 
-  /** Returns true if field memory is set (has been assigned a value) and false otherwise */
-  public boolean isSetMemory() {
-    return __isset_bit_vector.get(__MEMORY_ISSET_ID);
+  /** Returns true if field resources is set (has been assigned a value) and false otherwise */
+  public boolean isSetResources() {
+    return this.resources != null;
   }
 
-  public void setMemoryIsSet(boolean value) {
-    __isset_bit_vector.set(__MEMORY_ISSET_ID, value);
+  public void setResourcesIsSet(boolean value) {
+    if (!value) {
+      this.resources = null;
+    }
   }
 
-  public int getCores() {
-    return this.cores;
+  public int getQueueLength() {
+    return this.queueLength;
   }
 
-  public TResourceVector setCores(int cores) {
-    this.cores = cores;
-    setCoresIsSet(true);
+  public TResourceUsage setQueueLength(int queueLength) {
+    this.queueLength = queueLength;
+    setQueueLengthIsSet(true);
     return this;
   }
 
-  public void unsetCores() {
-    __isset_bit_vector.clear(__CORES_ISSET_ID);
+  public void unsetQueueLength() {
+    __isset_bit_vector.clear(__QUEUELENGTH_ISSET_ID);
   }
 
-  /** Returns true if field cores is set (has been assigned a value) and false otherwise */
-  public boolean isSetCores() {
-    return __isset_bit_vector.get(__CORES_ISSET_ID);
+  /** Returns true if field queueLength is set (has been assigned a value) and false otherwise */
+  public boolean isSetQueueLength() {
+    return __isset_bit_vector.get(__QUEUELENGTH_ISSET_ID);
   }
 
-  public void setCoresIsSet(boolean value) {
-    __isset_bit_vector.set(__CORES_ISSET_ID, value);
+  public void setQueueLengthIsSet(boolean value) {
+    __isset_bit_vector.set(__QUEUELENGTH_ISSET_ID, value);
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case MEMORY:
+    case RESOURCES:
       if (value == null) {
-        unsetMemory();
+        unsetResources();
       } else {
-        setMemory((Long)value);
+        setResources((TResourceVector)value);
       }
       break;
 
-    case CORES:
+    case QUEUE_LENGTH:
       if (value == null) {
-        unsetCores();
+        unsetQueueLength();
       } else {
-        setCores((Integer)value);
+        setQueueLength((Integer)value);
       }
       break;
 
@@ -222,11 +222,11 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case MEMORY:
-      return Long.valueOf(getMemory());
+    case RESOURCES:
+      return getResources();
 
-    case CORES:
-      return Integer.valueOf(getCores());
+    case QUEUE_LENGTH:
+      return Integer.valueOf(getQueueLength());
 
     }
     throw new IllegalStateException();
@@ -239,10 +239,10 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     }
 
     switch (field) {
-    case MEMORY:
-      return isSetMemory();
-    case CORES:
-      return isSetCores();
+    case RESOURCES:
+      return isSetResources();
+    case QUEUE_LENGTH:
+      return isSetQueueLength();
     }
     throw new IllegalStateException();
   }
@@ -251,30 +251,30 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof TResourceVector)
-      return this.equals((TResourceVector)that);
+    if (that instanceof TResourceUsage)
+      return this.equals((TResourceUsage)that);
     return false;
   }
 
-  public boolean equals(TResourceVector that) {
+  public boolean equals(TResourceUsage that) {
     if (that == null)
       return false;
 
-    boolean this_present_memory = true;
-    boolean that_present_memory = true;
-    if (this_present_memory || that_present_memory) {
-      if (!(this_present_memory && that_present_memory))
+    boolean this_present_resources = true && this.isSetResources();
+    boolean that_present_resources = true && that.isSetResources();
+    if (this_present_resources || that_present_resources) {
+      if (!(this_present_resources && that_present_resources))
         return false;
-      if (this.memory != that.memory)
+      if (!this.resources.equals(that.resources))
         return false;
     }
 
-    boolean this_present_cores = true;
-    boolean that_present_cores = true;
-    if (this_present_cores || that_present_cores) {
-      if (!(this_present_cores && that_present_cores))
+    boolean this_present_queueLength = true;
+    boolean that_present_queueLength = true;
+    if (this_present_queueLength || that_present_queueLength) {
+      if (!(this_present_queueLength && that_present_queueLength))
         return false;
-      if (this.cores != that.cores)
+      if (this.queueLength != that.queueLength)
         return false;
     }
 
@@ -286,30 +286,30 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     return 0;
   }
 
-  public int compareTo(TResourceVector other) {
+  public int compareTo(TResourceUsage other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    TResourceVector typedOther = (TResourceVector)other;
+    TResourceUsage typedOther = (TResourceUsage)other;
 
-    lastComparison = Boolean.valueOf(isSetMemory()).compareTo(typedOther.isSetMemory());
+    lastComparison = Boolean.valueOf(isSetResources()).compareTo(typedOther.isSetResources());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetMemory()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.memory, typedOther.memory);
+    if (isSetResources()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.resources, typedOther.resources);
       if (lastComparison != 0) {
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetCores()).compareTo(typedOther.isSetCores());
+    lastComparison = Boolean.valueOf(isSetQueueLength()).compareTo(typedOther.isSetQueueLength());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetCores()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.cores, typedOther.cores);
+    if (isSetQueueLength()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.queueLength, typedOther.queueLength);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -331,15 +331,19 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("TResourceVector(");
+    StringBuilder sb = new StringBuilder("TResourceUsage(");
     boolean first = true;
 
-    sb.append("memory:");
-    sb.append(this.memory);
+    sb.append("resources:");
+    if (this.resources == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.resources);
+    }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("cores:");
-    sb.append(this.cores);
+    sb.append("queueLength:");
+    sb.append(this.queueLength);
     first = false;
     sb.append(")");
     return sb.toString();
@@ -367,15 +371,15 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
     }
   }
 
-  private static class TResourceVectorStandardSchemeFactory implements SchemeFactory {
-    public TResourceVectorStandardScheme getScheme() {
-      return new TResourceVectorStandardScheme();
+  private static class TResourceUsageStandardSchemeFactory implements SchemeFactory {
+    public TResourceUsageStandardScheme getScheme() {
+      return new TResourceUsageStandardScheme();
     }
   }
 
-  private static class TResourceVectorStandardScheme extends StandardScheme<TResourceVector> {
+  private static class TResourceUsageStandardScheme extends StandardScheme<TResourceUsage> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, TResourceVector struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, TResourceUsage struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -385,18 +389,19 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
           break;
         }
         switch (schemeField.id) {
-          case 1: // MEMORY
-            if (schemeField.type == org.apache.thrift.protocol.TType.I64) {
-              struct.memory = iprot.readI64();
-              struct.setMemoryIsSet(true);
+          case 1: // RESOURCES
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+              struct.resources = new TResourceVector();
+              struct.resources.read(iprot);
+              struct.setResourcesIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // CORES
+          case 2: // QUEUE_LENGTH
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
-              struct.cores = iprot.readI32();
-              struct.setCoresIsSet(true);
+              struct.queueLength = iprot.readI32();
+              struct.setQueueLengthIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -412,15 +417,17 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, TResourceVector struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, TResourceUsage struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      oprot.writeFieldBegin(MEMORY_FIELD_DESC);
-      oprot.writeI64(struct.memory);
-      oprot.writeFieldEnd();
-      oprot.writeFieldBegin(CORES_FIELD_DESC);
-      oprot.writeI32(struct.cores);
+      if (struct.resources != null) {
+        oprot.writeFieldBegin(RESOURCES_FIELD_DESC);
+        struct.resources.write(oprot);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldBegin(QUEUE_LENGTH_FIELD_DESC);
+      oprot.writeI32(struct.queueLength);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -428,44 +435,45 @@ public class TResourceVector implements org.apache.thrift.TBase<TResourceVector,
 
   }
 
-  private static class TResourceVectorTupleSchemeFactory implements SchemeFactory {
-    public TResourceVectorTupleScheme getScheme() {
-      return new TResourceVectorTupleScheme();
+  private static class TResourceUsageTupleSchemeFactory implements SchemeFactory {
+    public TResourceUsageTupleScheme getScheme() {
+      return new TResourceUsageTupleScheme();
     }
   }
 
-  private static class TResourceVectorTupleScheme extends TupleScheme<TResourceVector> {
+  private static class TResourceUsageTupleScheme extends TupleScheme<TResourceUsage> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, TResourceVector struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, TResourceUsage struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetMemory()) {
+      if (struct.isSetResources()) {
         optionals.set(0);
       }
-      if (struct.isSetCores()) {
+      if (struct.isSetQueueLength()) {
         optionals.set(1);
       }
       oprot.writeBitSet(optionals, 2);
-      if (struct.isSetMemory()) {
-        oprot.writeI64(struct.memory);
+      if (struct.isSetResources()) {
+        struct.resources.write(oprot);
       }
-      if (struct.isSetCores()) {
-        oprot.writeI32(struct.cores);
+      if (struct.isSetQueueLength()) {
+        oprot.writeI32(struct.queueLength);
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, TResourceVector struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, TResourceUsage struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
-        struct.memory = iprot.readI64();
-        struct.setMemoryIsSet(true);
+        struct.resources = new TResourceVector();
+        struct.resources.read(iprot);
+        struct.setResourcesIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.cores = iprot.readI32();
-        struct.setCoresIsSet(true);
+        struct.queueLength = iprot.readI32();
+        struct.setQueueLengthIsSet(true);
       }
     }
   }

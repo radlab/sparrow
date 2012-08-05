@@ -38,11 +38,18 @@ struct TTaskSpec {
   4: optional binary message;
 }
 
+// This temporarily lets us specify the probe ratio for certain
+// types of requests. This is a hack.
+struct TSchedulingPref {
+  1: i32 probeRatio;
+}
+
 struct TSchedulingRequest {
   1: string app;
   2: list<TTaskSpec> tasks;
   3: TUserGroupInfo user;
   4: optional bool reserve;
+  5: optional TSchedulingPref schedulingPref; 
 }
 
 struct TTaskPlacement {

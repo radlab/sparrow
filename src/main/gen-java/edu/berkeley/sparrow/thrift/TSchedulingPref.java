@@ -27,22 +27,22 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("LoadSpec");
+public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref, TSchedulingPref._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TSchedulingPref");
 
-  private static final org.apache.thrift.protocol.TField LOAD_FIELD_DESC = new org.apache.thrift.protocol.TField("load", org.apache.thrift.protocol.TType.DOUBLE, (short)1);
+  private static final org.apache.thrift.protocol.TField PROBE_RATIO_FIELD_DESC = new org.apache.thrift.protocol.TField("probeRatio", org.apache.thrift.protocol.TType.I32, (short)1);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new LoadSpecStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new LoadSpecTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new TSchedulingPrefStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new TSchedulingPrefTupleSchemeFactory());
   }
 
-  public double load; // required
+  public int probeRatio; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    LOAD((short)1, "load");
+    PROBE_RATIO((short)1, "probeRatio");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -57,8 +57,8 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // LOAD
-          return LOAD;
+        case 1: // PROBE_RATIO
+          return PROBE_RATIO;
         default:
           return null;
       }
@@ -99,76 +99,76 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
   }
 
   // isset id assignments
-  private static final int __LOAD_ISSET_ID = 0;
+  private static final int __PROBERATIO_ISSET_ID = 0;
   private BitSet __isset_bit_vector = new BitSet(1);
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.LOAD, new org.apache.thrift.meta_data.FieldMetaData("load", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
+    tmpMap.put(_Fields.PROBE_RATIO, new org.apache.thrift.meta_data.FieldMetaData("probeRatio", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(LoadSpec.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TSchedulingPref.class, metaDataMap);
   }
 
-  public LoadSpec() {
+  public TSchedulingPref() {
   }
 
-  public LoadSpec(
-    double load)
+  public TSchedulingPref(
+    int probeRatio)
   {
     this();
-    this.load = load;
-    setLoadIsSet(true);
+    this.probeRatio = probeRatio;
+    setProbeRatioIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public LoadSpec(LoadSpec other) {
+  public TSchedulingPref(TSchedulingPref other) {
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
-    this.load = other.load;
+    this.probeRatio = other.probeRatio;
   }
 
-  public LoadSpec deepCopy() {
-    return new LoadSpec(this);
+  public TSchedulingPref deepCopy() {
+    return new TSchedulingPref(this);
   }
 
   public void clear() {
-    setLoadIsSet(false);
-    this.load = 0.0;
+    setProbeRatioIsSet(false);
+    this.probeRatio = 0;
   }
 
-  public double getLoad() {
-    return this.load;
+  public int getProbeRatio() {
+    return this.probeRatio;
   }
 
-  public LoadSpec setLoad(double load) {
-    this.load = load;
-    setLoadIsSet(true);
+  public TSchedulingPref setProbeRatio(int probeRatio) {
+    this.probeRatio = probeRatio;
+    setProbeRatioIsSet(true);
     return this;
   }
 
-  public void unsetLoad() {
-    __isset_bit_vector.clear(__LOAD_ISSET_ID);
+  public void unsetProbeRatio() {
+    __isset_bit_vector.clear(__PROBERATIO_ISSET_ID);
   }
 
-  /** Returns true if field load is set (has been assigned a value) and false otherwise */
-  public boolean isSetLoad() {
-    return __isset_bit_vector.get(__LOAD_ISSET_ID);
+  /** Returns true if field probeRatio is set (has been assigned a value) and false otherwise */
+  public boolean isSetProbeRatio() {
+    return __isset_bit_vector.get(__PROBERATIO_ISSET_ID);
   }
 
-  public void setLoadIsSet(boolean value) {
-    __isset_bit_vector.set(__LOAD_ISSET_ID, value);
+  public void setProbeRatioIsSet(boolean value) {
+    __isset_bit_vector.set(__PROBERATIO_ISSET_ID, value);
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case LOAD:
+    case PROBE_RATIO:
       if (value == null) {
-        unsetLoad();
+        unsetProbeRatio();
       } else {
-        setLoad((Double)value);
+        setProbeRatio((Integer)value);
       }
       break;
 
@@ -177,8 +177,8 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case LOAD:
-      return Double.valueOf(getLoad());
+    case PROBE_RATIO:
+      return Integer.valueOf(getProbeRatio());
 
     }
     throw new IllegalStateException();
@@ -191,8 +191,8 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
     }
 
     switch (field) {
-    case LOAD:
-      return isSetLoad();
+    case PROBE_RATIO:
+      return isSetProbeRatio();
     }
     throw new IllegalStateException();
   }
@@ -201,21 +201,21 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof LoadSpec)
-      return this.equals((LoadSpec)that);
+    if (that instanceof TSchedulingPref)
+      return this.equals((TSchedulingPref)that);
     return false;
   }
 
-  public boolean equals(LoadSpec that) {
+  public boolean equals(TSchedulingPref that) {
     if (that == null)
       return false;
 
-    boolean this_present_load = true;
-    boolean that_present_load = true;
-    if (this_present_load || that_present_load) {
-      if (!(this_present_load && that_present_load))
+    boolean this_present_probeRatio = true;
+    boolean that_present_probeRatio = true;
+    if (this_present_probeRatio || that_present_probeRatio) {
+      if (!(this_present_probeRatio && that_present_probeRatio))
         return false;
-      if (this.load != that.load)
+      if (this.probeRatio != that.probeRatio)
         return false;
     }
 
@@ -227,20 +227,20 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
     return 0;
   }
 
-  public int compareTo(LoadSpec other) {
+  public int compareTo(TSchedulingPref other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    LoadSpec typedOther = (LoadSpec)other;
+    TSchedulingPref typedOther = (TSchedulingPref)other;
 
-    lastComparison = Boolean.valueOf(isSetLoad()).compareTo(typedOther.isSetLoad());
+    lastComparison = Boolean.valueOf(isSetProbeRatio()).compareTo(typedOther.isSetProbeRatio());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetLoad()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.load, typedOther.load);
+    if (isSetProbeRatio()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.probeRatio, typedOther.probeRatio);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -262,11 +262,11 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("LoadSpec(");
+    StringBuilder sb = new StringBuilder("TSchedulingPref(");
     boolean first = true;
 
-    sb.append("load:");
-    sb.append(this.load);
+    sb.append("probeRatio:");
+    sb.append(this.probeRatio);
     first = false;
     sb.append(")");
     return sb.toString();
@@ -294,15 +294,15 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
     }
   }
 
-  private static class LoadSpecStandardSchemeFactory implements SchemeFactory {
-    public LoadSpecStandardScheme getScheme() {
-      return new LoadSpecStandardScheme();
+  private static class TSchedulingPrefStandardSchemeFactory implements SchemeFactory {
+    public TSchedulingPrefStandardScheme getScheme() {
+      return new TSchedulingPrefStandardScheme();
     }
   }
 
-  private static class LoadSpecStandardScheme extends StandardScheme<LoadSpec> {
+  private static class TSchedulingPrefStandardScheme extends StandardScheme<TSchedulingPref> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, LoadSpec struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, TSchedulingPref struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -312,10 +312,10 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
           break;
         }
         switch (schemeField.id) {
-          case 1: // LOAD
-            if (schemeField.type == org.apache.thrift.protocol.TType.DOUBLE) {
-              struct.load = iprot.readDouble();
-              struct.setLoadIsSet(true);
+          case 1: // PROBE_RATIO
+            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+              struct.probeRatio = iprot.readI32();
+              struct.setProbeRatioIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -331,12 +331,12 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, LoadSpec struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, TSchedulingPref struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      oprot.writeFieldBegin(LOAD_FIELD_DESC);
-      oprot.writeDouble(struct.load);
+      oprot.writeFieldBegin(PROBE_RATIO_FIELD_DESC);
+      oprot.writeI32(struct.probeRatio);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -344,34 +344,34 @@ public class LoadSpec implements org.apache.thrift.TBase<LoadSpec, LoadSpec._Fie
 
   }
 
-  private static class LoadSpecTupleSchemeFactory implements SchemeFactory {
-    public LoadSpecTupleScheme getScheme() {
-      return new LoadSpecTupleScheme();
+  private static class TSchedulingPrefTupleSchemeFactory implements SchemeFactory {
+    public TSchedulingPrefTupleScheme getScheme() {
+      return new TSchedulingPrefTupleScheme();
     }
   }
 
-  private static class LoadSpecTupleScheme extends TupleScheme<LoadSpec> {
+  private static class TSchedulingPrefTupleScheme extends TupleScheme<TSchedulingPref> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, LoadSpec struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, TSchedulingPref struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetLoad()) {
+      if (struct.isSetProbeRatio()) {
         optionals.set(0);
       }
       oprot.writeBitSet(optionals, 1);
-      if (struct.isSetLoad()) {
-        oprot.writeDouble(struct.load);
+      if (struct.isSetProbeRatio()) {
+        oprot.writeI32(struct.probeRatio);
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, LoadSpec struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, TSchedulingPref struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(1);
       if (incoming.get(0)) {
-        struct.load = iprot.readDouble();
-        struct.setLoadIsSet(true);
+        struct.probeRatio = iprot.readI32();
+        struct.setProbeRatioIsSet(true);
       }
     }
   }
