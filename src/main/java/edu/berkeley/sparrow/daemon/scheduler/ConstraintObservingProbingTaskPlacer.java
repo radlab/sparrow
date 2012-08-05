@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -30,6 +31,8 @@ import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
+  public static int MAXIMUM_PROBE_WAIT_MS = 5; // Longest time we wait to sample
+  
   public int probesPerTask;
   
   private final static Logger LOG = 
@@ -73,7 +76,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
         probeRatio);
     CountDownLatch latch = new CountDownLatch(machinesToProbe.size());
-    Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
+    Map<InetSocketAddress, TResourceUsage> loads = Maps.newConcurrentMap();
     for (InetSocketAddress machine: machinesToProbe) {
       AsyncClient client = null;
       try {
@@ -91,9 +94,18 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       }
     }
     try {
-      latch.await();
+      latch.await(MAXIMUM_PROBE_WAIT_MS, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
       e.printStackTrace();
+    }
+    for (InetSocketAddress machine : machinesToProbe) {
+      if (!loads.containsKey(machine)) {
+        // TODO maybe use stale data here?
+        // Assume this machine is really heavily loaded
+        loads.put(machine, 
+            TResources.createResourceUsage(
+                TResources.createResourceVector(1000, 4), 100));
+      }
     }
     return policy.assignTasks(tasks, loads);
   }

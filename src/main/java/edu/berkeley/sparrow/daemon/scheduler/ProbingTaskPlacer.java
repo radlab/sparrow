@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -18,6 +19,7 @@ import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
@@ -31,7 +33,9 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 public class ProbingTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(ProbingTaskPlacer.class);
   protected static final Logger AUDIT_LOG = Logging.getAuditLogger(ProbingTaskPlacer.class);
-   
+  
+  private static final int MAX_PROBE_WAIT_MS = 5; 
+  
   /** See {@link SparrowConf.PROBE_MULTIPLIER} */
   private double probeRatio;
   
@@ -125,7 +129,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
       return randomPlacer.placeTasks(appId, requestId, nodes, tasks, schedulingPref);
     }
     
-    Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
+    Map<InetSocketAddress, TResourceUsage> loads = Maps.newConcurrentMap();
     
     // This latch decides how many nodes need to respond for us to make a decision.
     // Using a simple counter is okay for now, but eventually we will want to use
@@ -157,11 +161,20 @@ public class ProbingTaskPlacer implements TaskPlacer {
     }
     
     try {
-      latch.await();
+      latch.await(MAX_PROBE_WAIT_MS, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-
+    
+    for (InetSocketAddress machine : nodeList) {
+      if (!loads.containsKey(machine)) {
+        // TODO maybe use stale data here?
+        // Assume this machine is really heavily loaded
+        loads.put(machine, 
+            TResources.createResourceUsage(
+                TResources.createResourceVector(1000, 4), 100));
+      }
+    }
     AssignmentPolicy assigner = new WaterLevelAssignmentPolicy();
     Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
 
