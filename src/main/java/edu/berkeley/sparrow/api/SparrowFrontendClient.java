@@ -64,14 +64,14 @@ public class SparrowFrontendClient {
     FrontendService.Processor<FrontendService.Iface> processor =
         new FrontendService.Processor<FrontendService.Iface>(frontendServer);
     try {
-      TServers.launchThreadedThriftServer(listenPort, 5, processor);
+      TServers.launchThreadedThriftServer(listenPort, 8, processor);
     } catch (IOException e) {
       LOG.fatal("Couldn't launch server side of frontend", e);
     }
     
     for (int i = 0; i < NUM_CLIENTS; i++) {
       Client client = TClients.createBlockingSchedulerClient(
-          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort(), 2000);
+          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort(), 60000);
       clients.add(client);
     }
     clients.peek().registerFrontend(app, "localhost:" + listenPort); 

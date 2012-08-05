@@ -25,17 +25,21 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
   private final static Logger LOG = 
       Logger.getLogger(ConstrainedTaskAssignmentPolicy.class);
   
-  private AssignmentPolicy delegate = new WaterLevelAssignmentPolicy();
+  private AssignmentPolicy delegate;
+  
+  public ConstrainedTaskAssignmentPolicy(AssignmentPolicy delegate) {
+    this.delegate = delegate;
+  }
   
   /**
    * Task assigner that takes into account tasks which may have constraints. This 
    * implements a heuristic for finding the optimal assignment as follows:
    * 
    * 1) For each task which has constraints:
-   *    - Assign that task to the optimal choice amongst its feasible set.
-   *    - Update the node selected (happens in the assignment policy)
+   *    - Assign that task to the optimal choice amongst its feasible set according
+   *      to the passed in policy.
    * 2) For all remaining tasks:
-   *    - Assign to nodes based on {@link WaterLevelAssignmentPolicy}.
+   *    - Assign to nodes based on the passed in policy.
    */
   public Collection<TaskPlacementResponse> assignTasks(
       Collection<TTaskSpec> tasks, Map<InetSocketAddress, TResourceUsage> nodes) {
@@ -56,8 +60,6 @@ public class ConstrainedTaskAssignmentPolicy implements AssignmentPolicy {
             InetAddress addr = InetAddress.getByName(node);
             if (addrToSocket.containsKey(addr)) {
               interests.add(addrToSocket.get(addr));
-            } else {
-              LOG.warn("Got placement constraint for unknown node " + node);
             }
           } catch (UnknownHostException e) {
             LOG.warn("Got placement constraint for unresolvable node " + node);

@@ -183,8 +183,8 @@ public class Scheduler {
         long t0 = System.currentTimeMillis();
         client = schedulerClientPool.borrowClient(response.getNodeAddr());
         long t1 = System.currentTimeMillis();
-        if (t1 - t0 > 1000) {
-          LOG.error("Took more than one second to create client for: " + 
+        if (t1 - t0 > 100) {
+          LOG.error("Took more than 100ms to create client for: " + 
             response.getNodeAddr());
         }
       } catch (Exception e) {

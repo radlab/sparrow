@@ -22,7 +22,8 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 public class TestConstrainedTaskAssignmentPolicy {
   @Test
   public void testBusyNodeAssignment() {
-    AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy();
+    AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy(
+        new WaterLevelAssignmentPolicy());
     
     // Create six task requests, which depend collectively on six nodes.
     // One of the nodes is heavily back-logged, make sure that one doesn't get scheduled.
@@ -117,7 +118,8 @@ public class TestConstrainedTaskAssignmentPolicy {
   
   @Test
   public void testThreeNodesAssignment() {
-    AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy();
+    AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy(
+        new WaterLevelAssignmentPolicy());
     
     // Create three task requests
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();

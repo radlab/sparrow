@@ -39,7 +39,10 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       Logger.getLogger(ConstraintObservingProbingTaskPlacer.class);
   
   private ThriftClientPool<AsyncClient> clientPool;
-  private AssignmentPolicy policy = new ConstrainedTaskAssignmentPolicy(); 
+  private AssignmentPolicy waterLevelPolicy = new ConstrainedTaskAssignmentPolicy(
+      new WaterLevelAssignmentPolicy());
+  private AssignmentPolicy randomPolicy = new ConstrainedTaskAssignmentPolicy(
+      new RandomAssignmentPolicy());
   
   @Override
   public void initialize(Configuration conf,
@@ -61,16 +64,25 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     // This approximates a "randomized over constraints" approach if we get a trivial
     // probe ratio.
     if (probeRatio < 1.0) {
-      Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 3);
-      Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
-      // All machines have uniform resources
-      for (InetSocketAddress socket : machinesToProbe) {
-        TResourceUsage usage = new TResourceUsage();
-        usage.queueLength = 0;
-        usage.resources = TResources.createResourceVector(0, 0);
-        mockedResources.put(socket, usage);
+      Set<TaskPlacementResponse> responses = Sets.newHashSet();
+      for (TTaskSpec task: tasks) {
+        List<TTaskSpec> taskList = Lists.newArrayList(task);
+        // Should return three neighbors
+        Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(
+            nodes, taskList, 3);
+        
+        // Resource info is ignored by random policy
+        Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
+        for (InetSocketAddress socket : machinesToProbe) {
+          TResourceUsage usage = new TResourceUsage();
+          // Resource info is ignored by random policy
+          usage.queueLength = 0;
+          usage.resources = TResources.createResourceVector(0, 0);
+          mockedResources.put(socket, usage);
+        }
+        responses.addAll(randomPolicy.assignTasks(taskList, mockedResources));
       }
-      return policy.assignTasks(tasks, mockedResources);
+      return responses;
     }
     
     Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
@@ -107,7 +119,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
                 TResources.createResourceVector(1000, 4), 100));
       }
     }
-    return policy.assignTasks(tasks, loads);
+    return waterLevelPolicy.assignTasks(tasks, loads);
   }
 
   
@@ -122,17 +134,25 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     }
     List<TTaskSpec> unconstrainedTasks = Lists.newLinkedList();
     
-    for (TTaskSpec task : tasks) {
+    List<TTaskSpec> taskList = Lists.newArrayList(tasks);
+    Collections.shuffle(taskList);
+    for (TTaskSpec task : taskList) {
       List<InetSocketAddress> interests = Lists.newLinkedList();
       if (task.preference != null && task.preference.nodes != null) {
-        List<String> prefs = task.preference.nodes;
+        Collections.shuffle(task.preference.nodes);
         for (String node : task.preference.nodes) {
           try {
             InetAddress addr = InetAddress.getByName(node);
             if (addrToSocket.containsKey(addr)) {
               interests.add(addrToSocket.get(addr));
             } else {
-              LOG.warn("Got placement constraint for unknown node " + node);
+              LOG.warn("Placement constraint for unknown node " + node);
+              LOG.warn("Node address: " + addr);
+              String knownAddrs = "";
+              for (InetAddress add: addrToSocket.keySet()) {
+                knownAddrs += " " + add.getHostAddress();
+              }
+              LOG.warn("Know about: " + knownAddrs);
             }
           } catch (UnknownHostException e) {
             LOG.warn("Got placement constraint for unresolvable node " + node);
