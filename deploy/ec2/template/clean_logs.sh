@@ -1,3 +1,3 @@
 #!/bin/bash
-rm -rf /tmp/*
+rm -rf /tmp/*.log
 rm ~/*.log

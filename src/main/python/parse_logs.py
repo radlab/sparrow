@@ -585,7 +585,7 @@ class LogParser:
         summary_file.close()
 
         # Queue length vs response time scatter plot
-        scatter_file = open("queue_vs_repsonse_length.txt", 'w')
+        scatter_file = open("queue_vs_wait_time.txt", 'w')
         for request in considered_requests:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
