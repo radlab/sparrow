@@ -180,7 +180,13 @@ public class Scheduler {
 
       InternalService.AsyncClient client;
       try {
+        long t0 = System.currentTimeMillis();
         client = schedulerClientPool.borrowClient(response.getNodeAddr());
+        long t1 = System.currentTimeMillis();
+        if (t1 - t0 > 1000) {
+          LOG.error("Took more than one second to create client for: " + 
+            response.getNodeAddr());
+        }
       } catch (Exception e) {
         LOG.error(e);
         return false;
