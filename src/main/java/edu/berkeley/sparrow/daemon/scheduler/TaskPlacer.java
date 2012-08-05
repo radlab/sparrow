@@ -9,6 +9,7 @@ import org.apache.commons.configuration.Configuration;
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitor;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /***
@@ -38,7 +39,8 @@ public interface TaskPlacer {
    * @throws IOException 
    */
   Collection<TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
+      TSchedulingPref schedulingPref)
           throws IOException;
   // TODO: For performance reasons it might make sense to just have these arguments as 
   //       List rather than Collection since they need to be returned as a list eventually.

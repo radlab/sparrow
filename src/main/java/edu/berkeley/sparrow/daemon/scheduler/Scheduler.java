@@ -64,7 +64,10 @@ public class Scheduler {
   SchedulerState state;
   
   /** Logical task assignment. */
-  TaskPlacer placer;
+  // TODO: NOTE - this is a hack - we need to modify constrainedPlacer to have more
+  // advanced features like waiting for some probes and configurable probe ratio.
+  TaskPlacer constrainedPlacer;
+  TaskPlacer unconstrainedPlacer;
   
   private Configuration conf;
   
@@ -117,19 +120,23 @@ public class Scheduler {
     this.conf = conf;
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
-      placer = new ConstraintObservingProbingTaskPlacer();
+      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
+      unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
-      placer = new ConstraintObservingProbingTaskPlacer();
+      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
+      unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("production")) {
       state = new StateStoreSchedulerState();
-      placer = new ConstraintObservingProbingTaskPlacer();
+      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
+      unconstrainedPlacer = new ProbingTaskPlacer();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
     
     state.initialize(conf);
-    placer.initialize(conf, schedulerClientPool);
+    constrainedPlacer.initialize(conf, schedulerClientPool);
+    unconstrainedPlacer.initialize(conf, schedulerClientPool);
   }
   
   public boolean registerFrontend(String appId, String addr) {
@@ -234,7 +241,20 @@ public class Scheduler {
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);
     }
-    return placer.placeTasks(app, requestId, backendList, tasks);
+    boolean constrained = false;
+    for (TTaskSpec task : tasks) {
+      constrained = constrained || (
+          task.preference != null &&
+          task.preference.nodes != null && 
+          !task.preference.nodes.isEmpty()); 
+    }
+    if (constrained) {
+      return constrainedPlacer.placeTasks(
+          app, requestId, backendList, tasks, req.schedulingPref);
+    } else {
+      return unconstrainedPlacer.placeTasks(
+          app, requestId, backendList, tasks, req.schedulingPref);
+    }
   }
   
   /**

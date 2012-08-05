@@ -20,14 +20,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
-  public static int PROBES_PER_TASK = 2; // TODO make this configurable
+  public int probesPerTask;
   
   private final static Logger LOG = 
       Logger.getLogger(ConstraintObservingProbingTaskPlacer.class);
@@ -38,14 +40,19 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
   public void initialize(Configuration conf,
       ThriftClientPool<AsyncClient> clientPool) {
     this.clientPool = clientPool; 
+    probesPerTask = conf.getInt(SparrowConf.SAMPLE_RATIO_CONSTRAINED, 
+        SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
     super.initialize(conf, clientPool);
   }
 
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
       String requestId, Collection<InetSocketAddress> nodes,
-      Collection<TTaskSpec> tasks) throws IOException {
-    Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks);
+      Collection<TTaskSpec> tasks, TSchedulingPref schedulingPref) throws IOException {
+    int probeRatio = Math.max(schedulingPref.probeRatio, probesPerTask);
+    Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
+        probeRatio);
+    LOG.debug("Placing constrained tasks with probe ratio: " + probeRatio); 
     CountDownLatch latch = new CountDownLatch(machinesToProbe.size());
     Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();
     for (InetSocketAddress machine: machinesToProbe) {
@@ -56,7 +63,6 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
         LOG.fatal(e);
       }
       try {
-        LOG.debug("Launching probe on node: " + machine); 
         AUDIT_LOG.info(Logging.auditEventString("probe_launch", requestId,
             machine.getAddress().getHostAddress()));
         client.getLoad(appId, requestId, 
@@ -77,7 +83,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
   
   /** Return the set of machines which we want to probe for a given job. */
   private Collection<InetSocketAddress> getMachinesToProbe(
-      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks) {
+      Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, int sampleRatio) {
     HashMap<InetAddress, InetSocketAddress> addrToSocket = Maps.newHashMap();
     Set<InetSocketAddress> probeSet = Sets.newHashSet();
     
@@ -109,7 +115,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
             probeSet.add(addr); 
             myProbes++;
           }
-          if (myProbes >= PROBES_PER_TASK) break;
+          if (myProbes >= sampleRatio) break;
         }
       } else { // We are not constrained
         unconstrainedTasks.add(task);
@@ -119,7 +125,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     List<InetSocketAddress> nodesLeft = Lists.newArrayList(
         Sets.difference(Sets.newHashSet(nodes), probeSet));
     Collections.shuffle(nodesLeft);
-    int numAdditionalNodes = Math.min(unconstrainedTasks.size() * PROBES_PER_TASK, 
+    int numAdditionalNodes = Math.min(unconstrainedTasks.size() * sampleRatio, 
         nodesLeft.size());
     probeSet.addAll(nodesLeft.subList(0, numAdditionalNodes));
     return probeSet;

@@ -23,6 +23,7 @@ import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.getLoad_call;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /**
@@ -106,14 +107,15 @@ public class ProbingTaskPlacer implements TaskPlacer {
 
   @Override
   public void initialize(Configuration conf, ThriftClientPool<AsyncClient> clientPool) {
-    probeRatio = conf.getDouble(SparrowConf.PROBE_RATIO, 
-        SparrowConf.DEFAULT_PROBE_MULTIPLIER);
+    probeRatio = conf.getDouble(SparrowConf.SAMPLE_RATIO, 
+        SparrowConf.DEFAULT_SAMPLE_RATIO);
     this.clientPool = clientPool;
   }
   
   @Override
   public Collection<TaskPlacer.TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks) 
+      String requestId, Collection<InetSocketAddress> nodes, 
+      Collection<TTaskSpec> tasks, TSchedulingPref schedulingPref) 
           throws IOException {
     LOG.debug(Logging.functionCall(appId, nodes, tasks));
     Map<InetSocketAddress, TResourceUsage> loads = Maps.newHashMap();

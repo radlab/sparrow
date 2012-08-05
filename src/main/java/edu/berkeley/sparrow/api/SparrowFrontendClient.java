@@ -14,6 +14,7 @@ import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.SchedulerService.Client;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -77,12 +78,14 @@ public class SparrowFrontendClient {
   }
   
   public synchronized boolean submitJob(String app, 
-      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user) 
+      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user,
+      TSchedulingPref pref) 
           throws TException {
     TSchedulingRequest request = new TSchedulingRequest();
     request.setTasks(tasks);
     request.setApp(app);
     request.setUser(user);
+    request.setSchedulingPref(pref);
     boolean result = false;
     try {
       Client client = clients.take();

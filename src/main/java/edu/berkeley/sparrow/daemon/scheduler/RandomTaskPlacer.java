@@ -11,6 +11,7 @@ import org.apache.commons.configuration.Configuration;
 
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /***
@@ -22,7 +23,8 @@ public class RandomTaskPlacer implements TaskPlacer {
   
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
+      TSchedulingPref schedulingPref)
           throws IOException {
     Collection<TaskPlacementResponse> out = new HashSet<TaskPlacementResponse>();
     
