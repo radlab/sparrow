@@ -1,15 +1,16 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -17,17 +18,20 @@ import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.SchedulerService;
-import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.sendFrontendMessage_call;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -42,32 +46,37 @@ public class NodeMonitor {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
   private final static int DEFAULT_CORES = 8;        // Default CPU capacity
+  private static int reservationMs;
   
   /** How many blocking thrift clients to make for each registered backend. */ 
   
   private static NodeMonitorState state;
-  private HashMap<String, Map<TUserGroupInfo, TResourceVector>> appLoads = 
-      new HashMap<String, Map<TUserGroupInfo, TResourceVector>>();
   private HashMap<String, InetSocketAddress> appSockets = 
       new HashMap<String, InetSocketAddress>();
-  private HashMap<String, List<String>> appTasks = 
-      new HashMap<String, List<String>>();
+  private HashMap<String, List<TFullTaskId>> appTasks = 
+      new HashMap<String, List<TFullTaskId>>();
   // Map to scheduler socket address for each request id.
-  private HashMap<String, InetSocketAddress> appSchedulers =
-      new HashMap<String, InetSocketAddress>();
+  private ConcurrentMap<String, InetSocketAddress> appSchedulers =
+      Maps.newConcurrentMap();
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool = 
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
   
+  private Map<String, ConcurrentLinkedQueue<ProbeWithTime>> pastProbes = 
+      Maps.newConcurrentMap();
   private TResourceVector capacity;
   private Configuration conf;
-  private InetAddress address;
+  private String ipAddress;
   private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
 
+  private class ProbeWithTime {
+    public long time;
+    public String requestId;
+  }
+  
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
-    address = InetAddress.getLocalHost();
     if (mode.equals("standalone")) {
       state = new StandaloneNodeMonitorState();
     } else if (mode.equals("configbased")) {
@@ -84,6 +93,7 @@ public class NodeMonitor {
     }
     capacity = new TResourceVector();
     this.conf = conf;
+    ipAddress = Hostname.getIPAddress(conf);
     
     int mem = Resources.getSystemMemoryMb(conf);
     capacity.setMemory(mem);
@@ -97,7 +107,10 @@ public class NodeMonitor {
     scheduler.setMaxActiveTasks(cores);
     scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
-    taskLauncherService.initialize(conf, scheduler, address);
+    taskLauncherService.initialize(conf, scheduler);
+    
+    reservationMs = conf.getInt(SparrowConf.RESERVATION_MS, 
+        SparrowConf.DEFAULT_RESERVATION_MS);
   }
   
   /**
@@ -107,13 +120,12 @@ public class NodeMonitor {
   public boolean registerBackend(String appId, InetSocketAddress nmAddr, 
       InetSocketAddress backendAddr) {
     LOG.debug(Logging.functionCall(appId, nmAddr, backendAddr));
-    if (appLoads.containsKey(appId)) {
+    if (appSockets.containsKey(appId)) {
       LOG.warn("Attempt to re-register app " + appId);
       return false;
     }
-    appLoads.put(appId, new HashMap<TUserGroupInfo, TResourceVector>());
     appSockets.put(appId, backendAddr);
-    appTasks.put(appId, new ArrayList<String>());
+    appTasks.put(appId, new ArrayList<TFullTaskId>());
     return state.registerBackend(appId, nmAddr);
   }
 
@@ -123,97 +135,106 @@ public class NodeMonitor {
    * application name, the map only includes that application. If it is set to anything
    * else, an empty map is returned.
    */
-  public Map<String, TResourceVector> getLoad(String appId, String requestId) {
+  public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
+    
+    if (!pastProbes.containsKey(appId)) {
+      pastProbes.put(appId, new ConcurrentLinkedQueue<ProbeWithTime>());
+    }
+    
+    // Return probes relating to all applications
+    int numToAccountFor = 0;
+    for (Entry<String, ConcurrentLinkedQueue<ProbeWithTime>> e : pastProbes.entrySet()) {
+      for (ProbeWithTime probe : e.getValue()) {
+        if (probe.time < System.currentTimeMillis() - reservationMs) {
+          e.getValue().remove(probe);
+        }
+        else {
+          numToAccountFor++;
+        }
+      }
+    }
+  
+    // Account for this guy
+    ProbeWithTime record = new ProbeWithTime();
+    record.time = System.currentTimeMillis();
+    record.requestId = requestId;
+    pastProbes.get(appId).add(record);
+    
     if (!requestId.equals("*")) { // Don't log state store request
       AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
-                                              address.getHostAddress()));
+                                              ipAddress));
     }
-    Map<String, TResourceVector> out = new HashMap<String, TResourceVector>();
+    Map<String, TResourceUsage> out = new HashMap<String, TResourceUsage>();
     if (appId.equals("*")) {
-      for (String app : appLoads.keySet()) {out.put(app, aggregateAppResources(app)); }
-      LOG.debug("Returning " + out);
-      return out;
+      for (String app : appSockets.keySet()) {
+        out.put(app, scheduler.getResourceUsage(app)); 
+      }
     }
-    else if (appLoads.containsKey(appId)) {
-      out.put(appId, aggregateAppResources(appId));
-      LOG.debug("Returning " + out);
-      return out;
-    } else {
-      LOG.warn("Request for load of uknown app " + appId);
-      return out;
+    else {
+      TResourceUsage usage = scheduler.getResourceUsage(appId);
+      if (numToAccountFor > 0) {
+        LOG.debug("Accounting for " + numToAccountFor + " probes in flight." );
+        TResources.addTo(usage.getResources(), 
+            TResources.createResourceVector(0, numToAccountFor));
+      }
+      out.put(appId, scheduler.getResourceUsage(appId));
     }
+    LOG.debug("Returning " + out);
+    return out;
   }
-  
-  /** Return the aggregate resource usage for a given appId, across all users. This will
-   *  fail if appId is not currently tracked.
-   */
-  public TResourceVector aggregateAppResources(String appId) {
-    TResourceVector inUse = TResources.none();
-    for (TResourceVector res : appLoads.get(appId).values()) {
-      TResources.addTo(inUse, res);
-    }
-    return inUse;
-  }
+
   /**
    * Update the resource usage for a given application.
    */
   public void updateResourceUsage(
       String app, Map<TUserGroupInfo, TResourceVector> load, 
-      List<String> activeTaskIds) {
+      List<TFullTaskId> activeTaskIds) {
     LOG.debug(Logging.functionCall(app, load, activeTaskIds));
-    try {
-    List<String> toRemove = new LinkedList<String>();
-    for (String taskId : appTasks.get(app)) {
-      if (!activeTaskIds.contains(taskId)) {
-        scheduler.taskCompleted(taskId);
-        toRemove.add(taskId);
-      }
-    }
-    for (String taskId : toRemove) {
-      appTasks.get(app).remove(taskId);
-    }
-    appLoads.put(app, load);
-    }
-    catch (RuntimeException e) {
-      e.printStackTrace();
-    }
+    LOG.error("UpdateResourceUsage not supported");
+  }
+  
+  /**
+   * Account for tasks which have finished.
+   */
+  public void tasksFinished(List<TFullTaskId> tasks) {
+    LOG.debug(Logging.functionCall(tasks));
+    scheduler.tasksFinished(tasks);
   }
   
   /**
    * Launch a task for the given app.
    * @param schedulerAddress 
    */
-  public boolean launchTask(String app, ByteBuffer message, String requestId,
-      String taskId, TUserGroupInfo user, TResourceVector estimatedResources, 
-      String schedulerAddress)
+  public boolean launchTask(ByteBuffer message, TFullTaskId taskId,
+      TUserGroupInfo user, TResourceVector estimatedResources)
           throws TException {
-    /* Task ids need not be unique between scheduling requests, so here we use an
-     * identifier which contains the request id, so we can tell when this task has
-     * finished. */
-    String compoundId = taskId + "-" + requestId;
-    LOG.debug(Logging.functionCall(app, message, requestId, compoundId, user,
-                                   estimatedResources, schedulerAddress));
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_start", requestId,
-                                            address.getHostAddress(), taskId));
+    LOG.debug(Logging.functionCall(message, taskId, user, estimatedResources));
+    if (pastProbes.containsKey(taskId)) {
+      for (ProbeWithTime probe : pastProbes.get(taskId.appId)) {
+        if (probe.requestId.equals(taskId.requestId)) {
+        pastProbes.remove(probe);
+        }
+      }
+    }
     
-    Optional<InetSocketAddress> schedAddr = Serialization.strToSocket(schedulerAddress);
+    Optional<InetSocketAddress> schedAddr = Serialization.strToSocket(
+        taskId.frontendSocket);
     if (!schedAddr.isPresent()) {
-      LOG.error("No scheduler address specified in request for " + app + " got " + 
-                schedulerAddress);
+      LOG.error("No scheduler address specified in request for " + taskId.appId + " got " + 
+          taskId.frontendSocket);
       return false;
     }
-    appSchedulers.put(requestId, schedAddr.get());
+    appSchedulers.put(taskId.requestId, schedAddr.get());
     
-    InetSocketAddress socket = appSockets.get(app);
+    InetSocketAddress socket = appSockets.get(taskId.appId);
     if (socket == null) {
-      LOG.error("No socket stored for " + app + " (never registered?). " +
+      LOG.error("No socket stored for " + taskId.appId + " (never registered?). " +
       		"Can't launch task.");
       return false;
     }
-    appTasks.get(app).add(compoundId);
-    scheduler.submitTask(scheduler.new TaskDescription(compoundId, requestId, message, 
-        estimatedResources, user, socket));
+    scheduler.submitTask(scheduler.new TaskDescription(taskId, message, 
+        estimatedResources, user, socket), taskId.appId);
     return true;
   }
 

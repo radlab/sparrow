@@ -14,6 +14,7 @@ import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.SchedulerService.Client;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -63,26 +64,28 @@ public class SparrowFrontendClient {
     FrontendService.Processor<FrontendService.Iface> processor =
         new FrontendService.Processor<FrontendService.Iface>(frontendServer);
     try {
-      TServers.launchThreadedThriftServer(listenPort, 5, processor);
+      TServers.launchThreadedThriftServer(listenPort, 8, processor);
     } catch (IOException e) {
       LOG.fatal("Couldn't launch server side of frontend", e);
     }
     
     for (int i = 0; i < NUM_CLIENTS; i++) {
       Client client = TClients.createBlockingSchedulerClient(
-          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort());
+          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort(), 60000);
       clients.add(client);
     }
     clients.peek().registerFrontend(app, "localhost:" + listenPort); 
   }
   
-  public synchronized boolean submitJob(String app, 
-      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user) 
+  public boolean submitJob(String app, 
+      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user,
+      TSchedulingPref pref) 
           throws TException {
     TSchedulingRequest request = new TSchedulingRequest();
     request.setTasks(tasks);
     request.setApp(app);
     request.setUser(user);
+    request.setSchedulingPref(pref);
     boolean result = false;
     try {
       Client client = clients.take();
@@ -90,11 +93,14 @@ public class SparrowFrontendClient {
       clients.put(client);
     } catch (InterruptedException e) {
       LOG.fatal(e);
+    } catch (TException e) {
+      LOG.error(e);
+      return false;
     }
     return result;
   }
   
-  public synchronized List<TTaskPlacement> getJobPlacement(String app,
+  public List<TTaskPlacement> getJobPlacement(String app,
       List<TTaskSpec> tasks, TUserGroupInfo user) throws TException {
     TSchedulingRequest request = new TSchedulingRequest();
     request.setTasks(tasks);

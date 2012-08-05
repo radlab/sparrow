@@ -17,13 +17,13 @@ MESOS_CLASSPATH="$MESOS_HOME/lib/java/mesos.jar"
 MESOS_LIBRARY_PATH="$MESOS_HOME/lib/java"
 
 if [ "x$SPARK_MEM" == "x" ] ; then
-  SPARK_MEM="1024m"
+  SPARK_MEM="1300m"
 fi
 export SPARK_MEM  # So that the process sees it and can report it to Mesos
 
 # Set JAVA_OPTS to be able to load native libraries and to set heap size
 JAVA_OPTS="$SPARK_JAVA_OPTS"
-JAVA_OPTS+=" -Djava.library.path=$SPARK_LIBRARY_PATH:$FWDIR/lib:$FWDIR/src/main/native:$MESOS_LIBRARY_PATH"
+JAVA_OPTS+="-XX:+UseConcMarkSweepGC -Djava.library.path=$SPARK_LIBRARY_PATH:$FWDIR/lib:$FWDIR/src/main/native:$MESOS_LIBRARY_PATH"
 JAVA_OPTS+=" -Xms$SPARK_MEM -Xmx$SPARK_MEM"
 # Load extra JAVA_OPTS from conf/java-opts, if it exists
 if [ -e $FWDIR/conf/java-opts ] ; then

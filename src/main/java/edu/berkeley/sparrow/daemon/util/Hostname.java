@@ -9,6 +9,8 @@ import edu.berkeley.sparrow.daemon.SparrowConf;
 
 public class Hostname {
 
+  /** Return the hostname of this machine, based on configured value, or system
+   * Interrogation. */
   public static String getHostName(Configuration conf) {
     String defaultHostname = null;
     try {
@@ -17,5 +19,18 @@ public class Hostname {
       defaultHostname = "localhost";
     }
     return conf.getString(SparrowConf.HOSTNAME, defaultHostname); 
+  }
+  
+  /**
+   * Return the IP address of this machine, as determined from the hostname
+   * specified in configuration or from querying the machine.
+   */
+  public static String getIPAddress(Configuration conf) {
+    String hostname = getHostName(conf);
+    try {
+      return InetAddress.getByName(hostname).getHostAddress();
+    } catch (UnknownHostException e) {
+      return "IP UNKNOWN";
+    }
   }
 }

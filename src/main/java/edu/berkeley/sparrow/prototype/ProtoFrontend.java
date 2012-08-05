@@ -23,6 +23,7 @@ import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TResourceVector;
+import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -58,7 +59,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       user.setUser("*");
       user.setGroup("*");
       try {
-        client.submitJob("testApp", request, user);
+        client.submitJob("testApp", request, user, new TSchedulingPref());
         LOG.debug("Submitted job: " + request);
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);

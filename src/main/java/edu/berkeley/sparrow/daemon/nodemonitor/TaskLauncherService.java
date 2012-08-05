@@ -1,7 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
@@ -14,7 +13,6 @@ import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskDescription;
-import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.thrift.BackendService;
 
@@ -25,8 +23,6 @@ import edu.berkeley.sparrow.thrift.BackendService;
  */
 public class TaskLauncherService {
   private final static Logger LOG = Logger.getLogger(TaskLauncherService.class);
-  private final static Logger AUDIT_LOG = Logging.getAuditLogger(
-      TaskLauncherService.class);
   /* The number of threads we use to launch tasks on backends. We also use this
    * to determine how many thrift connections to keep open to each backend, so that
    * in the limit case where all threads are talking to the same backend, we don't run
@@ -49,18 +45,14 @@ public class TaskLauncherService {
         } catch (InterruptedException e) {
           LOG.fatal(e);
         }
-        AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_call_start", 
-            task.requestId, address.getHostAddress(), task.taskId));
         
         try {
-          client.launchTask(task.message, task.requestId, task.taskId, task.user, 
+          client.launchTask(task.message, task.taskId, task.user, 
               task.estimatedResources);
         } catch (TException e) {
           LOG.error("Error launching task: " + task.taskId, e);
+          return; // Don't put this client back if there was an error
         }
-        
-        AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_call_finish", 
-            task.requestId, address.getHostAddress(), task.taskId));
         
         try {
           backendClients.get(task.backendSocket).put(client);
@@ -68,25 +60,20 @@ public class TaskLauncherService {
           LOG.fatal(e);
         }
         
-        AUDIT_LOG.info(Logging.auditEventString("nodemonitor_launch_finish", 
-            task.requestId, address.getHostAddress(), task.taskId));
         LOG.debug("Launched task " + task.taskId);
       }
     }
   }
   
   private TaskScheduler scheduler;
-  private InetAddress address;
 
   /** Cache of thrift clients pools for each backends. Clients are removed from the pool
    *  when in use. */
   private HashMap<InetSocketAddress, BlockingQueue<BackendService.Client>> backendClients =
       new HashMap<InetSocketAddress, BlockingQueue<BackendService.Client>>();
   
-  public void initialize(Configuration conf, TaskScheduler scheduler, 
-      InetAddress address) {
+  public void initialize(Configuration conf, TaskScheduler scheduler) {
     this.scheduler = scheduler;
-    this.address = address;
     ExecutorService service = Executors.newFixedThreadPool(CLIENT_POOL_SIZE);
     for (int i = 0; i < CLIENT_POOL_SIZE; i++) {
       service.submit(new TaskLaunchRunnable());

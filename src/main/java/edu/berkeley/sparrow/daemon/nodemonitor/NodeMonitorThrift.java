@@ -17,6 +17,8 @@ import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -28,7 +30,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
                                           InternalService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_NM_THRIFT_PORT = 20501;
-  public final static int DEFAULT_NM_THRIFT_THREADS = 16;
+  public final static int DEFAULT_NM_THRIFT_THREADS = 64;
   public final static int DEFAULT_INTERNAL_THRIFT_PORT = 20502;
   public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 8;
  
@@ -80,22 +82,20 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   }
   
   @Override
-  public Map<String, TResourceVector> getLoad(String app, String requestId)
+  public Map<String, TResourceUsage> getLoad(String app, String requestId)
       throws TException {
     return nodeMonitor.getLoad(app, requestId);
   }
 
   @Override
-  public boolean launchTask(String app, ByteBuffer message,
-      String requestId, String taskId, TUserGroupInfo user,
-      TResourceVector estimatedResources, String schedulerAddress) throws TException {
-    return nodeMonitor.launchTask(app, message, requestId, taskId, user,
-                                  estimatedResources, schedulerAddress);
+  public boolean launchTask(ByteBuffer message, TFullTaskId taskId,
+      TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
+    return nodeMonitor.launchTask(message, taskId, user, estimatedResources);
   }
 
   @Override
   public void updateResourceUsage(String app,
-      Map<TUserGroupInfo, TResourceVector> usage, List<String> activeTaskIds)
+      Map<TUserGroupInfo, TResourceVector> usage, List<TFullTaskId> activeTaskIds)
       throws TException {
     nodeMonitor.updateResourceUsage(app, usage, activeTaskIds);
   }
@@ -106,4 +106,8 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
     nodeMonitor.sendFrontendMessage(app, requestId, message);
   }
 
+  @Override
+  public void tasksFinished(List<TFullTaskId> tasks) throws TException {
+    nodeMonitor.tasksFinished(tasks);
+  }
 }

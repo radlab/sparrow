@@ -7,8 +7,23 @@ struct TPlacementPreference {
 }
 
 struct TResourceVector {
-  1: i64 memory; // Memory, in Mb
-  2: i32 cores;    // # Cores
+  1: i64 memory;      // Memory, in Mb
+  2: i32 cores;       // # Cores
+}
+
+// Conveys both a quantity of resources in use and a task queue length
+struct TResourceUsage { 
+  1: TResourceVector resources; // Current resource usage
+  2: i32 queueLength;           // Number of queued tasks
+}
+
+
+// A fully-specified Sparrow task has four identifiers
+struct TFullTaskId {
+  1: string taskId;    // Task ID as reported from the FE
+  2: string requestId; // Scheduling request ID as assigned by the FE
+  3: string appId;     // ID of the application
+  4: string frontendSocket; // Host:Port of the sparrow frontend
 }
 
 struct TUserGroupInfo {
@@ -23,11 +38,18 @@ struct TTaskSpec {
   4: optional binary message;
 }
 
+// This temporarily lets us specify the probe ratio for certain
+// types of requests. This is a hack.
+struct TSchedulingPref {
+  1: i32 probeRatio;
+}
+
 struct TSchedulingRequest {
   1: string app;
   2: list<TTaskSpec> tasks;
   3: TUserGroupInfo user;
   4: optional bool reserve;
+  5: optional TSchedulingPref schedulingPref; 
 }
 
 struct TTaskPlacement {

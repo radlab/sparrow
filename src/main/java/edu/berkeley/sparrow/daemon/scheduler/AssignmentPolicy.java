@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
-import edu.berkeley.sparrow.thrift.TResourceVector;
+import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /**
@@ -15,9 +15,12 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  * information about the remote machines has been completed.
  */
 public interface AssignmentPolicy {
-  /** Return a list of placement responses assigning {@code tasks} to the list of
-   * {@code nodes} provided.
+  /** 
+   * Return a list of placement responses assigning {@code tasks} to the list of
+   * {@code nodes} provided. Note that a policy may or may not modify elements of the
+   * nodes list (for instance, it might increase the resource usage of certain nodes
+   * to reflect task assignment).
    */
   public Collection<TaskPlacementResponse> assignTasks(Collection<TTaskSpec> tasks, 
-      Map<InetSocketAddress, TResourceVector> nodes);
+      Map<InetSocketAddress, TResourceUsage> nodes);
 }

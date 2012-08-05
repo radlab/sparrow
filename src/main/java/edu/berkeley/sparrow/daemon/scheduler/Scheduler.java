@@ -1,6 +1,7 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -18,9 +19,11 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
+import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
@@ -29,6 +32,7 @@ import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient;
 import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -62,7 +66,12 @@ public class Scheduler {
   SchedulerState state;
   
   /** Logical task assignment. */
-  TaskPlacer placer;
+  // TODO: NOTE - this is a hack - we need to modify constrainedPlacer to have more
+  // advanced features like waiting for some probes and configurable probe ratio.
+  TaskPlacer constrainedPlacer;
+  TaskPlacer unconstrainedPlacer;
+  
+  private Configuration conf;
   
   /**
    * A callback handler for asynchronous task launches.
@@ -96,11 +105,6 @@ public class Scheduler {
     @Override
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
-      try {
-        schedulerClientPool.returnClient(socket, client);
-      } catch (Exception e) {
-        LOG.error(e);
-      }
       // TODO We need to have a story here, regarding the failure model when the
       //      probe doesn't succeed.
       latch.countDown();
@@ -110,21 +114,26 @@ public class Scheduler {
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
+    this.conf = conf;
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
-      placer = new ConstraintObservingProbingTaskPlacer();
+      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
+      unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
-      placer = new ConstraintObservingProbingTaskPlacer();
+      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
+      unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("production")) {
       state = new StateStoreSchedulerState();
-      placer = new ConstraintObservingProbingTaskPlacer();
+      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
+      unconstrainedPlacer = new ProbingTaskPlacer();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
     
     state.initialize(conf);
-    placer.initialize(conf, schedulerClientPool);
+    constrainedPlacer.initialize(conf, schedulerClientPool);
+    unconstrainedPlacer.initialize(conf, schedulerClientPool);
   }
   
   public boolean registerFrontend(String appId, String addr) {
@@ -168,7 +177,13 @@ public class Scheduler {
 
       InternalService.AsyncClient client;
       try {
+        long t0 = System.currentTimeMillis();
         client = schedulerClientPool.borrowClient(response.getNodeAddr());
+        long t1 = System.currentTimeMillis();
+        if (t1 - t0 > 100) {
+          LOG.error("Took more than 100ms to create client for: " + 
+            response.getNodeAddr());
+        }
       } catch (Exception e) {
         LOG.error(e);
         return false;
@@ -176,17 +191,24 @@ public class Scheduler {
       String taskId = response.getTaskSpec().taskID;
 
       AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
-      client.launchTask(req.getApp(), response.getTaskSpec().message, requestId,
-          taskId, req.getUser(), response.getTaskSpec().getEstimatedResources(),
-          address.getHostName() + ":" + address.getPort(),
+      TFullTaskId id = new TFullTaskId();
+      id.appId = req.getApp();
+      id.frontendSocket = address.getHostName() + ":" + address.getPort();
+      id.requestId = requestId;
+      id.taskId = taskId;
+      client.launchTask(response.getTaskSpec().message, id,
+          req.getUser(), response.getTaskSpec().getEstimatedResources(),          
           new TaskLaunchCallback(latch, client, response.getNodeAddr()));
     }
+    // NOTE: Currently we just return rather than waiting for all tasks to launch
+    /*
     try {
       LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");
       latch.await();
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+    */
     long end = System.currentTimeMillis();
     LOG.debug("All tasks launched, returning. Total time: " + (end - start) + 
         "Probe time: " + (probeFinish - start));
@@ -225,7 +247,43 @@ public class Scheduler {
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);
     }
-    return placer.placeTasks(app, requestId, backendList, tasks);
+    boolean constrained = false;
+    for (TTaskSpec task : tasks) {
+      constrained = constrained || (
+          task.preference != null &&
+          task.preference.nodes != null && 
+          !task.preference.nodes.isEmpty()); 
+    }
+    
+    /* TESTING SOMETHING --- REMOVE THIS */
+    if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
+      if (tasks.get(0).preference.nodes != null &&
+          (tasks.get(0).preference.nodes.size() == 1 ||
+          tasks.get(0).preference.nodes.size() == 2)) {
+        
+        // Explicitly avoid nodes with preferences so spark RDD's get spread out
+        List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
+        List<InetSocketAddress> toRemove = Lists.newArrayList();
+        for (TTaskSpec task : tasks) {
+          for (String node : task.preference.nodes) {
+           InetAddress addr = InetAddress.getByName(node);
+           for (InetSocketAddress backend : subBackends) {
+             if (backend.getAddress().equals(addr)) { toRemove.add(backend); }
+           }
+          }
+        }
+       subBackends.removeAll(toRemove);
+       return new RandomTaskPlacer().placeTasks(
+           app, requestId, subBackends, tasks, req.schedulingPref);
+      }
+    }
+    if (constrained) {
+      return constrainedPlacer.placeTasks(
+          app, requestId, backendList, tasks, req.schedulingPref);
+    } else {
+      return unconstrainedPlacer.placeTasks(
+          app, requestId, backendList, tasks, req.schedulingPref);
+    }
   }
   
   /**
@@ -241,7 +299,7 @@ public class Scheduler {
     /* The request id is a string that includes the IP address of this scheduler followed
      * by the counter.  We use a counter rather than a hash of the request because there
      * may be multiple requests to run an identical job. */
-    return String.format("%s_%d", address.toString(), counter++);
+    return String.format("%s_%d", Hostname.getIPAddress(conf), counter++);
   }
 
   private class sendFrontendMessageCallback implements 
@@ -259,8 +317,7 @@ public class Scheduler {
     }
 
     public void onError(Exception exception) {
-      try { frontendClientPool.returnClient(frontendSocket, client); } 
-      catch (Exception e) { LOG.error(e); }
+      // Do not return error client to pool
       LOG.error(exception);
     }
   }

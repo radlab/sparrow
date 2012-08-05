@@ -1,10 +1,9 @@
 package edu.berkeley.sparrow.api;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -19,13 +18,23 @@ import org.apache.mesos.Protos.TaskID;
 import org.apache.mesos.Protos.TaskState;
 import org.apache.mesos.Protos.TaskStatus;
 import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TServers;
+import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.BackendService;
+import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.AsyncClient;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.AsyncClient.sendFrontendMessage_call;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.AsyncClient.tasksFinished_call;
+import edu.berkeley.sparrow.thrift.NodeMonitorService.Client;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -43,11 +52,17 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  */
 public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Iface {
   private Executor executor;
-  private NodeMonitorService.Client client;
-  private HashMap<String, String> taskIdToRequestId = 
-      new HashMap<String, String>();
-  private List<String> activeTaskIds = new ArrayList<String>();
   
+  ThriftClientPool<NodeMonitorService.AsyncClient> clientPool = // Async clients for
+                                                                // messages 
+      new ThriftClientPool<NodeMonitorService.AsyncClient>(
+      new ThriftClientPool.NodeMonitorServiceMakerFactory());
+  
+  Client client; // Sync client for registration
+  
+  private HashMap<String, TFullTaskId> taskIdToFullTaskId = Maps.newHashMap();
+
+  private InetSocketAddress localhost = new InetSocketAddress("localhost", 20501);
   private boolean isRunning = false;
   private Status stopStatus = Status.OK;
   private Lock runLock = new ReentrantLock();
@@ -86,23 +101,66 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     return abort();
   }
 
-  @Override
-  public synchronized Status sendStatusUpdate(TaskStatus status) {
-    if (status.getState() == TaskState.TASK_FINISHED) {
-      activeTaskIds.remove(status.getTaskId().getValue());
-      // TODO deal with removing task ID's
+  private class TaskFinishedCallback implements AsyncMethodCallback<tasksFinished_call> { 
+    private AsyncClient client;
+    
+    TaskFinishedCallback(AsyncClient client) { this.client = client; }
+      
+    public void onComplete(tasksFinished_call response) {
       try {
-        client.updateResourceUsage(appName, 
-            new HashMap<TUserGroupInfo, TResourceVector>(), activeTaskIds);
-      } catch (TException e) {
-        e.printStackTrace();
+        clientPool.returnClient(localhost, client);
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
       }
     }
-    String requestId = taskIdToRequestId.get(status.getTaskId().getValue());
+
+    public void onError(Exception exception) {
+      exception.printStackTrace(System.err);
+    }
+  }
+  
+  private class SendFrontendMessageCallback implements AsyncMethodCallback<sendFrontendMessage_call> { 
+    private AsyncClient client;
+    
+    SendFrontendMessageCallback(AsyncClient client) { this.client = client; }
+      
+    public void onComplete(sendFrontendMessage_call response) {
+      try {
+        clientPool.returnClient(localhost, client);
+      } catch (Exception e) {
+        e.printStackTrace(System.err);
+      }
+    }
+
+    public void onError(Exception exception) {
+      exception.printStackTrace(System.err);
+    }
+  }
+  
+  @Override
+  public synchronized Status sendStatusUpdate(TaskStatus status) {
+    TFullTaskId fullId = taskIdToFullTaskId.get(status.getTaskId().getValue());
+    AsyncClient client1 = null;
+    AsyncClient client2 = null;
+    try {
+      client1 = clientPool.borrowClient(localhost);
+      client2 = clientPool.borrowClient(localhost);
+    } catch (Exception e) {
+      e.printStackTrace(System.err);
+    }
+    if (status.getState() == TaskState.TASK_FINISHED) {
+      try {
+        client1.tasksFinished(Lists.newArrayList(fullId),  new TaskFinishedCallback(client1));
+      } catch (TException e) {
+        e.printStackTrace(System.err);
+      }
+    }
+    // TODO check if null
+    String requestId = fullId.requestId;
 
     try {
-      client.sendFrontendMessage(appName, requestId, 
-          ByteBuffer.wrap(status.toByteArray()));
+      client2.sendFrontendMessage(appName, requestId, 
+          ByteBuffer.wrap(status.toByteArray()), new SendFrontendMessageCallback(client2));
     } catch (TException e) {
       e.printStackTrace();
       return abort();
@@ -115,8 +173,8 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     if (isRunning) { 
       return Status.DRIVER_ALREADY_RUNNING; 
     }
-    try {
-      client = TClients.createBlockingNmClient("localhost", 20501);
+    try { // TODO switch to client pool here
+      client = TClients.createBlockingNmClient("localhost", 20501, 500);
     } catch (IOException e) {
       System.err.println("Failed to create connection to Sparrow:");
       e.printStackTrace(System.err);
@@ -176,12 +234,11 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   }
 
   @Override
-  public void launchTask(ByteBuffer message, String requestId, String taskId,
+  public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {
-    activeTaskIds.add(taskId);
-    taskIdToRequestId.put(taskId, requestId);
-    TaskID id = TaskID.newBuilder().setValue(taskId).build();
+    taskIdToFullTaskId.put(taskId.taskId, taskId);
+    TaskID id = TaskID.newBuilder().setValue(taskId.taskId).build();
     SlaveID sId = SlaveID.newBuilder().setValue("slave").build();
     TaskDescription task = TaskDescription.newBuilder()
         .setTaskId(id)
