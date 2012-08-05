@@ -24,11 +24,13 @@ import edu.berkeley.sparrow.thrift.SchedulerService;
 public class ThriftClientPool<T extends TAsyncClient> {
   // Default configurations for underlying pool
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int MIN_IDLE_CLIENTS_PER_ADDR = 0;
+  public static int MIN_IDLE_CLIENTS_PER_ADDR = 5;
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int EVICTABLE_IDLE_TIME_MS = 1000;
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = 1000;
+  public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = 10000;
+  /** See {@link GenericKeyedObjectPool.Config} */
+  public static int MAX_ACTIVE_CLIENTS_PER_ADDR = -1;
   
   private static final Logger LOG = Logger.getLogger(ThriftClientPool.class);
   
@@ -38,6 +40,8 @@ public class ThriftClientPool<T extends TAsyncClient> {
     conf.minIdle = MIN_IDLE_CLIENTS_PER_ADDR;
     conf.minEvictableIdleTimeMillis = EVICTABLE_IDLE_TIME_MS;
     conf.timeBetweenEvictionRunsMillis = TIME_BETWEEN_EVICTION_RUNS_MILLIS;
+    conf.maxActive = MAX_ACTIVE_CLIENTS_PER_ADDR;
+    conf.whenExhaustedAction = GenericKeyedObjectPool.WHEN_EXHAUSTED_GROW;
     return conf;
   }
   
@@ -137,8 +141,8 @@ public class ThriftClientPool<T extends TAsyncClient> {
   private GenericKeyedObjectPool<InetSocketAddress, T> pool;
   
   public ThriftClientPool(MakerFactory<T> maker) {
-    pool = new GenericKeyedObjectPool<InetSocketAddress, T>(new PoolFactory(maker));
-    pool.setConfig(getPoolConfig());
+    pool = new GenericKeyedObjectPool<InetSocketAddress, T>(new PoolFactory(maker), 
+        getPoolConfig());
     try {
       clientManager = new TAsyncClientManager();
     } catch (IOException e) {
