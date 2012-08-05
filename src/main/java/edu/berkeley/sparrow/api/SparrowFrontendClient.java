@@ -71,7 +71,7 @@ public class SparrowFrontendClient {
     
     for (int i = 0; i < NUM_CLIENTS; i++) {
       Client client = TClients.createBlockingSchedulerClient(
-          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort());
+          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort(), 1000);
       clients.add(client);
     }
     clients.peek().registerFrontend(app, "localhost:" + listenPort); 

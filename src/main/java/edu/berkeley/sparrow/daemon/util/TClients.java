@@ -22,11 +22,17 @@ import edu.berkeley.sparrow.thrift.StateStoreService;
  */
 public class TClients {
   private final static Logger LOG = Logger.getLogger(TClients.class);
-  
+
   public static NodeMonitorService.Client createBlockingNmClient(String host, int port) 
       throws IOException {
+    return createBlockingNmClient(host, port, 0);
+  }
+
+  public static NodeMonitorService.Client createBlockingNmClient(String host, int port,
+      int timeout) 
+      throws IOException {
     TTransport tr = new TFramedTransport(
-        new TSocket(host, port));
+        new TSocket(host, port, timeout));
     try {
       tr.open();
     } catch (TTransportException e) {
@@ -45,8 +51,13 @@ public class TClients {
   
   public static SchedulerService.Client createBlockingSchedulerClient(
       String host, int port) throws IOException {
+    return createBlockingSchedulerClient(host, port, 0);
+  }
+  
+  public static SchedulerService.Client createBlockingSchedulerClient(
+      String host, int port, int timeout) throws IOException {
     TTransport tr = new TFramedTransport(
-        new TSocket(host, port));
+        new TSocket(host, port, timeout));
     try {
       tr.open();
     } catch (TTransportException e) {
