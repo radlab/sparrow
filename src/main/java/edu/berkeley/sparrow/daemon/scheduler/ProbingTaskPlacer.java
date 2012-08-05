@@ -175,7 +175,8 @@ public class ProbingTaskPlacer implements TaskPlacer {
                 TResources.createResourceVector(1000, 4), 100));
       }
     }
-    AssignmentPolicy assigner = new WaterLevelAssignmentPolicy();
+    AssignmentPolicy assigner = new ComparatorAssignmentPolicy(
+        new TResources.CPUThenQueueComparator());
     Collection<TaskPlacementResponse> out = assigner.assignTasks(tasks, loads);
 
     return out;
