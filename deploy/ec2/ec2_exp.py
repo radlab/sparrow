@@ -5,6 +5,7 @@ import tempfile
 import time
 import subprocess
 import shutil
+import random
 
 from optparse import OptionParser
 
@@ -43,16 +44,22 @@ def parse_args():
       help="Which benchmark to run")
   parser.add_option("-e", "--benchmark-iterations", type="int", default=4,
       help="Iterations of benchmark to run")
-  parser.add_option("-p", "--probe-ratio", type="float", default=1.05,
-      help="Probe ratio")
+  parser.add_option("-p", "--sample-ratio", type="float", default=1.05,
+      help="Sample ratio for unconstrained tasks")
+  parser.add_option("-q", "--sample-ratio-constrained", type=int, default=2,
+      help="Sample ratio for constrained tasks")
   parser.add_option("-y", "--kill-delay", type="int", default=1,
       help="Time to wait between killing backends and frontends")
   parser.add_option("-m", "--scheduler", type="string", default="mesos",
       help="Which scheduler to use for running spark (mesos/sparrow)")
-  parser.add_option("-j", "--max-queries", type=int, default=60,
+  parser.add_option("-j", "--max-queries", type="int", default=60,
       help="How many spark queries to run before shutting down")
-  parser.add_option("-v", "--query-rate", type=int, default=1,
+  parser.add_option("-v", "--query-rate", type="float", default=1.0,
       help="What rate to run spark queries at (queries per second)")
+  parser.add_option("-o", "--tpch-query", type="int", default=1,
+      help="Which TPC-H query to run.")
+  parser.add_option("-r", "--parallelism", type="int", default=8,
+      help="Level of parallelism for dummy queries.")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1:
@@ -113,6 +120,7 @@ def parallel_commands(commands, tolerable_failures):
     (stdout, stderr) = p.communicate()
     if p.poll() != 0:
       failures.append((stdout, stderr, processes[p]))
+    print stdout
 
   if len(failures) > tolerable_failures:
     out = "Parallel commands failed:\n"
@@ -211,6 +219,7 @@ def find_existing_cluster(conn, opts):
            (len(frontend_nodes), len(backend_nodes)))
 
     print "Frontends:"
+    frontend_nodes = filter(lambda k: k.public_dns_name != "", frontend_nodes)
     for fe in frontend_nodes:
       print fe.public_dns_name
     print "Backends:"
@@ -245,7 +254,8 @@ def deploy_cluster(frontends, backends, opts):
     "benchmark_iterations": "%s" % opts.benchmark_iterations,
     "benchmark_id": "%s" % opts.benchmark_id,
     "tasks_per_job": "%s" % opts.tasks_per_job,
-    "probe_ratio": "%s" % opts.probe_ratio,
+    "sample_ratio": "%s" % opts.sample_ratio,
+    "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
@@ -317,11 +327,33 @@ def start_spark(frontends, backends, opts):
   if opts.scheduler == "sparrow":
     print "Starting Spark backends..."
     ssh_all([be.public_dns_name for be in backends], opts,
-           "/root/start_spark_backend.sh")
+            "/root/start_spark_backend.sh")
+    time.sleep(30)
   print "Starting Spark frontends..."
-  ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "/root/start_spark_frontend.sh %s %s %s" % (
-            opts.scheduler, opts.query_rate, opts.max_queries))
+  print opts.max_queries
+
+  
+  # Adjustment to schedule all mesos work on one node
+  if opts.scheduler == "mesos":
+    driver = frontends[0]
+    adjusted_rate = opts.query_rate * len(frontends)
+    adjusted_max = opts.max_queries * len(frontends)
+    ssh(driver.public_dns_name, opts,
+          "/root/start_spark_frontend.sh %s %s %s %s %s" % (
+           opts.scheduler, adjusted_rate, adjusted_max, opts.tpch_query,
+           opts.parallelism))
+    print "WARNING: started spark with adjusted rate:%s and max:%s " % (
+      adjusted_rate, adjusted_max)
+    return
+  
+
+  for fe in frontends:
+    ssh(fe.public_dns_name, opts,
+          "/root/start_spark_frontend.sh %s %s %s %s %s" % (
+           opts.scheduler, opts.query_rate, opts.max_queries, opts.tpch_query,
+           opts.parallelism))
+    print "Sleeping to let spark pull into cache on %s" % fe.public_dns_name
+    time.sleep(1 + random.random()) # add some random to avoid synchronization
 
 def stop_spark(frontends, backends, opts):
   print "Stopping spark frontends..."
@@ -370,14 +402,24 @@ def stop_proto(frontends, backends, opts):
 
 # Collect logs from all machines
 def collect_logs(frontends, backends, opts):
-  rsync_from_all([fe.public_dns_name for fe in frontends], opts,
-    "*.log", opts.log_dir, len(frontends))
-  rsync_from_all([be.public_dns_name for be in backends], opts,
-    "*.log", opts.log_dir, len(backends))
+  print "Zipping logs..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
+          "/root/prepare_logs.sh")
   ssh_all([be.public_dns_name for be in backends], opts,
-          "rm -f /tmp/*audit*.log; mv /root/*log /tmp;")
+          "/root/prepare_logs.sh")
+  print "Hauling logs"
+  rsync_from_all([fe.public_dns_name for fe in frontends], opts,
+    "*.log.gz", opts.log_dir, len(frontends))
+  rsync_from_all([be.public_dns_name for be in backends], opts,
+    "*.log.gz", opts.log_dir, len(backends))
+  f = open(opts.log_dir + "params.txt", 'w')
+  for (k, v) in opts.__dict__.items():
+    f.write("%s\t%s\n" % (k, v))
+  f.close()
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "rm -f /tmp/*audit*.log.gz; mv /root/*log.gz /tmp;")
+  ssh_all([be.public_dns_name for be in backends], opts,
+          "rm -f /tmp/*audit*.log.gz; mv /root/*log.gz /tmp;")
 
 # Tear down a cluster
 def destroy_cluster(frontends, backends, opts):

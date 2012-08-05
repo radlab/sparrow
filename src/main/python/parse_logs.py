@@ -15,11 +15,14 @@ import os
 import sys
 import stats
 import time
+import subprocess
 
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
-EXCLUDE_SECS = 0
+
+START_SEC = 200
+END_SEC = 300
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -34,7 +37,7 @@ def get_percentile(N, percent, key=lambda x:x):
       The percentile of the values
     """
     if not N:
-        return None
+        return 0
     k = (len(N)-1) * percent
     f = math.floor(k)
     c = math.ceil(k)
@@ -208,7 +211,7 @@ class Request:
         
     def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
-        self.__num_tasks = num_tasks
+        self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
         
     def add_probe_launch(self, address, time):
@@ -246,9 +249,9 @@ class Request:
         """ Sets the clock skews for all tasks. """
         for task in self.__tasks.values():
             if task.address not in self.__probes:
-                print self.__probes.keys()
-                self.__logger.warn(("No probe information for request %s, "
-                                  "machine %s") % (self.__id, task.address))
+                #print self.__probes.keys()
+                #self.__logger.warn(("No probe information for request %s, "
+                #                  "machine %s") % (self.__id, task.address))
                 continue
             probe = self.__probes[task.address]
             if not probe.complete():
@@ -280,6 +283,14 @@ class Request:
         for task in self.__tasks.values():
             if task.complete():
                 network_delays.append(task.network_delay())
+                if task.network_delay() > 20:
+                  print "Long launch %s" % self.__id
+                  print task.node_monitor_submit_time
+                  print task.scheduler_launch_time
+                  print task.clock_skew
+                  print task.id
+                  print task.address
+                  print
         return network_delays
     
     def service_times(self):
@@ -287,6 +298,7 @@ class Request:
         service_times = []
         for task in self.__tasks.values():
             if task.complete():
+                x = task.service_time()
                 service_times.append(task.service_time())
         return service_times
 
@@ -303,6 +315,8 @@ class Request:
         probe_times = []
         for probe in self.__probes.values():
             if probe.complete():
+                if probe.round_trip_time() > 20:
+                  "Long probe: %s " %self.__id
                 probe_times.append(probe.round_trip_time())
         return probe_times
 
@@ -341,10 +355,13 @@ class Request:
           tasks randomly. """
       probe_times = self.probe_times()
       num_tasks = len(self.__tasks)
-      result = sorted(probe_times)[num_tasks - 1]
-      if result > 8:
-        print self.__id
-      return result
+      if len(probe_times) < num_tasks:
+        self.__logger.warn("Fewer probes send than tasks for task %s." 
+                           % self.__id)
+      
+      if len(probe_times) == 0:
+        return 0
+      return sorted(probe_times)[min(num_tasks - 1, len(probe_times) - 1)]
 
     def response_time(self, incorporate_skew=True):
         """ Returns the time from when the task arrived to when it completed.
@@ -385,6 +402,15 @@ class Request:
 								self.__logger.warn("Task %s suggests clock skew: " % task_id)
             completion_time = max(completion_time, task_completion_time)
 
+        if (completion_time - self.__arrival_time) > 2000:
+          pass
+          """
+          print "TRUE: %s" % (completion_time - self.__arrival_time)
+          print self.network_delays()
+          print self.service_times()
+          print self.probing_time()
+          print "EST: %s" % (max(self.service_times()) + max(self.network_delays()) + self.probing_time())
+          """
         return completion_time - self.__arrival_time
         
     def complete(self):
@@ -396,9 +422,11 @@ class Request:
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
             return False
-        for task in self.__tasks:
+        for task in self.__tasks.values():
             if not task.complete():
                 return False
+        if len(self.__probes) == 0:
+          return False # Don't consider non-probing requests
         return True
     
     def __get_task(self, task_id):
@@ -500,12 +528,17 @@ class LogParser:
         # (clock skew, time) pairs. Store addresses in tuple in increasing
         # order, so that we get the clock skew calculated in both directions.
         clock_skews = {}
-        cutoff_time = self.__earliest_time + (EXCLUDE_SECS * 1000)
-        considered_requests = filter(lambda k: k.arrival_time() >= cutoff_time, 
+        start_time = self.__earliest_time + (START_SEC * 1000)
+        end_time = self.__earliest_time + (END_SEC * 1000)
+        for request in self.__requests.values():
+          request.set_clock_skews()
+
+        considered_requests = filter(lambda k: k.arrival_time() >= start_time and
+                                     k.arrival_time() <= end_time and
+                                     k.complete(), 
                                      self.__requests.values())
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
-            request.set_clock_skews()
             scheduler_address = request.scheduler_address()
             for address, probe_skew in request.clock_skews().items():
                 if address > scheduler_address:
@@ -524,6 +557,8 @@ class LogParser:
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
             probe_times.extend(request.probe_times())
+            if request.probing_time() > 40:
+              print request._Request__id
             probing_times.append(request.probing_time())
             queue_lengths.extend(request.queue_lengths())
             rcv_probing_times.append(request.receive_and_probing_time())
@@ -545,6 +580,7 @@ class LogParser:
         rcv_probing_times.sort()
         worst_probe_times.sort()
 
+
         for i in range(100):
             i = float(i) / 100
             file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i, 
@@ -561,7 +597,7 @@ class LogParser:
         file.close()
         
         self.plot_response_time_cdf(results_filename, file_prefix)
-        
+        """        
         # Output data about clock skews.  Currently this writes a different
         # file for each pair of machines; we may want to change this when
         # we do larger experiments.
@@ -577,25 +613,48 @@ class LogParser:
                 percentile = (i + 1) * stride * 1.0 / len(skews)
                 file.write("%f\t%d\t%d\n" % (percentile, skew, time))
         self.plot_skew_cdf(skew_filenames, file_prefix)
-    
+        """    
         summary_file = open("%s_response_time_summary" % file_prefix, 'w')
         summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
                                          get_percentile(response_times, .95),
                                          get_percentile(response_times, .99)))
         summary_file.close()
 
-        # Queue length vs response time scatter plot
-        scatter_file = open("queue_vs_wait_time.txt", 'w')
+
+        wait_times_per_queue_len = {}
         for request in considered_requests:
           for task in request._Request__tasks.values():
             wait_time = task.queued_time()
             if task.address not in request._Request__probes:
+              print "Excluding"
               continue
             queue_length = request._Request__probes[task.address].queue_length
-            scatter_file.write("%s\t%s\t%s\t%s\n" % (
-              queue_length, wait_time, task.address, task.id))
-        scatter_file.close
-
+            arr = wait_times_per_queue_len.get(queue_length, [])
+            arr.append(wait_time)
+            wait_times_per_queue_len[queue_length] = arr
+        
+        # Queue length vs response time
+        files = [] # (file name, queue length, # items)
+        for (queue_len, waits) in wait_times_per_queue_len.items():
+          fname = "data/queue_waits_%s.txt" % queue_len
+          files.append((fname, queue_len, len(waits)))
+          f = open(fname, 'w')
+          waits.sort()
+          for (i, wait) in enumerate(waits):
+            f.write("%s\t%s\n" % (float(i)/len(waits), wait))
+          f.close()
+        plot_fname = "wait_time.gp"
+        plot_file = open(plot_fname, 'w')
+        plot_file.write("set terminal postscript color\n")
+        plot_file.write("set output 'wait_time.ps'\n")
+        plot_file.write("set xrange [0:500]\n")
+        parts = map(lambda x: "'%s' using 2:1 with lines lw 3 title '%s (n=%s)'"
+          % (x[0], x[1], x[2]), files)
+        plot = "plot " + ",\\\n".join(parts)
+        plot_file.write(plot + "\n")
+        plot_file.close()
+        subprocess.check_call("gnuplot %s" % plot_fname, shell=True)
+        #subprocess.check_call("rm queue_waits*.txt", shell=True)
 
     def plot_skew_cdf(self, skew_filenames, file_prefix):
         gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")
@@ -660,7 +719,7 @@ class LogParser:
         request.add_task_completion(task_id, time)
 
 def main(argv):
-    PARAMS = ["log_dir", "output_file"]
+    PARAMS = ["log_dir", "output_file", "start_sec", "end_sec"]
     if "help" in argv[0]:
         print ("Usage: python parse_logs.py " +
                " ".join(["[%s=v]" % k for k in PARAMS]))
@@ -680,6 +739,12 @@ def main(argv):
                          filename in unqualified_log_files]
         elif kv[0] == PARAMS[1]:
             output_filename = kv[1]
+        elif kv[0] == PARAMS[2]:
+            global START_SEC
+            START_SEC = int(kv[1])
+        elif kv[0] == PARAMS[3]:
+            global END_SEC
+            END_SEC = int(kv[1])
         else:
             print "Warning: ignoring parameter %s" % kv[0]
             
