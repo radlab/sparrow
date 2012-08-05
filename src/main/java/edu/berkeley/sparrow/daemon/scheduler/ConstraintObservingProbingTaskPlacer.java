@@ -91,9 +91,12 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       addrToSocket.put(node.getAddress(), node);
     }
     List<TTaskSpec> unconstrainedTasks = Lists.newLinkedList();
+    
     for (TTaskSpec task : tasks) {
       List<InetSocketAddress> interests = Lists.newLinkedList();
       if (task.preference != null && task.preference.nodes != null) {
+        List<String> prefs = task.preference.nodes;
+        Collections.shuffle(prefs);
         for (String node : task.preference.nodes) {
           try {
             InetAddress addr = InetAddress.getByName(node);
