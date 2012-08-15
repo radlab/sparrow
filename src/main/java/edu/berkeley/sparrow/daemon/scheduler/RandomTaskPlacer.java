@@ -17,9 +17,9 @@ import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /***
- * A {@link TaskPlacer} implementation which randomly distributes tasks accross
- * backends. Note that if there are fewer backends than tasks, this will distributed multiple
- * tasks on some backends.
+ * A {@link TaskPlacer} implementation which randomly distributes tasks across
+ * backends. Note that if there are fewer backends than tasks, this will assign multiple
+ * tasks to some backends.
  */
 public class RandomTaskPlacer implements TaskPlacer {
   private RandomAssignmentPolicy policy = new RandomAssignmentPolicy();

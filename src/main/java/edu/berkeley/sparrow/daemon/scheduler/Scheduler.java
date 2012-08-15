@@ -52,12 +52,12 @@ public class Scheduler {
   HashMap<String, InetSocketAddress> frontendSockets = 
       new HashMap<String, InetSocketAddress>();
   
-  /** Thrift client pools */
-  ThriftClientPool<InternalService.AsyncClient> schedulerClientPool = // For probes
+  /** Thrift client pool for communicating with node monitors */
+  ThriftClientPool<InternalService.AsyncClient> nodeMonitorClientPool =
       new ThriftClientPool<InternalService.AsyncClient>(
       new ThriftClientPool.InternalServiceMakerFactory());
   
-  // For frontend messages
+  /** Thrift client pool for communicating with front ends. */
   private ThriftClientPool<FrontendService.AsyncClient> frontendClientPool =  
       new ThriftClientPool<FrontendService.AsyncClient>(
           new ThriftClientPool.FrontendServiceMakerFactory());
@@ -95,7 +95,7 @@ public class Scheduler {
     @Override
     public void onComplete(launchTask_call response) {
       try {
-        schedulerClientPool.returnClient(socket, client);
+        nodeMonitorClientPool.returnClient(socket, client);
       } catch (Exception e) {
         LOG.error(e);
       }
@@ -106,7 +106,7 @@ public class Scheduler {
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
       // TODO We need to have a story here, regarding the failure model when the
-      //      probe doesn't succeed.
+      //      task launch doesn't succeed.
       latch.countDown();
     }
   }
@@ -132,10 +132,10 @@ public class Scheduler {
     }
     
     state.initialize(conf);
-    constrainedPlacer.initialize(conf, schedulerClientPool);
-    unconstrainedPlacer.initialize(conf, schedulerClientPool);
+    constrainedPlacer.initialize(conf, nodeMonitorClientPool);
+    unconstrainedPlacer.initialize(conf, nodeMonitorClientPool);
   }
-  
+   
   public boolean registerFrontend(String appId, String addr) {
     LOG.debug(Logging.functionCall(appId, addr));
     Optional<InetSocketAddress> socketAddress = Serialization.strToSocket(addr);
@@ -153,7 +153,7 @@ public class Scheduler {
     
     String requestId = getRequestId();
     // Logging the address here is somewhat redundant, since all of the
-    // messages in this particularly log file come from the same address.
+    // messages in this particular log file come from the same address.
     // However, it simplifies the process of aggregating the logs, and will
     // also be useful when we support multiple daemons running on a single
     // machine.
@@ -178,7 +178,7 @@ public class Scheduler {
       InternalService.AsyncClient client;
       try {
         long t0 = System.currentTimeMillis();
-        client = schedulerClientPool.borrowClient(response.getNodeAddr());
+        client = nodeMonitorClientPool.borrowClient(response.getNodeAddr());
         long t1 = System.currentTimeMillis();
         if (t1 - t0 > 100) {
           LOG.error("Took more than 100ms to create client for: " + 
@@ -255,13 +255,17 @@ public class Scheduler {
           !task.preference.nodes.isEmpty()); 
     }
     
-    /* TESTING SOMETHING --- REMOVE THIS */
+    /* This is a hack to force Spark to cache data on multiple machines. We
+     * use a probe ratio of three to signal that the scheduler should perform
+     * this hack rather than trying to do a "good" job scheduling. */
     if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
       if (tasks.get(0).preference.nodes != null &&
           (tasks.get(0).preference.nodes.size() == 1 ||
           tasks.get(0).preference.nodes.size() == 2)) {
         
-        // Explicitly avoid nodes with preferences so spark RDD's get spread out
+        // Explicitly avoid nodes with preferences, because those are nodes where
+        // the data is already cached, and we're trying to force the data to be
+        // cached on other nodes.
         List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
         List<InetSocketAddress> toRemove = Lists.newArrayList();
         for (TTaskSpec task : tasks) {
@@ -321,7 +325,7 @@ public class Scheduler {
       LOG.error(exception);
     }
   }
-  
+ 
   public void sendFrontendMessage(String app, String requestId,
       ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, requestId, message));

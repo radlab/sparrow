@@ -4,7 +4,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -109,6 +108,7 @@ public abstract class TaskScheduler {
       LOG.fatal(e);
     }
   }
+
   protected void taskCompleted(TFullTaskId taskId) {
     AUDIT_LOG.info(
         Logging.auditEventString("nodemonitor_task_completed", taskId.requestId, 

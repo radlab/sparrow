@@ -48,15 +48,13 @@ public class NodeMonitor {
   private final static int DEFAULT_CORES = 8;        // Default CPU capacity
   private static int reservationMs;
   
-  /** How many blocking thrift clients to make for each registered backend. */ 
-  
   private static NodeMonitorState state;
   private HashMap<String, InetSocketAddress> appSockets = 
       new HashMap<String, InetSocketAddress>();
   private HashMap<String, List<TFullTaskId>> appTasks = 
       new HashMap<String, List<TFullTaskId>>();
   // Map to scheduler socket address for each request id.
-  private ConcurrentMap<String, InetSocketAddress> appSchedulers =
+  private ConcurrentMap<String, InetSocketAddress> requestSchedulers =
       Maps.newConcurrentMap();
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool = 
       new ThriftClientPool<SchedulerService.AsyncClient>(
@@ -213,7 +211,7 @@ public class NodeMonitor {
     if (pastProbes.containsKey(taskId)) {
       for (ProbeWithTime probe : pastProbes.get(taskId.appId)) {
         if (probe.requestId.equals(taskId.requestId)) {
-        pastProbes.remove(probe);
+          pastProbes.remove(probe);
         }
       }
     }
@@ -225,7 +223,7 @@ public class NodeMonitor {
           taskId.frontendSocket);
       return false;
     }
-    appSchedulers.put(taskId.requestId, schedAddr.get());
+    requestSchedulers.put(taskId.requestId, schedAddr.get());
     
     InetSocketAddress socket = appSockets.get(taskId.appId);
     if (socket == null) {
@@ -262,7 +260,7 @@ public class NodeMonitor {
   public void sendFrontendMessage(String app, String requestId,
       ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, requestId, message));
-    InetSocketAddress scheduler = appSchedulers.get(requestId);
+    InetSocketAddress scheduler = requestSchedulers.get(requestId);
     if (scheduler == null) {
       LOG.error("Did not find any scheduler info for request: " + requestId);
       return;

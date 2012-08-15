@@ -62,7 +62,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   protected void handleTaskCompleted(TFullTaskId taskId) {
     synchronized(appQueues) {
       /* Scan through the list of apps (starting at currentIndex) and find the first
-       * one with a pending tasks. If we find a pending task, make that task runnable
+       * one with a pending task. If we find a pending task, make that task runnable
        * and update the round robin index.
        * 
        * Note that this implementation assumes that we can take an arbitrary task and,
