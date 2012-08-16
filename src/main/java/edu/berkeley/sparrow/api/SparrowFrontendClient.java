@@ -12,12 +12,10 @@ import org.apache.thrift.TException;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.FrontendService;
+import edu.berkeley.sparrow.thrift.IncompleteRequestException;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.SchedulerService.Client;
-import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
-import edu.berkeley.sparrow.thrift.TTaskPlacement;
-import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
@@ -71,50 +69,51 @@ public class SparrowFrontendClient {
     
     for (int i = 0; i < NUM_CLIENTS; i++) {
       Client client = TClients.createBlockingSchedulerClient(
-          sparrowSchedulerAddr.getHostName(), sparrowSchedulerAddr.getPort(), 60000);
+          sparrowSchedulerAddr.getAddress().getHostAddress(), sparrowSchedulerAddr.getPort(),
+          60000);
       clients.add(client);
     }
     clients.peek().registerFrontend(app, "localhost:" + listenPort); 
   }
   
   public boolean submitJob(String app, 
-      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user,
-      TSchedulingPref pref) 
+      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user) 
           throws TException {
-    TSchedulingRequest request = new TSchedulingRequest();
-    request.setTasks(tasks);
-    request.setApp(app);
-    request.setUser(user);
-    request.setSchedulingPref(pref);
-    boolean result = false;
+    TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
     try {
       Client client = clients.take();
-      result = client.submitJob(request);
+      client.submitJob(request);
+      clients.put(client);
+    } catch (InterruptedException e) {
+      LOG.fatal(e);
+    } catch (TException e) {
+      LOG.error("Thrift exception when submitting job: ");
+      return false;
+    } catch (IncompleteRequestException e) {
+      LOG.error(e);
+    }
+    return true;
+  }
+  
+  public boolean submitJob(String app, 
+      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user,
+      double probeRatio) 
+          throws TException {
+    TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
+    request.setProbeRatio(probeRatio);
+    try {
+      Client client = clients.take();
+      client.submitJob(request);
       clients.put(client);
     } catch (InterruptedException e) {
       LOG.fatal(e);
     } catch (TException e) {
       LOG.error(e);
       return false;
+    } catch (IncompleteRequestException e) {
+      LOG.error(e);
     }
-    return result;
-  }
-  
-  public List<TTaskPlacement> getJobPlacement(String app,
-      List<TTaskSpec> tasks, TUserGroupInfo user) throws TException {
-    TSchedulingRequest request = new TSchedulingRequest();
-    request.setTasks(tasks);
-    request.setApp(app);
-    request.setUser(user);
-    List<TTaskPlacement> result = null;
-    try {
-      Client client = clients.take();
-      result = client.getJobPlacement(request);
-      clients.put(client);
-    } catch (InterruptedException e) {
-      LOG.fatal(e);
-    }
-    return result;
+    return true;
   }
   
   public void close() {

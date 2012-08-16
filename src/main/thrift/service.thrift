@@ -9,13 +9,7 @@ service SchedulerService {
   bool registerFrontend(1: string app, 2: string socketAddress);
 
   # Submit a job composed of a list of individual tasks. 
-  bool submitJob(1: types.TSchedulingRequest req);
-
-  # Get task placement for a specific job. If request.reserve is set to true
-  # scheduling will pass through the central scheduler and resources will
-  # be reserved (this will take much longer, but guarantee no     
-  # preemption). Otherwise, resources are acquired opportunistically.
-  list<types.TTaskPlacement> getJobPlacement(1: types.TSchedulingRequest req);
+  void submitJob(1: types.TSchedulingRequest req) throws (1: types.IncompleteRequestException e);
 
   # Send a message to be delivered to the frontend for {app} pertaining
   # to the task {taskId}. The {status} field allows for application-specific
@@ -23,6 +17,12 @@ service SchedulerService {
   # the scheduler to send task completion messages to frontends.
   void sendFrontendMessage(1: string app, 2: types.TFullTaskId taskId, 
                            3: i32 status, 4: binary message);
+  
+  # Called by a node monitor when it has available responses to run a task. Always called in
+  # response to an enqueueTask() request from this scheduler, requestId specifies the ID given
+  # in that enqueueTask() request. Returning null signals that the scheduler has already
+  # launched all tasks for the given request.
+  types.TTaskLaunchSpec getTask(1: string requestId, 2: types.THostPort nodeMonitorAddress);
 }
 
 # A service used by application backends to coordinate with Sparrow.
@@ -40,11 +40,10 @@ service NodeMonitorService {
 
 # A service that backends are expected to extend. Handles communication
 # from a NodeMonitor.
-service BackendService {  
+service BackendService {
   void launchTask(1: binary message, 2: types.TFullTaskId taskId,
                   3: types.TUserGroupInfo user,
                   4: types.TResourceVector estimatedResources);
-
 }
 
 # A service that frontends are expected to extend. Handles communication from
@@ -59,10 +58,13 @@ service FrontendService {
 # 1) Other Sparrow daemons
 # 2) The central state store
 service InternalService {
+  # Enqueues a reservation to launch the given number of tasks. The NodeMonitor sends
+  # a GetTask() RPC to the given schedulerAddress when it is ready to launch a task, for each
+  # enqueued task reservation. Returns whether or not the task was successfully enqueued.
+  bool enqueueTaskReservations(1: types.TEnqueueTaskReservationsRequest request);
+  
+  # Used by the state store.
   map<string, types.TResourceUsage> getLoad(1: string app, 2: string requestId);
-  bool launchTask(1: binary message, 2: types.TFullTaskId taskId,
-                  3: types.TUserGroupInfo user, 
-                  4: types.TResourceVector estimatedResources);
 }
 
 service SchedulerStateStoreService {

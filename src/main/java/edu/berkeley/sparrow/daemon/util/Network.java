@@ -1,13 +1,19 @@
 package edu.berkeley.sparrow.daemon.util;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 import org.apache.commons.configuration.Configuration;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
+import edu.berkeley.sparrow.thrift.THostPort;
 
-public class Hostname {
+public class Network {
+  
+  public static THostPort socketAddressToThrift(InetSocketAddress address) {
+    return new THostPort(address.getAddress().getHostAddress(), address.getPort());
+  }
 
   /** Return the hostname of this machine, based on configured value, or system
    * Interrogation. */

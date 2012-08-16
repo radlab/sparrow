@@ -1,48 +1,46 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Map;
 
-import org.apache.commons.configuration.Configuration;
-
-import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitor;
-import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
-import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
-import edu.berkeley.sparrow.thrift.TSchedulingPref;
-import edu.berkeley.sparrow.thrift.TTaskSpec;
+import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
+import edu.berkeley.sparrow.thrift.THostPort;
+import edu.berkeley.sparrow.thrift.TSchedulingRequest;
+import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 
 /***
- * Represents a class which is capable of determining task placement on 
- * backends.
+ * A TaskPlacer is responsible for assigning the tasks in a job to backends. Assigning tasks to
+ * backends occurs in two phases:
+ *   (1) Task reservations are enqueued on backends. Typically more task reservations are enqueued
+ *       than there are tasks that need to run (the ratio of task reservations to tasks is set
+ *       using {@link SparrowConf.SAMPLE_RATIO} and {@link SparrowConf.SAMPLE_RATIO_CONSTRAINED}).
+ *   (2) When backends are ready to run a task, they reply to the scheduler with a GetTask()
+ *       RPC. The scheduler passes this call on to the task placer; if there are tasks remaining
+ *       that can be run on that machine, the TaskPlacer responds with a specification for the
+ *       task.
+ * A TaskPlacer is responsible for determining where to enqueue task reservations, and how to
+ * assign tasks to backends once a backend signals that it's ready to execute a task. TaskPlacers
+ * are created per-job and persist state across these two phases.
  */
 public interface TaskPlacer {
-  public class TaskPlacementResponse {
-    private TTaskSpec taskSpec; // Original request specification 
-    private InetSocketAddress nodeAddr;
-    
-    public TaskPlacementResponse(TTaskSpec taskSpec, InetSocketAddress nodeAddr) {
-      this.taskSpec = taskSpec;
-      this.nodeAddr = nodeAddr;
-    }
-    
-    public TTaskSpec getTaskSpec() { return this.taskSpec; }
-    public InetSocketAddress getNodeAddr() { return this.nodeAddr; }
-  }
-  
-  /** Initialize this TaskPlacer. */
-  void initialize(Configuration conf, ThriftClientPool<AsyncClient> clientPool);
+
+  /**
+   * Returns a mapping of node monitor socket addresses to {@link TEnqueueTaskReservationRequest}s
+   * that should be send to those node monitors. The caller is responsible for ensuring that
+   * {@link schedulingRequest} is properly filled out.
+   */
+  public Map<InetSocketAddress, TEnqueueTaskReservationsRequest>
+      getEnqueueTaskReservationsRequests(
+          TSchedulingRequest schedulingRequest, String requestId,
+          Collection<InetSocketAddress> nodes, THostPort schedulerAddress);
   
   /**
-   * Given a list of {@link NodeMonitor} network addresses and a list of
-   * task placement preferences, return a list of task placement choices.
-   * @throws IOException 
+   * Returns a {@link TTaskLaunchSpec} for a task that should be launched from the give node
+   * monitor.
    */
-  Collection<TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
-      TSchedulingPref schedulingPref)
-          throws IOException;
-  // TODO: For performance reasons it might make sense to just have these arguments as 
-  //       List rather than Collection since they need to be returned as a list eventually.
-
+  public TTaskLaunchSpec assignTask(THostPort nodeMonitorAddress);
+  
+  /** Returns true if all node monitors where task reservations were enqueued have replied. */
+  public boolean allResponsesReceived();
 }

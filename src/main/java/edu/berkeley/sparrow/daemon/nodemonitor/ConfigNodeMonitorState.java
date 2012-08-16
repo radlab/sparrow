@@ -32,8 +32,13 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
       LOG.warn("Requested to register backend for app " + appId +
           " but was expecting app " + staticAppId);
     } else if (!nodeMonitors.contains(nodeMonitor)) {
+      StringBuilder errorMessage = new StringBuilder();
+      for (InetSocketAddress nodeMonitorAddress : nodeMonitors) {
+        errorMessage.append(nodeMonitorAddress.toString());
+      }
       throw new RuntimeException("Address " + nodeMonitor.toString() + 
-          " not found among statically configured addreses for app " + appId);
+          " not found among statically configured addreses for app " + appId + " (statically " +
+          "configured addresses include: " + errorMessage.toString());
     }
     
     return true;

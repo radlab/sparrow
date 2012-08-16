@@ -14,7 +14,7 @@ import org.apache.thrift.TException;
 import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.util.Hostname;
+import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TClients;
@@ -50,7 +50,7 @@ public class StateStoreSchedulerState implements SchedulerState,
         DEFAULT_SCHEDULER_STATE_THRIFT_PORT);
     /* TODO: It's not clear whether this will always give us the right hostname.
      *       We might want to add a configuration option to set the hostname to use.*/ 
-    String hostname = Hostname.getHostName(conf);
+    String hostname = Network.getHostName(conf);
     try {
       client.registerScheduler(hostname + ":" + port);
     } catch (TException e) {

@@ -267,7 +267,7 @@ public class StateStore implements StateStoreService.Iface {
       throws IOException {
     if (!this.internalClients.containsKey(addr)) {
       TNonblockingTransport nbTr = new TNonblockingSocket(
-        addr.getHostName(), addr.getPort());
+        addr.getAddress().getHostAddress(), addr.getPort());
       TProtocolFactory factory = new TBinaryProtocol.Factory();
       InternalService.AsyncClient client = new InternalService.AsyncClient(
         factory, internalManager, nbTr);
@@ -284,7 +284,7 @@ public class StateStore implements StateStoreService.Iface {
       InetSocketAddress addr) throws IOException {
     if (!this.schedulerClients.containsKey(addr)) {
       TNonblockingTransport nbTr = new TNonblockingSocket(
-        addr.getHostName(), addr.getPort());
+        addr.getAddress().getHostAddress(), addr.getPort());
       TProtocolFactory factory = new TBinaryProtocol.Factory();
       SchedulerStateStoreService.AsyncClient client = 
           new SchedulerStateStoreService.AsyncClient(factory, schedulerManager, nbTr);

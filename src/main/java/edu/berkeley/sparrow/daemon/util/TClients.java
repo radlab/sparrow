@@ -46,7 +46,7 @@ public class TClients {
   
   public static SchedulerService.Client createBlockingSchedulerClient(
       InetSocketAddress socket) throws IOException {
-    return createBlockingSchedulerClient(socket.getHostName(), socket.getPort());
+    return createBlockingSchedulerClient(socket.getAddress().getHostAddress(), socket.getPort());
   }
   
   public static SchedulerService.Client createBlockingSchedulerClient(
@@ -101,7 +101,7 @@ public class TClients {
   
   public static FrontendService.Client createBlockingFrontendClient(
       InetSocketAddress socket) throws IOException {
-    return createBlockingFrontendClient(socket.getHostName(), socket.getPort());
+    return createBlockingFrontendClient(socket.getAddress().getHostAddress(), socket.getPort());
   }
   
   public static FrontendService.Client createBlockingFrontendClient(

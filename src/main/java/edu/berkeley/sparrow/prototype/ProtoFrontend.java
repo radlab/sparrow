@@ -24,7 +24,6 @@ import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
-import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -60,7 +59,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       user.setUser("*");
       user.setGroup("*");
       try {
-        client.submitJob("testApp", request, user, new TSchedulingPref());
+        client.submitJob("testApp", request, user);
         LOG.debug("Submitted job: " + request);
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);
@@ -82,7 +81,7 @@ public class ProtoFrontend implements FrontendService.Iface {
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
     for (int taskId = 0; taskId < numTasks; taskId++) {
       TTaskSpec spec = new TTaskSpec();
-      spec.setTaskID(Integer.toString((new Random().nextInt())));
+      spec.setTaskId(Integer.toString((new Random().nextInt())));
       spec.setMessage(message.array());
       spec.setEstimatedResources(resources);
       out.add(spec);
@@ -90,6 +89,9 @@ public class ProtoFrontend implements FrontendService.Iface {
     return out;
   }
 
+  /**
+   * Generates exponentially distributed interarrival delays.
+   */
   public double generateInterarrivalDelay(Random r, double lambda) {
     double u = r.nextDouble();
     return -Math.log(u)/lambda;
@@ -121,6 +123,7 @@ public class ProtoFrontend implements FrontendService.Iface {
 
       Random r = new Random();
       double lambda = conf.getDouble("job_arrival_rate_s", DEFAULT_JOB_ARRIVAL_RATE_S);
+      LOG.debug("Using arrival rate of  " + lambda + " tasks per second.");
       int tasksPerJob = conf.getInt("tasks_per_job", DEFAULT_TASKS_PER_JOB);
       int benchmarkIterations = conf.getInt("benchmark.iterations",
           DEFAULT_BENCHMARK_ITERATIONS);

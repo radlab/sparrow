@@ -1,15 +1,15 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -17,21 +17,23 @@ import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
-import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.FrontendService;
-import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient;
 import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.InternalService;
-import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
+import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.enqueueTaskReservations_call;
+import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
+import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
-import edu.berkeley.sparrow.thrift.TTaskPlacement;
+import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /**
@@ -43,7 +45,8 @@ public class Scheduler {
 
   /** Used to uniquely identify requests arriving at this scheduler. */
   private int counter = 0;
-  private InetSocketAddress address;
+
+  private THostPort address;
 
   /** Socket addresses for each frontend. */
   HashMap<String, InetSocketAddress> frontendSockets =
@@ -60,77 +63,42 @@ public class Scheduler {
           new ThriftClientPool.FrontendServiceMakerFactory());
 
   /** Information about cluster workload due to other schedulers. */
-  SchedulerState state;
-
-  /** Logical task assignment. */
-  // TODO: NOTE - this is a hack - we need to modify constrainedPlacer to have more
-  // advanced features like waiting for some probes and configurable probe ratio.
-  TaskPlacer constrainedPlacer;
-  TaskPlacer unconstrainedPlacer;
-
+  private SchedulerState state;
+  
+  /** Probe ratios to use if the probe ratio is not explicitly set in the request. */
+  private double defaultProbeRatioUnconstrained;
+  private double defaultProbeRatioConstrained;
+  
+  /**
+   * For each request, the task placer that should be used to place the request's tasks. Indexed
+   * by the request ID.
+   */
+  private Map<String, TaskPlacer> requestTaskPlacers;
+  
   private Configuration conf;
 
-  /**
-   * A callback handler for asynchronous task launches.
-   *
-   * We use the thrift event-based interface for launching tasks. In parallel, we launch
-   * several tasks, then we return when all have finished launching.
-   */
-  private class TaskLaunchCallback implements AsyncMethodCallback<launchTask_call> {
-    private CountDownLatch latch;
-    private InternalService.AsyncClient client;
-    private InetSocketAddress socket;
-
-    // Note that the {@code client} must come from the Scheduler's {@code clientPool}.
-    public TaskLaunchCallback(CountDownLatch latch, InternalService.AsyncClient client,
-        InetSocketAddress socket) {
-      this.latch = latch;
-      this.client = client;
-      this.socket = socket;
-    }
-
-    @Override
-    public void onComplete(launchTask_call response) {
-      try {
-        nodeMonitorClientPool.returnClient(socket, client);
-      } catch (Exception e) {
-        LOG.error(e);
-      }
-      latch.countDown();
-    }
-
-    @Override
-    public void onError(Exception exception) {
-      LOG.error("Error launching task: " + exception);
-      // TODO We need to have a story here, regarding the failure model when the
-      //      task launch doesn't succeed.
-      latch.countDown();
-    }
-  }
-
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
-    address = socket;
+    address = Network.socketAddressToThrift(socket);
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     this.conf = conf;
     if (mode.equals("standalone")) {
       state = new StandaloneSchedulerState();
-      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
-      unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
-      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
-      unconstrainedPlacer = new ProbingTaskPlacer();
     } else if (mode.equals("production")) {
       state = new StateStoreSchedulerState();
-      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
-      unconstrainedPlacer = new ProbingTaskPlacer();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
 
     state.initialize(conf);
-    constrainedPlacer.initialize(conf, nodeMonitorClientPool);
-    unconstrainedPlacer.initialize(conf, nodeMonitorClientPool);
+
+    defaultProbeRatioUnconstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO,
+                                                    SparrowConf.DEFAULT_SAMPLE_RATIO);
+    defaultProbeRatioConstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO_CONSTRAINED,
+                                                  SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
+    
+    requestTaskPlacers = Maps.newConcurrentMap();
   }
 
   public boolean registerFrontend(String appId, String addr) {
@@ -144,106 +112,40 @@ public class Scheduler {
     return state.watchApplication(appId);
   }
 
-  public boolean submitJob(TSchedulingRequest req) throws TException {
-    LOG.debug(Logging.functionCall(req));
+  /**
+   * Callback for enqueueTaskReservations() that does nothing (needed because Thrift can't handle
+   * null callbacks).
+   */
+  private class EnqueueTaskReservationsCallback
+      implements AsyncMethodCallback<enqueueTaskReservations_call> {
+    public void onComplete(enqueueTaskReservations_call response) {
+      return;
+    }
+
+    public void onError(Exception exception) {
+      // Do not return error client to pool
+      LOG.error(exception);
+    }
+  }
+
+  public void submitJob(TSchedulingRequest request) throws TException {
+    LOG.debug(Logging.functionCall(request));
     long start = System.currentTimeMillis();
 
     String requestId = getRequestId();
+    
     // Logging the address here is somewhat redundant, since all of the
     // messages in this particular log file come from the same address.
     // However, it simplifies the process of aggregating the logs, and will
     // also be useful when we support multiple daemons running on a single
     // machine.
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
-                                            req.getTasks().size(),
-                                            address.getAddress().getHostAddress()));
-    Collection<TaskPlacementResponse> placement = null;
-    try {
-      placement = getJobPlacementResp(req, requestId);
-    } catch (IOException e) {
-      LOG.error(e);
-      return false;
-    }
-    long probeFinish = System.currentTimeMillis();
-
-    // Launch tasks.
-    CountDownLatch latch = new CountDownLatch(placement.size());
-    for (TaskPlacementResponse response : placement) {
-      LOG.debug("Attempting to launch task " + response.getTaskSpec().getTaskID()
-          + " on " + response.getNodeAddr());
-
-      InternalService.AsyncClient client;
-      try {
-        long t0 = System.currentTimeMillis();
-        client = nodeMonitorClientPool.borrowClient(response.getNodeAddr());
-        long t1 = System.currentTimeMillis();
-        if (t1 - t0 > 100) {
-          LOG.error("Took more than 100ms to create client for: " +
-            response.getNodeAddr());
-        }
-      } catch (Exception e) {
-        LOG.error(e);
-        return false;
-      }
-      String taskId = response.getTaskSpec().taskID;
-
-      AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
-      TFullTaskId id = new TFullTaskId();
-      id.appId = req.getApp();
-      id.frontendSocket = address.getHostName() + ":" + address.getPort();
-      id.requestId = requestId;
-      id.taskId = taskId;
-      client.launchTask(response.getTaskSpec().message, id,
-          req.getUser(), response.getTaskSpec().getEstimatedResources(),
-          new TaskLaunchCallback(latch, client, response.getNodeAddr()));
-    }
-    // NOTE: Currently we just return rather than waiting for all tasks to launch
-    /*
-    try {
-      LOG.debug("Waiting for " + placement.size() + " tasks to finish launching");
-      latch.await();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-    */
-    long end = System.currentTimeMillis();
-    LOG.debug("All tasks launched, returning. Total time: " + (end - start) +
-        "Probe time: " + (probeFinish - start));
-    return true;
-  }
-
-  public Collection<TTaskPlacement> getJobPlacement(TSchedulingRequest req)
-      throws IOException {
-    LOG.debug(Logging.functionCall(req));
-    // Get placement
-    Collection<TaskPlacementResponse> placements = getJobPlacementResp(req,
-                                                                       getRequestId());
-
-    // Massage into correct Thrift output type
-    Collection<TTaskPlacement> out = new HashSet<TTaskPlacement>(placements.size());
-    for (TaskPlacementResponse placement : placements) {
-      TTaskPlacement tPlacement = new TTaskPlacement();
-      tPlacement.node = placement.getNodeAddr().toString();
-      tPlacement.taskID = placement.getTaskSpec().getTaskID();
-      out.add(tPlacement);
-    }
-    LOG.debug("Returning task placement: " + out);
-    return out;
-  }
-
-  /**
-   * Internal method called by both submitJob() and getJobPlacement().
-   */
-  private Collection<TaskPlacementResponse> getJobPlacementResp(TSchedulingRequest req,
-      String requestId) throws IOException {
-    LOG.debug(Logging.functionCall(req));
-    String app = req.getApp();
-    List<TTaskSpec> tasks = req.getTasks();
+                                            request.getTasks().size(),
+                                            address.getHost(), address.getPort()));
+    
+    String app = request.getApp();
+    List<TTaskSpec> tasks = request.getTasks();
     Set<InetSocketAddress> backends = state.getBackends(app).keySet();
-    List<InetSocketAddress> backendList = new ArrayList<InetSocketAddress>(backends.size());
-    for (InetSocketAddress backend : backends) {
-      backendList.add(backend);
-    }
     boolean constrained = false;
     for (TTaskSpec task : tasks) {
       constrained = constrained || (
@@ -251,45 +153,93 @@ public class Scheduler {
           task.preference.nodes != null &&
           !task.preference.nodes.isEmpty());
     }
-
-    /* This is a hack to force Spark to cache data on multiple machines. We
-     * use a probe ratio of three to signal that the scheduler should perform
-     * this hack rather than trying to do a "good" job scheduling.
-     *
-     * This makes several assumptions, including the fact that after all preferences
-     * are excluded, there are still nodes left in the cluster. This works only under
-     * a very limited set of circumstances that correspond to our large scale tests.*/
-    /*
-    if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
-      if (tasks.get(0).preference.nodes != null &&
-          (tasks.get(0).preference.nodes.size() == 1 ||
-          tasks.get(0).preference.nodes.size() == 2)) {
-
-        // Explicitly avoid nodes with preferences, because those are nodes where
-        // the data is already cached, and we're trying to force the data to be
-        // cached on other nodes.
-        List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
-        List<InetSocketAddress> toRemove = Lists.newArrayList();
-        for (TTaskSpec task : tasks) {
-          for (String node : task.preference.nodes) {
-           InetAddress addr = InetAddress.getByName(node);
-           for (InetSocketAddress backend : subBackends) {
-             if (backend.getAddress().equals(addr)) { toRemove.add(backend); }
-           }
+    
+    TaskPlacer taskPlacer;
+    if (constrained) {
+      if (request.isSetProbeRatio()) {
+        taskPlacer = new ConstrainedTaskPlacer(request.getProbeRatio());
+      } else {
+        taskPlacer = new ConstrainedTaskPlacer(defaultProbeRatioConstrained);
+      }
+    } else {
+      if (request.isSetProbeRatio()) {
+        taskPlacer = new UnconstrainedTaskPlacer(request.getProbeRatio());
+      } else {
+        taskPlacer = new UnconstrainedTaskPlacer(defaultProbeRatioUnconstrained);
+      }
+    }
+    requestTaskPlacers.put(requestId, taskPlacer);
+    
+    Map<InetSocketAddress, TEnqueueTaskReservationsRequest> enqueueTaskReservationsRequests;
+    
+    if (request.isSetProbeRatio() && request.getProbeRatio() == 3 &&
+        tasks.get(0).preference.nodes != null &&
+        (tasks.get(0).preference.nodes.size() == 1 || tasks.get(0).preference.nodes.size() == 2)) {
+      // This is a hack to force Spark to cache data on multiple machines. If a Spark job runs
+      // on a machine where the input data is not already cached in memory, Spark will
+      // automatically caches the data on those machines. So, we run a few dummy jobs at the
+      // beginning of each experiment to force the data for each job to be cached in three places. 
+      // To do this, we need to explicitly avoid the nodes where data is already cached.
+      List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
+      List<InetSocketAddress> toRemove = Lists.newArrayList();
+      for (TTaskSpec task : tasks) {
+        for (String node : task.preference.nodes) {
+          try {
+            InetAddress addr = InetAddress.getByName(node);
+            for (InetSocketAddress backend : subBackends) {
+              if (backend.getAddress().equals(addr)) {
+                toRemove.add(backend);
+                break;
+              }
+            }
+          } catch (UnknownHostException e) {
+            LOG.error(e);
           }
         }
-       subBackends.removeAll(toRemove);
-       return new RandomTaskPlacer().placeTasks(
-           app, requestId, subBackends, tasks, req.schedulingPref);
       }
-    }*/
-    if (constrained) {
-      return constrainedPlacer.placeTasks(
-          app, requestId, backendList, tasks, req.schedulingPref);
+     subBackends.removeAll(toRemove);
+     
+     enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
+        request, requestId, subBackends, address);
     } else {
-      return unconstrainedPlacer.placeTasks(
-          app, requestId, backendList, tasks, req.schedulingPref);
+      enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
+          request, requestId, backends, address);
     }
+    
+    // Request to enqueue a task at each of the selected nodes.
+    for (Entry<InetSocketAddress, TEnqueueTaskReservationsRequest> entry :
+         enqueueTaskReservationsRequests.entrySet())  {
+      try {
+        InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
+        LOG.debug("Launching enqueueTask on node: " + entry.getKey());
+        AUDIT_LOG.info(Logging.auditEventString("enqueueTask_launch", requestId,
+                                                entry.getKey().toString(), 1));
+        // Pass in null callback because the RPC doesn't return anything.
+        client.enqueueTaskReservations(entry.getValue(), new EnqueueTaskReservationsCallback());
+      } catch (Exception e) {
+        LOG.error(e);
+      }
+    }
+    
+    long end = System.currentTimeMillis();
+    LOG.debug("All tasks enqueued; returning. Total time: " + (end - start) + " milliseconds");
+  }
+  
+  public TTaskLaunchSpec getTask(String requestId, THostPort nodeMonitorAddress) {
+    if (!requestTaskPlacers.containsKey(requestId)) {
+      LOG.error("Received getTask() request for request " + requestId + " which had no more " +
+                "pending reservations");
+      return null;
+    }
+    TaskPlacer taskPlacer = requestTaskPlacers.get(requestId);
+    TTaskLaunchSpec taskLaunchSpec = taskPlacer.assignTask(nodeMonitorAddress);
+    if (taskPlacer.allResponsesReceived()) {
+      // Remove the entry in requestTaskPlacers once all tasks have been placed, so that
+      // requestTaskPlacers doesn't grow to be unbounded.
+      requestTaskPlacers.remove(requestId);
+    }
+    LOG.debug("returning task: " + taskLaunchSpec);
+    return taskLaunchSpec;
   }
 
   /**
@@ -305,14 +255,14 @@ public class Scheduler {
     /* The request id is a string that includes the IP address of this scheduler followed
      * by the counter.  We use a counter rather than a hash of the request because there
      * may be multiple requests to run an identical job. */
-    return String.format("%s_%d", Hostname.getIPAddress(conf), counter++);
+    return String.format("%s_%d", Network.getIPAddress(conf), counter++);
   }
 
   private class sendFrontendMessageCallback implements
       AsyncMethodCallback<frontendMessage_call> {
     private InetSocketAddress frontendSocket;
-    private AsyncClient client;
-    public sendFrontendMessageCallback(InetSocketAddress socket, AsyncClient client) {
+    private FrontendService.AsyncClient client;
+    public sendFrontendMessageCallback(InetSocketAddress socket, FrontendService.AsyncClient client) {
       frontendSocket = socket;
       this.client = client;
     }
@@ -336,8 +286,8 @@ public class Scheduler {
       LOG.error("Requested message sent to unregistered app: " + app);
     }
     try {
-      AsyncClient client = frontendClientPool.borrowClient(frontend);
-      client.frontendMessage(taskId, status, message,
+      FrontendService.AsyncClient client = frontendClientPool.borrowClient(frontend);
+      client.frontendMessage(taskId, status, message, 
           new sendFrontendMessageCallback(frontend, client));
     } catch (IOException e) {
       LOG.error("Error launching message on frontend: " + app, e);

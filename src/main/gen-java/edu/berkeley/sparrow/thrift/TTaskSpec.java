@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._Fields>, java.io.Serializable, Cloneable {
   private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TTaskSpec");
 
-  private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskID", org.apache.thrift.protocol.TType.STRING, (short)1);
+  private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField PREFERENCE_FIELD_DESC = new org.apache.thrift.protocol.TField("preference", org.apache.thrift.protocol.TType.STRUCT, (short)2);
   private static final org.apache.thrift.protocol.TField ESTIMATED_RESOURCES_FIELD_DESC = new org.apache.thrift.protocol.TField("estimatedResources", org.apache.thrift.protocol.TType.STRUCT, (short)3);
   private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)4);
@@ -41,14 +41,14 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
     schemes.put(TupleScheme.class, new TTaskSpecTupleSchemeFactory());
   }
 
-  public String taskID; // required
+  public String taskId; // required
   public TPlacementPreference preference; // required
   public TResourceVector estimatedResources; // required
-  public ByteBuffer message; // optional
+  public ByteBuffer message; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    TASK_ID((short)1, "taskID"),
+    TASK_ID((short)1, "taskId"),
     PREFERENCE((short)2, "preference"),
     ESTIMATED_RESOURCES((short)3, "estimatedResources"),
     MESSAGE((short)4, "message");
@@ -114,17 +114,16 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
   }
 
   // isset id assignments
-  private _Fields optionals[] = {_Fields.MESSAGE};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskID", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.PREFERENCE, new org.apache.thrift.meta_data.FieldMetaData("preference", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TPlacementPreference.class)));
     tmpMap.put(_Fields.ESTIMATED_RESOURCES, new org.apache.thrift.meta_data.FieldMetaData("estimatedResources", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TResourceVector.class)));
-    tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TTaskSpec.class, metaDataMap);
@@ -134,22 +133,24 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
   }
 
   public TTaskSpec(
-    String taskID,
+    String taskId,
     TPlacementPreference preference,
-    TResourceVector estimatedResources)
+    TResourceVector estimatedResources,
+    ByteBuffer message)
   {
     this();
-    this.taskID = taskID;
+    this.taskId = taskId;
     this.preference = preference;
     this.estimatedResources = estimatedResources;
+    this.message = message;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public TTaskSpec(TTaskSpec other) {
-    if (other.isSetTaskID()) {
-      this.taskID = other.taskID;
+    if (other.isSetTaskId()) {
+      this.taskId = other.taskId;
     }
     if (other.isSetPreference()) {
       this.preference = new TPlacementPreference(other.preference);
@@ -168,33 +169,33 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
   }
 
   public void clear() {
-    this.taskID = null;
+    this.taskId = null;
     this.preference = null;
     this.estimatedResources = null;
     this.message = null;
   }
 
-  public String getTaskID() {
-    return this.taskID;
+  public String getTaskId() {
+    return this.taskId;
   }
 
-  public TTaskSpec setTaskID(String taskID) {
-    this.taskID = taskID;
+  public TTaskSpec setTaskId(String taskId) {
+    this.taskId = taskId;
     return this;
   }
 
-  public void unsetTaskID() {
-    this.taskID = null;
+  public void unsetTaskId() {
+    this.taskId = null;
   }
 
-  /** Returns true if field taskID is set (has been assigned a value) and false otherwise */
-  public boolean isSetTaskID() {
-    return this.taskID != null;
+  /** Returns true if field taskId is set (has been assigned a value) and false otherwise */
+  public boolean isSetTaskId() {
+    return this.taskId != null;
   }
 
-  public void setTaskIDIsSet(boolean value) {
+  public void setTaskIdIsSet(boolean value) {
     if (!value) {
-      this.taskID = null;
+      this.taskId = null;
     }
   }
 
@@ -284,9 +285,9 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
     switch (field) {
     case TASK_ID:
       if (value == null) {
-        unsetTaskID();
+        unsetTaskId();
       } else {
-        setTaskID((String)value);
+        setTaskId((String)value);
       }
       break;
 
@@ -320,7 +321,7 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
   public Object getFieldValue(_Fields field) {
     switch (field) {
     case TASK_ID:
-      return getTaskID();
+      return getTaskId();
 
     case PREFERENCE:
       return getPreference();
@@ -343,7 +344,7 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
 
     switch (field) {
     case TASK_ID:
-      return isSetTaskID();
+      return isSetTaskId();
     case PREFERENCE:
       return isSetPreference();
     case ESTIMATED_RESOURCES:
@@ -367,12 +368,12 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
     if (that == null)
       return false;
 
-    boolean this_present_taskID = true && this.isSetTaskID();
-    boolean that_present_taskID = true && that.isSetTaskID();
-    if (this_present_taskID || that_present_taskID) {
-      if (!(this_present_taskID && that_present_taskID))
+    boolean this_present_taskId = true && this.isSetTaskId();
+    boolean that_present_taskId = true && that.isSetTaskId();
+    if (this_present_taskId || that_present_taskId) {
+      if (!(this_present_taskId && that_present_taskId))
         return false;
-      if (!this.taskID.equals(that.taskID))
+      if (!this.taskId.equals(that.taskId))
         return false;
     }
 
@@ -419,12 +420,12 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
     int lastComparison = 0;
     TTaskSpec typedOther = (TTaskSpec)other;
 
-    lastComparison = Boolean.valueOf(isSetTaskID()).compareTo(typedOther.isSetTaskID());
+    lastComparison = Boolean.valueOf(isSetTaskId()).compareTo(typedOther.isSetTaskId());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetTaskID()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskID, typedOther.taskID);
+    if (isSetTaskId()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskId, typedOther.taskId);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -479,11 +480,11 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
     StringBuilder sb = new StringBuilder("TTaskSpec(");
     boolean first = true;
 
-    sb.append("taskID:");
-    if (this.taskID == null) {
+    sb.append("taskId:");
+    if (this.taskId == null) {
       sb.append("null");
     } else {
-      sb.append(this.taskID);
+      sb.append(this.taskId);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -502,16 +503,14 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
       sb.append(this.estimatedResources);
     }
     first = false;
-    if (isSetMessage()) {
-      if (!first) sb.append(", ");
-      sb.append("message:");
-      if (this.message == null) {
-        sb.append("null");
-      } else {
-        org.apache.thrift.TBaseHelper.toString(this.message, sb);
-      }
-      first = false;
+    if (!first) sb.append(", ");
+    sb.append("message:");
+    if (this.message == null) {
+      sb.append("null");
+    } else {
+      org.apache.thrift.TBaseHelper.toString(this.message, sb);
     }
+    first = false;
     sb.append(")");
     return sb.toString();
   }
@@ -556,8 +555,8 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
         switch (schemeField.id) {
           case 1: // TASK_ID
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-              struct.taskID = iprot.readString();
-              struct.setTaskIDIsSet(true);
+              struct.taskId = iprot.readString();
+              struct.setTaskIdIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -603,9 +602,9 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.taskID != null) {
+      if (struct.taskId != null) {
         oprot.writeFieldBegin(TASK_ID_FIELD_DESC);
-        oprot.writeString(struct.taskID);
+        oprot.writeString(struct.taskId);
         oprot.writeFieldEnd();
       }
       if (struct.preference != null) {
@@ -619,11 +618,9 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
         oprot.writeFieldEnd();
       }
       if (struct.message != null) {
-        if (struct.isSetMessage()) {
-          oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
-          oprot.writeBinary(struct.message);
-          oprot.writeFieldEnd();
-        }
+        oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
+        oprot.writeBinary(struct.message);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -643,7 +640,7 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
     public void write(org.apache.thrift.protocol.TProtocol prot, TTaskSpec struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetTaskID()) {
+      if (struct.isSetTaskId()) {
         optionals.set(0);
       }
       if (struct.isSetPreference()) {
@@ -656,8 +653,8 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
         optionals.set(3);
       }
       oprot.writeBitSet(optionals, 4);
-      if (struct.isSetTaskID()) {
-        oprot.writeString(struct.taskID);
+      if (struct.isSetTaskId()) {
+        oprot.writeString(struct.taskId);
       }
       if (struct.isSetPreference()) {
         struct.preference.write(oprot);
@@ -675,8 +672,8 @@ public class TTaskSpec implements org.apache.thrift.TBase<TTaskSpec, TTaskSpec._
       TTupleProtocol iprot = (TTupleProtocol) prot;
       BitSet incoming = iprot.readBitSet(4);
       if (incoming.get(0)) {
-        struct.taskID = iprot.readString();
-        struct.setTaskIDIsSet(true);
+        struct.taskId = iprot.readString();
+        struct.setTaskIdIsSet(true);
       }
       if (incoming.get(1)) {
         struct.preference = new TPlacementPreference();

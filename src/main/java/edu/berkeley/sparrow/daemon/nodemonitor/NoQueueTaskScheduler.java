@@ -1,7 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 
@@ -15,9 +14,9 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 public class NoQueueTaskScheduler extends TaskScheduler {
 
   @Override
-  void handleSubmitTask(TaskDescription task, String appId) {
+  void handleSubmitTaskReservation(TaskReservation taskReservation) {
     // Make this task instantly runnable
-    makeTaskRunnable(task);
+    makeTaskRunnable(taskReservation);
   }
 
 
@@ -33,7 +32,7 @@ public class NoQueueTaskScheduler extends TaskScheduler {
 
 
   @Override
-  protected void handleTaskCompleted(TFullTaskId taskId) {
+  protected void handleTaskCompleted(String requestId) {
     // Do nothing
   }
 

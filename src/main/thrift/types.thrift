@@ -1,9 +1,18 @@
 namespace java edu.berkeley.sparrow.thrift
 
+exception IncompleteRequestException {
+  1: string message;
+}
+
+struct THostPort {
+  1: string host;
+  2: i32 port;
+}
+
 struct TPlacementPreference {
-  1: list<string> nodes;
-  2: list<string> racks;
-  3: i32 delayThreshold; // Threshold for delay scheduling
+  1: list<string> nodes; // List of preferred nodes, described by their hostname.
+  2: list<string> racks; // Not currently supported.
+  3: i32 delayThreshold; // Threshold for delay scheduling (not currently supported).
 }
 
 struct TResourceVector {
@@ -19,11 +28,12 @@ struct TResourceUsage {
 
 
 // A fully-specified Sparrow task has four identifiers
+// neeed?
 struct TFullTaskId {
   1: string taskId;    // Task ID as reported from the FE
   2: string requestId; // Scheduling request ID as assigned by the FE
   3: string appId;     // ID of the application
-  4: string frontendSocket; // Host:Port of the sparrow frontend
+  4: THostPort schedulerAddress; // Address of the scheduler that scheduled the task.
 }
 
 struct TUserGroupInfo {
@@ -32,30 +42,38 @@ struct TUserGroupInfo {
 }
 
 struct TTaskSpec {
-  1: string taskID;
+  1: string taskId;
   2: TPlacementPreference preference;
   3: TResourceVector estimatedResources;
-  4: optional binary message;
-}
-
-// This temporarily lets us specify the probe ratio for certain
-// types of requests. This is a hack.
-struct TSchedulingPref {
-  1: i32 probeRatio;
+  4: binary message;
 }
 
 struct TSchedulingRequest {
   1: string app;
   2: list<TTaskSpec> tasks;
   3: TUserGroupInfo user;
-  4: optional bool reserve;
-  5: optional TSchedulingPref schedulingPref; 
+  # Hack to allow us to specify the probe ratio for certain types of requests.
+  4: optional double probeRatio; 
 }
 
-struct TTaskPlacement {
-  1: string taskID;
-  2: string node;
-  3: optional binary message;
+struct TEnqueueTaskReservationsRequest {
+  1: string appId;
+  2: TUserGroupInfo user;
+  3: string requestId;
+  4: TResourceVector estimatedResources;
+  5: THostPort schedulerAddress;
+  6: i32 numTasks;
+}
+
+# Information needed to launch a task.  The application and user information are not needed
+# because they're included when the task is enqueued, so the node monitor already has them at
+# launch time.
+struct TTaskLaunchSpec {
+  # Task ID (originally assigned by the application)
+  1: string taskId;
+  
+  # Description of the task passed on to the application backend (opaque to Sparrow).
+  2: binary message;
 }
 
 struct LoadSpec {

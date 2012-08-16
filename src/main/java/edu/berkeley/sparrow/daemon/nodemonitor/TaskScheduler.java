@@ -1,9 +1,7 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -11,11 +9,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Sets;
-
-import edu.berkeley.sparrow.daemon.util.Hostname;
+import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -31,50 +28,52 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  * multiple threads.
  */
 public abstract class TaskScheduler {
+  protected class TaskReservation {
+    public String appId;
+    public TUserGroupInfo user;
+    public String requestId;
+    public TResourceVector estimatedResources;
+    public InetSocketAddress schedulerAddress;
+    public InetSocketAddress appBackendAddress;
+    
+    public TaskReservation (TEnqueueTaskReservationsRequest request,
+                            InetSocketAddress appBackendAddress) {
+      appId = request.getAppId();
+      user = request.getUser();
+      requestId = request.getRequestId();
+      estimatedResources = request.getEstimatedResources();
+      schedulerAddress = new InetSocketAddress(request.getSchedulerAddress().getHost(),
+                                               request.getSchedulerAddress().getPort());
+      this.appBackendAddress = appBackendAddress;
+    }
+  }
+
   private final static Logger LOG = Logger.getLogger(TaskScheduler.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(
       TaskScheduler.class);
   private String ipAddress;
-  class TaskDescription {
-    ByteBuffer message;
-    public TFullTaskId taskId;
-    public TResourceVector estimatedResources;
-    public TUserGroupInfo user;
-    public InetSocketAddress backendSocket;
-    
-    public TaskDescription(TFullTaskId taskId, ByteBuffer message, 
-        TResourceVector estimatedResources, TUserGroupInfo user, InetSocketAddress addr) {
-      this.message = message;
-      this.taskId = taskId;
-      this.estimatedResources = estimatedResources;
-      this.user = user;
-      this.backendSocket = addr;
-    }
-  }
   
   protected TResourceVector capacity;
   protected Configuration conf;
   protected TResourceVector inUse = TResources.clone(TResources.none());
-  private final BlockingQueue<TaskDescription> runnableTaskQueue = 
-      new LinkedBlockingQueue<TaskDescription>();
-  // Task ids of tasks that have been made runnable at some point
-  private final HashSet<TFullTaskId> runnableTaskIds = Sets.newHashSet();
-  private HashMap<TFullTaskId, TResourceVector> resourcesPerTask = new 
-      HashMap<TFullTaskId, TResourceVector>();
+  private final BlockingQueue<TaskReservation> runnableTaskQueue = 
+      new LinkedBlockingQueue<TaskReservation>();
+  private HashMap<String, TResourceVector> resourcesPerRequest = new
+      HashMap<String, TResourceVector>();
   
   /** Initialize the task scheduler, passing it the current available resources 
    *  on the machine. */
   void initialize(TResourceVector capacity, Configuration conf) {
     this.capacity = capacity;
     this.conf = conf;
-    this.ipAddress = Hostname.getIPAddress(conf);
+    this.ipAddress = Network.getIPAddress(conf);
   }
   
   /**
    * Get the next task available for launching. This will block until a task is available.
    */
-  TaskDescription getNextTask() {
-    TaskDescription task = null;
+  TaskReservation getNextTask() {
+    TaskReservation task = null;
     try {
       task = runnableTaskQueue.take();
     } catch (InterruptedException e) {
@@ -93,41 +92,52 @@ public abstract class TaskScheduler {
   
   synchronized void tasksFinished(List<TFullTaskId> finishedTasks) {
     for (TFullTaskId t : finishedTasks) {
-      taskCompleted(t);
+      taskCompleted(t.getRequestId());
     }
   }
-  
-  protected void makeTaskRunnable(TaskDescription task) {
-    runnableTaskIds.add(task.taskId);
+
+  /**
+   * Signals that a task associated with the given requestId has completed.
+   * 
+   * TODO: Currently, this may be called by TaskLauncherService to signal that a task was never
+   * launched. We may want to separate out the case where a task actually started and finished,
+   * and the case where a task was never launched (which occurs if calling getTask() on the
+   * scheduler that scheduled the task returns null, likely because all tasks for the request were
+   * already scheduled).
+   */
+  synchronized void taskCompleted(String requestId) {
     AUDIT_LOG.info(
-        Logging.auditEventString("nodemonitor_task_runnable", ipAddress, 
-            task.taskId.requestId, task.taskId.taskId));
+        Logging.auditEventString("nodemonitor_task_completed", requestId));
+    TResourceVector res = resourcesPerRequest.get(requestId);
+    if (res == null) {
+      LOG.error("Missing resources for request: " + requestId);
+      res = TResources.createResourceVector(0, 1);
+    }
+    resourcesPerRequest.remove(requestId);
+    freeResourceInUse(res);
+    handleTaskCompleted(requestId);
+  }
+  
+  
+  protected void makeTaskRunnable(TaskReservation taskReservation) {
+    AUDIT_LOG.info(
+        Logging.auditEventString("nodemonitor_task_runnable", taskReservation.requestId));
     try {
-      runnableTaskQueue.put(task);
+      runnableTaskQueue.put(taskReservation);
     } catch (InterruptedException e) {
       LOG.fatal(e);
     }
   }
-
-  protected void taskCompleted(TFullTaskId taskId) {
-    AUDIT_LOG.info(
-        Logging.auditEventString("nodemonitor_task_completed", taskId.requestId, 
-            taskId.taskId));
-    TResourceVector res = resourcesPerTask.get(taskId);
-    if (res == null) {
-      LOG.error("Missing resources for task :" + taskId);
-      res = TResources.createResourceVector(0, 1);
+   void submitTaskReservations(TEnqueueTaskReservationsRequest request,
+                               InetSocketAddress appBackendAddress) {
+    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_task_submitted", ipAddress.toString(),
+        request.getRequestId(), request.getNumTasks()));
+    resourcesPerRequest.put(request.getRequestId(), request.getEstimatedResources());
+    for (int i = 0; i < request.getNumTasks(); ++i) {
+      LOG.debug("Creating reservation " + i + " for request " + request.getRequestId());
+      TaskReservation reservation = new TaskReservation(request, appBackendAddress);
+      handleSubmitTaskReservation(reservation);
     }
-    resourcesPerTask.remove(taskId);
-    freeResourceInUse(res);
-    handleTaskCompleted(taskId);
-  }
-  
-   void submitTask(TaskDescription task, String appId) {
-    AUDIT_LOG.info(Logging.auditEventString("nodemonitor_task_submitted", ipAddress,
-        task.taskId.requestId, task.taskId.taskId));
-    resourcesPerTask.put(task.taskId, task.estimatedResources);
-    handleSubmitTask(task, appId);
   }
   
   protected synchronized void addResourceInUse(TResourceVector nowInUse) {
@@ -146,7 +156,7 @@ public abstract class TaskScheduler {
   protected TResourceVector getFreeResources() {
     TResourceVector free = TResources.subtract(capacity, inUse);
     TResourceVector reserved = TResources.none();
-    for (TaskDescription t: runnableTaskQueue) {
+    for (TaskReservation t: runnableTaskQueue) {
       reserved = TResources.add(reserved, t.estimatedResources);
     }
     return TResources.subtract(free, reserved);
@@ -157,12 +167,12 @@ public abstract class TaskScheduler {
   /**
    * Submit a task to the scheduler.
    */
-  abstract void handleSubmitTask(TaskDescription task, String appId);
+  abstract void handleSubmitTaskReservation(TaskReservation taskReservation);
   
   /**
    * Signal that a given task has completed.
    */
-  protected abstract void handleTaskCompleted(TFullTaskId taskId);
+  protected abstract void handleTaskCompleted(String requestId);
   
   /**
    * Returns the current resource usage. If the resource usage is equal to the

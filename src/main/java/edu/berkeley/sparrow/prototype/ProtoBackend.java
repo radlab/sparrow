@@ -3,7 +3,6 @@ package edu.berkeley.sparrow.prototype;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +18,7 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.collect.Lists;
 
@@ -205,6 +205,7 @@ public class ProtoBackend implements BackendService.Iface {
   private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
 
   public ProtoBackend() {
+    LOG.debug("Created");
     this.user = new TUserGroupInfo();
     user.setUser("*");
     user.setGroup("*");
@@ -213,6 +214,7 @@ public class ProtoBackend implements BackendService.Iface {
   @Override
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
+    LOG.info("Submitting task " + taskId.getTaskId());
     // We want to add accounting for task start here, even though the task is actually
     // queued. Note that this won't be propagated to the node monitor until another task
     // finishes.
@@ -243,7 +245,9 @@ public class ProtoBackend implements BackendService.Iface {
     // Logger configuration: log to the console
     BasicConfigurator.configure();
     LOG.setLevel(Level.DEBUG);
-
+    Logging.configureAuditLogging();
+    LOG.debug("debug logging on");
+    
     Configuration conf = new PropertiesConfiguration();
 
     if (options.has("c")) {
@@ -252,13 +256,6 @@ public class ProtoBackend implements BackendService.Iface {
         conf = new PropertiesConfiguration(configFile);
       } catch (ConfigurationException e) {}
     }
-
-    // Logger configuration: log to the console
-    BasicConfigurator.configure();
-    LOG.setLevel(Level.DEBUG);
-
-    Logging.configureAuditLogging();
-
     // Start backend server
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(new ProtoBackend());
@@ -269,6 +266,11 @@ public class ProtoBackend implements BackendService.Iface {
 
     // Register server
     client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
-    client.registerBackend(APP_ID, "localhost:" + listenPort);
+    
+    try {
+      client.registerBackend(APP_ID, "localhost:" + listenPort);
+    } catch (TTransportException e) {
+      LOG.debug("Error while registering backend: " + e.getMessage());
+    }
   }
 }

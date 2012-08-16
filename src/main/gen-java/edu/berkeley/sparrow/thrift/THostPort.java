@@ -27,22 +27,25 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref, TSchedulingPref._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TSchedulingPref");
+public class THostPort implements org.apache.thrift.TBase<THostPort, THostPort._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("THostPort");
 
-  private static final org.apache.thrift.protocol.TField PROBE_RATIO_FIELD_DESC = new org.apache.thrift.protocol.TField("probeRatio", org.apache.thrift.protocol.TType.I32, (short)1);
+  private static final org.apache.thrift.protocol.TField HOST_FIELD_DESC = new org.apache.thrift.protocol.TField("host", org.apache.thrift.protocol.TType.STRING, (short)1);
+  private static final org.apache.thrift.protocol.TField PORT_FIELD_DESC = new org.apache.thrift.protocol.TField("port", org.apache.thrift.protocol.TType.I32, (short)2);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new TSchedulingPrefStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new TSchedulingPrefTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new THostPortStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new THostPortTupleSchemeFactory());
   }
 
-  public int probeRatio; // required
+  public String host; // required
+  public int port; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    PROBE_RATIO((short)1, "probeRatio");
+    HOST((short)1, "host"),
+    PORT((short)2, "port");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -57,8 +60,10 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
      */
     public static _Fields findByThriftId(int fieldId) {
       switch(fieldId) {
-        case 1: // PROBE_RATIO
-          return PROBE_RATIO;
+        case 1: // HOST
+          return HOST;
+        case 2: // PORT
+          return PORT;
         default:
           return null;
       }
@@ -99,76 +104,116 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
   }
 
   // isset id assignments
-  private static final int __PROBERATIO_ISSET_ID = 0;
+  private static final int __PORT_ISSET_ID = 0;
   private BitSet __isset_bit_vector = new BitSet(1);
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.PROBE_RATIO, new org.apache.thrift.meta_data.FieldMetaData("probeRatio", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.HOST, new org.apache.thrift.meta_data.FieldMetaData("host", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.PORT, new org.apache.thrift.meta_data.FieldMetaData("port", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TSchedulingPref.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(THostPort.class, metaDataMap);
   }
 
-  public TSchedulingPref() {
+  public THostPort() {
   }
 
-  public TSchedulingPref(
-    int probeRatio)
+  public THostPort(
+    String host,
+    int port)
   {
     this();
-    this.probeRatio = probeRatio;
-    setProbeRatioIsSet(true);
+    this.host = host;
+    this.port = port;
+    setPortIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public TSchedulingPref(TSchedulingPref other) {
+  public THostPort(THostPort other) {
     __isset_bit_vector.clear();
     __isset_bit_vector.or(other.__isset_bit_vector);
-    this.probeRatio = other.probeRatio;
+    if (other.isSetHost()) {
+      this.host = other.host;
+    }
+    this.port = other.port;
   }
 
-  public TSchedulingPref deepCopy() {
-    return new TSchedulingPref(this);
+  public THostPort deepCopy() {
+    return new THostPort(this);
   }
 
   public void clear() {
-    setProbeRatioIsSet(false);
-    this.probeRatio = 0;
+    this.host = null;
+    setPortIsSet(false);
+    this.port = 0;
   }
 
-  public int getProbeRatio() {
-    return this.probeRatio;
+  public String getHost() {
+    return this.host;
   }
 
-  public TSchedulingPref setProbeRatio(int probeRatio) {
-    this.probeRatio = probeRatio;
-    setProbeRatioIsSet(true);
+  public THostPort setHost(String host) {
+    this.host = host;
     return this;
   }
 
-  public void unsetProbeRatio() {
-    __isset_bit_vector.clear(__PROBERATIO_ISSET_ID);
+  public void unsetHost() {
+    this.host = null;
   }
 
-  /** Returns true if field probeRatio is set (has been assigned a value) and false otherwise */
-  public boolean isSetProbeRatio() {
-    return __isset_bit_vector.get(__PROBERATIO_ISSET_ID);
+  /** Returns true if field host is set (has been assigned a value) and false otherwise */
+  public boolean isSetHost() {
+    return this.host != null;
   }
 
-  public void setProbeRatioIsSet(boolean value) {
-    __isset_bit_vector.set(__PROBERATIO_ISSET_ID, value);
+  public void setHostIsSet(boolean value) {
+    if (!value) {
+      this.host = null;
+    }
+  }
+
+  public int getPort() {
+    return this.port;
+  }
+
+  public THostPort setPort(int port) {
+    this.port = port;
+    setPortIsSet(true);
+    return this;
+  }
+
+  public void unsetPort() {
+    __isset_bit_vector.clear(__PORT_ISSET_ID);
+  }
+
+  /** Returns true if field port is set (has been assigned a value) and false otherwise */
+  public boolean isSetPort() {
+    return __isset_bit_vector.get(__PORT_ISSET_ID);
+  }
+
+  public void setPortIsSet(boolean value) {
+    __isset_bit_vector.set(__PORT_ISSET_ID, value);
   }
 
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
-    case PROBE_RATIO:
+    case HOST:
       if (value == null) {
-        unsetProbeRatio();
+        unsetHost();
       } else {
-        setProbeRatio((Integer)value);
+        setHost((String)value);
+      }
+      break;
+
+    case PORT:
+      if (value == null) {
+        unsetPort();
+      } else {
+        setPort((Integer)value);
       }
       break;
 
@@ -177,8 +222,11 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
 
   public Object getFieldValue(_Fields field) {
     switch (field) {
-    case PROBE_RATIO:
-      return Integer.valueOf(getProbeRatio());
+    case HOST:
+      return getHost();
+
+    case PORT:
+      return Integer.valueOf(getPort());
 
     }
     throw new IllegalStateException();
@@ -191,8 +239,10 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
     }
 
     switch (field) {
-    case PROBE_RATIO:
-      return isSetProbeRatio();
+    case HOST:
+      return isSetHost();
+    case PORT:
+      return isSetPort();
     }
     throw new IllegalStateException();
   }
@@ -201,21 +251,30 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof TSchedulingPref)
-      return this.equals((TSchedulingPref)that);
+    if (that instanceof THostPort)
+      return this.equals((THostPort)that);
     return false;
   }
 
-  public boolean equals(TSchedulingPref that) {
+  public boolean equals(THostPort that) {
     if (that == null)
       return false;
 
-    boolean this_present_probeRatio = true;
-    boolean that_present_probeRatio = true;
-    if (this_present_probeRatio || that_present_probeRatio) {
-      if (!(this_present_probeRatio && that_present_probeRatio))
+    boolean this_present_host = true && this.isSetHost();
+    boolean that_present_host = true && that.isSetHost();
+    if (this_present_host || that_present_host) {
+      if (!(this_present_host && that_present_host))
         return false;
-      if (this.probeRatio != that.probeRatio)
+      if (!this.host.equals(that.host))
+        return false;
+    }
+
+    boolean this_present_port = true;
+    boolean that_present_port = true;
+    if (this_present_port || that_present_port) {
+      if (!(this_present_port && that_present_port))
+        return false;
+      if (this.port != that.port)
         return false;
     }
 
@@ -227,20 +286,30 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
     return 0;
   }
 
-  public int compareTo(TSchedulingPref other) {
+  public int compareTo(THostPort other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    TSchedulingPref typedOther = (TSchedulingPref)other;
+    THostPort typedOther = (THostPort)other;
 
-    lastComparison = Boolean.valueOf(isSetProbeRatio()).compareTo(typedOther.isSetProbeRatio());
+    lastComparison = Boolean.valueOf(isSetHost()).compareTo(typedOther.isSetHost());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetProbeRatio()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.probeRatio, typedOther.probeRatio);
+    if (isSetHost()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.host, typedOther.host);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetPort()).compareTo(typedOther.isSetPort());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetPort()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.port, typedOther.port);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -262,11 +331,19 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("TSchedulingPref(");
+    StringBuilder sb = new StringBuilder("THostPort(");
     boolean first = true;
 
-    sb.append("probeRatio:");
-    sb.append(this.probeRatio);
+    sb.append("host:");
+    if (this.host == null) {
+      sb.append("null");
+    } else {
+      sb.append(this.host);
+    }
+    first = false;
+    if (!first) sb.append(", ");
+    sb.append("port:");
+    sb.append(this.port);
     first = false;
     sb.append(")");
     return sb.toString();
@@ -294,15 +371,15 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
     }
   }
 
-  private static class TSchedulingPrefStandardSchemeFactory implements SchemeFactory {
-    public TSchedulingPrefStandardScheme getScheme() {
-      return new TSchedulingPrefStandardScheme();
+  private static class THostPortStandardSchemeFactory implements SchemeFactory {
+    public THostPortStandardScheme getScheme() {
+      return new THostPortStandardScheme();
     }
   }
 
-  private static class TSchedulingPrefStandardScheme extends StandardScheme<TSchedulingPref> {
+  private static class THostPortStandardScheme extends StandardScheme<THostPort> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, TSchedulingPref struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, THostPort struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -312,10 +389,18 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
           break;
         }
         switch (schemeField.id) {
-          case 1: // PROBE_RATIO
+          case 1: // HOST
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+              struct.host = iprot.readString();
+              struct.setHostIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
+          case 2: // PORT
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
-              struct.probeRatio = iprot.readI32();
-              struct.setProbeRatioIsSet(true);
+              struct.port = iprot.readI32();
+              struct.setPortIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -331,12 +416,17 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, TSchedulingPref struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, THostPort struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      oprot.writeFieldBegin(PROBE_RATIO_FIELD_DESC);
-      oprot.writeI32(struct.probeRatio);
+      if (struct.host != null) {
+        oprot.writeFieldBegin(HOST_FIELD_DESC);
+        oprot.writeString(struct.host);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldBegin(PORT_FIELD_DESC);
+      oprot.writeI32(struct.port);
       oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -344,34 +434,44 @@ public class TSchedulingPref implements org.apache.thrift.TBase<TSchedulingPref,
 
   }
 
-  private static class TSchedulingPrefTupleSchemeFactory implements SchemeFactory {
-    public TSchedulingPrefTupleScheme getScheme() {
-      return new TSchedulingPrefTupleScheme();
+  private static class THostPortTupleSchemeFactory implements SchemeFactory {
+    public THostPortTupleScheme getScheme() {
+      return new THostPortTupleScheme();
     }
   }
 
-  private static class TSchedulingPrefTupleScheme extends TupleScheme<TSchedulingPref> {
+  private static class THostPortTupleScheme extends TupleScheme<THostPort> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, TSchedulingPref struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, THostPort struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetProbeRatio()) {
+      if (struct.isSetHost()) {
         optionals.set(0);
       }
-      oprot.writeBitSet(optionals, 1);
-      if (struct.isSetProbeRatio()) {
-        oprot.writeI32(struct.probeRatio);
+      if (struct.isSetPort()) {
+        optionals.set(1);
+      }
+      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetHost()) {
+        oprot.writeString(struct.host);
+      }
+      if (struct.isSetPort()) {
+        oprot.writeI32(struct.port);
       }
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, TSchedulingPref struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, THostPort struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(1);
+      BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
-        struct.probeRatio = iprot.readI32();
-        struct.setProbeRatioIsSet(true);
+        struct.host = iprot.readString();
+        struct.setHostIsSet(true);
+      }
+      if (incoming.get(1)) {
+        struct.port = iprot.readI32();
+        struct.setPortIsSet(true);
       }
     }
   }

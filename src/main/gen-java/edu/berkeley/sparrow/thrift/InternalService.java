@@ -31,17 +31,17 @@ public class InternalService {
 
   public interface Iface {
 
-    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getLoad(String app, String requestId) throws org.apache.thrift.TException;
+    public boolean enqueueTaskReservations(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request) throws org.apache.thrift.TException;
 
-    public boolean launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException;
+    public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getLoad(String app, String requestId) throws org.apache.thrift.TException;
 
   }
 
   public interface AsyncIface {
 
-    public void getLoad(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getLoad_call> resultHandler) throws org.apache.thrift.TException;
+    public void enqueueTaskReservations(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.enqueueTaskReservations_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.launchTask_call> resultHandler) throws org.apache.thrift.TException;
+    public void getLoad(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getLoad_call> resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -63,6 +63,29 @@ public class InternalService {
 
     public Client(org.apache.thrift.protocol.TProtocol iprot, org.apache.thrift.protocol.TProtocol oprot) {
       super(iprot, oprot);
+    }
+
+    public boolean enqueueTaskReservations(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request) throws org.apache.thrift.TException
+    {
+      send_enqueueTaskReservations(request);
+      return recv_enqueueTaskReservations();
+    }
+
+    public void send_enqueueTaskReservations(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request) throws org.apache.thrift.TException
+    {
+      enqueueTaskReservations_args args = new enqueueTaskReservations_args();
+      args.setRequest(request);
+      sendBase("enqueueTaskReservations", args);
+    }
+
+    public boolean recv_enqueueTaskReservations() throws org.apache.thrift.TException
+    {
+      enqueueTaskReservations_result result = new enqueueTaskReservations_result();
+      receiveBase(result, "enqueueTaskReservations");
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "enqueueTaskReservations failed: unknown result");
     }
 
     public Map<String,edu.berkeley.sparrow.thrift.TResourceUsage> getLoad(String app, String requestId) throws org.apache.thrift.TException
@@ -89,32 +112,6 @@ public class InternalService {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getLoad failed: unknown result");
     }
 
-    public boolean launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException
-    {
-      send_launchTask(message, taskId, user, estimatedResources);
-      return recv_launchTask();
-    }
-
-    public void send_launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException
-    {
-      launchTask_args args = new launchTask_args();
-      args.setMessage(message);
-      args.setTaskId(taskId);
-      args.setUser(user);
-      args.setEstimatedResources(estimatedResources);
-      sendBase("launchTask", args);
-    }
-
-    public boolean recv_launchTask() throws org.apache.thrift.TException
-    {
-      launchTask_result result = new launchTask_result();
-      receiveBase(result, "launchTask");
-      if (result.isSetSuccess()) {
-        return result.success;
-      }
-      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "launchTask failed: unknown result");
-    }
-
   }
   public static class AsyncClient extends org.apache.thrift.async.TAsyncClient implements AsyncIface {
     public static class Factory implements org.apache.thrift.async.TAsyncClientFactory<AsyncClient> {
@@ -131,6 +128,38 @@ public class InternalService {
 
     public AsyncClient(org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.async.TAsyncClientManager clientManager, org.apache.thrift.transport.TNonblockingTransport transport) {
       super(protocolFactory, clientManager, transport);
+    }
+
+    public void enqueueTaskReservations(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request, org.apache.thrift.async.AsyncMethodCallback<enqueueTaskReservations_call> resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      enqueueTaskReservations_call method_call = new enqueueTaskReservations_call(request, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class enqueueTaskReservations_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request;
+      public enqueueTaskReservations_call(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request, org.apache.thrift.async.AsyncMethodCallback<enqueueTaskReservations_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.request = request;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("enqueueTaskReservations", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        enqueueTaskReservations_args args = new enqueueTaskReservations_args();
+        args.setRequest(request);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public boolean getResult() throws org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        return (new Client(prot)).recv_enqueueTaskReservations();
+      }
     }
 
     public void getLoad(String app, String requestId, org.apache.thrift.async.AsyncMethodCallback<getLoad_call> resultHandler) throws org.apache.thrift.TException {
@@ -168,47 +197,6 @@ public class InternalService {
       }
     }
 
-    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler) throws org.apache.thrift.TException {
-      checkReady();
-      launchTask_call method_call = new launchTask_call(message, taskId, user, estimatedResources, resultHandler, this, ___protocolFactory, ___transport);
-      this.___currentMethod = method_call;
-      ___manager.call(method_call);
-    }
-
-    public static class launchTask_call extends org.apache.thrift.async.TAsyncMethodCall {
-      private ByteBuffer message;
-      private edu.berkeley.sparrow.thrift.TFullTaskId taskId;
-      private edu.berkeley.sparrow.thrift.TUserGroupInfo user;
-      private edu.berkeley.sparrow.thrift.TResourceVector estimatedResources;
-      public launchTask_call(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
-        super(client, protocolFactory, transport, resultHandler, false);
-        this.message = message;
-        this.taskId = taskId;
-        this.user = user;
-        this.estimatedResources = estimatedResources;
-      }
-
-      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
-        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("launchTask", org.apache.thrift.protocol.TMessageType.CALL, 0));
-        launchTask_args args = new launchTask_args();
-        args.setMessage(message);
-        args.setTaskId(taskId);
-        args.setUser(user);
-        args.setEstimatedResources(estimatedResources);
-        args.write(prot);
-        prot.writeMessageEnd();
-      }
-
-      public boolean getResult() throws org.apache.thrift.TException {
-        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
-          throw new IllegalStateException("Method call not finished!");
-        }
-        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
-        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
-        return (new Client(prot)).recv_launchTask();
-      }
-    }
-
   }
 
   public static class Processor<I extends Iface> extends org.apache.thrift.TBaseProcessor<I> implements org.apache.thrift.TProcessor {
@@ -222,9 +210,26 @@ public class InternalService {
     }
 
     private static <I extends Iface> Map<String,  org.apache.thrift.ProcessFunction<I, ? extends  org.apache.thrift.TBase>> getProcessMap(Map<String,  org.apache.thrift.ProcessFunction<I, ? extends  org.apache.thrift.TBase>> processMap) {
+      processMap.put("enqueueTaskReservations", new enqueueTaskReservations());
       processMap.put("getLoad", new getLoad());
-      processMap.put("launchTask", new launchTask());
       return processMap;
+    }
+
+    private static class enqueueTaskReservations<I extends Iface> extends org.apache.thrift.ProcessFunction<I, enqueueTaskReservations_args> {
+      public enqueueTaskReservations() {
+        super("enqueueTaskReservations");
+      }
+
+      protected enqueueTaskReservations_args getEmptyArgsInstance() {
+        return new enqueueTaskReservations_args();
+      }
+
+      protected enqueueTaskReservations_result getResult(I iface, enqueueTaskReservations_args args) throws org.apache.thrift.TException {
+        enqueueTaskReservations_result result = new enqueueTaskReservations_result();
+        result.success = iface.enqueueTaskReservations(args.request);
+        result.setSuccessIsSet(true);
+        return result;
+      }
     }
 
     private static class getLoad<I extends Iface> extends org.apache.thrift.ProcessFunction<I, getLoad_args> {
@@ -243,20 +248,706 @@ public class InternalService {
       }
     }
 
-    private static class launchTask<I extends Iface> extends org.apache.thrift.ProcessFunction<I, launchTask_args> {
-      public launchTask() {
-        super("launchTask");
+  }
+
+  public static class enqueueTaskReservations_args implements org.apache.thrift.TBase<enqueueTaskReservations_args, enqueueTaskReservations_args._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("enqueueTaskReservations_args");
+
+    private static final org.apache.thrift.protocol.TField REQUEST_FIELD_DESC = new org.apache.thrift.protocol.TField("request", org.apache.thrift.protocol.TType.STRUCT, (short)1);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new enqueueTaskReservations_argsStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new enqueueTaskReservations_argsTupleSchemeFactory());
+    }
+
+    public edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      REQUEST((short)1, "request");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
       }
 
-      protected launchTask_args getEmptyArgsInstance() {
-        return new launchTask_args();
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // REQUEST
+            return REQUEST;
+          default:
+            return null;
+        }
       }
 
-      protected launchTask_result getResult(I iface, launchTask_args args) throws org.apache.thrift.TException {
-        launchTask_result result = new launchTask_result();
-        result.success = iface.launchTask(args.message, args.taskId, args.user, args.estimatedResources);
-        result.setSuccessIsSet(true);
-        return result;
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.REQUEST, new org.apache.thrift.meta_data.FieldMetaData("request", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest.class)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(enqueueTaskReservations_args.class, metaDataMap);
+    }
+
+    public enqueueTaskReservations_args() {
+    }
+
+    public enqueueTaskReservations_args(
+      edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request)
+    {
+      this();
+      this.request = request;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public enqueueTaskReservations_args(enqueueTaskReservations_args other) {
+      if (other.isSetRequest()) {
+        this.request = new edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest(other.request);
+      }
+    }
+
+    public enqueueTaskReservations_args deepCopy() {
+      return new enqueueTaskReservations_args(this);
+    }
+
+    public void clear() {
+      this.request = null;
+    }
+
+    public edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest getRequest() {
+      return this.request;
+    }
+
+    public enqueueTaskReservations_args setRequest(edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest request) {
+      this.request = request;
+      return this;
+    }
+
+    public void unsetRequest() {
+      this.request = null;
+    }
+
+    /** Returns true if field request is set (has been assigned a value) and false otherwise */
+    public boolean isSetRequest() {
+      return this.request != null;
+    }
+
+    public void setRequestIsSet(boolean value) {
+      if (!value) {
+        this.request = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case REQUEST:
+        if (value == null) {
+          unsetRequest();
+        } else {
+          setRequest((edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case REQUEST:
+        return getRequest();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case REQUEST:
+        return isSetRequest();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof enqueueTaskReservations_args)
+        return this.equals((enqueueTaskReservations_args)that);
+      return false;
+    }
+
+    public boolean equals(enqueueTaskReservations_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_request = true && this.isSetRequest();
+      boolean that_present_request = true && that.isSetRequest();
+      if (this_present_request || that_present_request) {
+        if (!(this_present_request && that_present_request))
+          return false;
+        if (!this.request.equals(that.request))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(enqueueTaskReservations_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      enqueueTaskReservations_args typedOther = (enqueueTaskReservations_args)other;
+
+      lastComparison = Boolean.valueOf(isSetRequest()).compareTo(typedOther.isSetRequest());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetRequest()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.request, typedOther.request);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("enqueueTaskReservations_args(");
+      boolean first = true;
+
+      sb.append("request:");
+      if (this.request == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.request);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+    private static class enqueueTaskReservations_argsStandardSchemeFactory implements SchemeFactory {
+      public enqueueTaskReservations_argsStandardScheme getScheme() {
+        return new enqueueTaskReservations_argsStandardScheme();
+      }
+    }
+
+    private static class enqueueTaskReservations_argsStandardScheme extends StandardScheme<enqueueTaskReservations_args> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, enqueueTaskReservations_args struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // REQUEST
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.request = new edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest();
+                struct.request.read(iprot);
+                struct.setRequestIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, enqueueTaskReservations_args struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.request != null) {
+          oprot.writeFieldBegin(REQUEST_FIELD_DESC);
+          struct.request.write(oprot);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class enqueueTaskReservations_argsTupleSchemeFactory implements SchemeFactory {
+      public enqueueTaskReservations_argsTupleScheme getScheme() {
+        return new enqueueTaskReservations_argsTupleScheme();
+      }
+    }
+
+    private static class enqueueTaskReservations_argsTupleScheme extends TupleScheme<enqueueTaskReservations_args> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, enqueueTaskReservations_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetRequest()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetRequest()) {
+          struct.request.write(oprot);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, enqueueTaskReservations_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.request = new edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest();
+          struct.request.read(iprot);
+          struct.setRequestIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class enqueueTaskReservations_result implements org.apache.thrift.TBase<enqueueTaskReservations_result, enqueueTaskReservations_result._Fields>, java.io.Serializable, Cloneable   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("enqueueTaskReservations_result");
+
+    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.BOOL, (short)0);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new enqueueTaskReservations_resultStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new enqueueTaskReservations_resultTupleSchemeFactory());
+    }
+
+    public boolean success; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      SUCCESS((short)0, "success");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 0: // SUCCESS
+            return SUCCESS;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(enqueueTaskReservations_result.class, metaDataMap);
+    }
+
+    public enqueueTaskReservations_result() {
+    }
+
+    public enqueueTaskReservations_result(
+      boolean success)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public enqueueTaskReservations_result(enqueueTaskReservations_result other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      this.success = other.success;
+    }
+
+    public enqueueTaskReservations_result deepCopy() {
+      return new enqueueTaskReservations_result(this);
+    }
+
+    public void clear() {
+      setSuccessIsSet(false);
+      this.success = false;
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public enqueueTaskReservations_result setSuccess(boolean success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
+    }
+
+    /** Returns true if field success is set (has been assigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Boolean)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return Boolean.valueOf(isSuccess());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof enqueueTaskReservations_result)
+        return this.equals((enqueueTaskReservations_result)that);
+      return false;
+    }
+
+    public boolean equals(enqueueTaskReservations_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(enqueueTaskReservations_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      enqueueTaskReservations_result typedOther = (enqueueTaskReservations_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(typedOther.isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetSuccess()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.success, typedOther.success);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+      }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("enqueueTaskReservations_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te.getMessage());
+      }
+    }
+
+    private static class enqueueTaskReservations_resultStandardSchemeFactory implements SchemeFactory {
+      public enqueueTaskReservations_resultStandardScheme getScheme() {
+        return new enqueueTaskReservations_resultStandardScheme();
+      }
+    }
+
+    private static class enqueueTaskReservations_resultStandardScheme extends StandardScheme<enqueueTaskReservations_result> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, enqueueTaskReservations_result struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 0: // SUCCESS
+              if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+                struct.success = iprot.readBool();
+                struct.setSuccessIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, enqueueTaskReservations_result struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        oprot.writeBool(struct.success);
+        oprot.writeFieldEnd();
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class enqueueTaskReservations_resultTupleSchemeFactory implements SchemeFactory {
+      public enqueueTaskReservations_resultTupleScheme getScheme() {
+        return new enqueueTaskReservations_resultTupleScheme();
+      }
+    }
+
+    private static class enqueueTaskReservations_resultTupleScheme extends TupleScheme<enqueueTaskReservations_result> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, enqueueTaskReservations_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetSuccess()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetSuccess()) {
+          oprot.writeBool(struct.success);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, enqueueTaskReservations_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.success = iprot.readBool();
+          struct.setSuccessIsSet(true);
+        }
       }
     }
 
@@ -1026,16 +1717,16 @@ public class InternalService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map16 = iprot.readMapBegin();
-                  struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map16.size);
-                  for (int _i17 = 0; _i17 < _map16.size; ++_i17)
+                  org.apache.thrift.protocol.TMap _map8 = iprot.readMapBegin();
+                  struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map8.size);
+                  for (int _i9 = 0; _i9 < _map8.size; ++_i9)
                   {
-                    String _key18; // required
-                    edu.berkeley.sparrow.thrift.TResourceUsage _val19; // required
-                    _key18 = iprot.readString();
-                    _val19 = new edu.berkeley.sparrow.thrift.TResourceUsage();
-                    _val19.read(iprot);
-                    struct.success.put(_key18, _val19);
+                    String _key10; // required
+                    edu.berkeley.sparrow.thrift.TResourceUsage _val11; // optional
+                    _key10 = iprot.readString();
+                    _val11 = new edu.berkeley.sparrow.thrift.TResourceUsage();
+                    _val11.read(iprot);
+                    struct.success.put(_key10, _val11);
                   }
                   iprot.readMapEnd();
                 }
@@ -1063,10 +1754,10 @@ public class InternalService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter20 : struct.success.entrySet())
+            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter12 : struct.success.entrySet())
             {
-              oprot.writeString(_iter20.getKey());
-              _iter20.getValue().write(oprot);
+              oprot.writeString(_iter12.getKey());
+              _iter12.getValue().write(oprot);
             }
             oprot.writeMapEnd();
           }
@@ -1097,10 +1788,10 @@ public class InternalService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter21 : struct.success.entrySet())
+            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter13 : struct.success.entrySet())
             {
-              oprot.writeString(_iter21.getKey());
-              _iter21.getValue().write(oprot);
+              oprot.writeString(_iter13.getKey());
+              _iter13.getValue().write(oprot);
             }
           }
         }
@@ -1112,1036 +1803,18 @@ public class InternalService {
         BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TMap _map22 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map22.size);
-            for (int _i23 = 0; _i23 < _map22.size; ++_i23)
+            org.apache.thrift.protocol.TMap _map14 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map14.size);
+            for (int _i15 = 0; _i15 < _map14.size; ++_i15)
             {
-              String _key24; // required
-              edu.berkeley.sparrow.thrift.TResourceUsage _val25; // required
-              _key24 = iprot.readString();
-              _val25 = new edu.berkeley.sparrow.thrift.TResourceUsage();
-              _val25.read(iprot);
-              struct.success.put(_key24, _val25);
+              String _key16; // required
+              edu.berkeley.sparrow.thrift.TResourceUsage _val17; // optional
+              _key16 = iprot.readString();
+              _val17 = new edu.berkeley.sparrow.thrift.TResourceUsage();
+              _val17.read(iprot);
+              struct.success.put(_key16, _val17);
             }
           }
-          struct.setSuccessIsSet(true);
-        }
-      }
-    }
-
-  }
-
-  public static class launchTask_args implements org.apache.thrift.TBase<launchTask_args, launchTask_args._Fields>, java.io.Serializable, Cloneable   {
-    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("launchTask_args");
-
-    private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)1);
-    private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRUCT, (short)2);
-    private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)3);
-    private static final org.apache.thrift.protocol.TField ESTIMATED_RESOURCES_FIELD_DESC = new org.apache.thrift.protocol.TField("estimatedResources", org.apache.thrift.protocol.TType.STRUCT, (short)4);
-
-    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
-    static {
-      schemes.put(StandardScheme.class, new launchTask_argsStandardSchemeFactory());
-      schemes.put(TupleScheme.class, new launchTask_argsTupleSchemeFactory());
-    }
-
-    public ByteBuffer message; // required
-    public edu.berkeley.sparrow.thrift.TFullTaskId taskId; // required
-    public edu.berkeley.sparrow.thrift.TUserGroupInfo user; // required
-    public edu.berkeley.sparrow.thrift.TResourceVector estimatedResources; // required
-
-    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-      MESSAGE((short)1, "message"),
-      TASK_ID((short)2, "taskId"),
-      USER((short)3, "user"),
-      ESTIMATED_RESOURCES((short)4, "estimatedResources");
-
-      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
-
-      static {
-        for (_Fields field : EnumSet.allOf(_Fields.class)) {
-          byName.put(field.getFieldName(), field);
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, or null if its not found.
-       */
-      public static _Fields findByThriftId(int fieldId) {
-        switch(fieldId) {
-          case 1: // MESSAGE
-            return MESSAGE;
-          case 2: // TASK_ID
-            return TASK_ID;
-          case 3: // USER
-            return USER;
-          case 4: // ESTIMATED_RESOURCES
-            return ESTIMATED_RESOURCES;
-          default:
-            return null;
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, throwing an exception
-       * if it is not found.
-       */
-      public static _Fields findByThriftIdOrThrow(int fieldId) {
-        _Fields fields = findByThriftId(fieldId);
-        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
-        return fields;
-      }
-
-      /**
-       * Find the _Fields constant that matches name, or null if its not found.
-       */
-      public static _Fields findByName(String name) {
-        return byName.get(name);
-      }
-
-      private final short _thriftId;
-      private final String _fieldName;
-
-      _Fields(short thriftId, String fieldName) {
-        _thriftId = thriftId;
-        _fieldName = fieldName;
-      }
-
-      public short getThriftFieldId() {
-        return _thriftId;
-      }
-
-      public String getFieldName() {
-        return _fieldName;
-      }
-    }
-
-    // isset id assignments
-    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
-    static {
-      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
-      tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TFullTaskId.class)));
-      tmpMap.put(_Fields.USER, new org.apache.thrift.meta_data.FieldMetaData("user", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TUserGroupInfo.class)));
-      tmpMap.put(_Fields.ESTIMATED_RESOURCES, new org.apache.thrift.meta_data.FieldMetaData("estimatedResources", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class)));
-      metaDataMap = Collections.unmodifiableMap(tmpMap);
-      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(launchTask_args.class, metaDataMap);
-    }
-
-    public launchTask_args() {
-    }
-
-    public launchTask_args(
-      ByteBuffer message,
-      edu.berkeley.sparrow.thrift.TFullTaskId taskId,
-      edu.berkeley.sparrow.thrift.TUserGroupInfo user,
-      edu.berkeley.sparrow.thrift.TResourceVector estimatedResources)
-    {
-      this();
-      this.message = message;
-      this.taskId = taskId;
-      this.user = user;
-      this.estimatedResources = estimatedResources;
-    }
-
-    /**
-     * Performs a deep copy on <i>other</i>.
-     */
-    public launchTask_args(launchTask_args other) {
-      if (other.isSetMessage()) {
-        this.message = org.apache.thrift.TBaseHelper.copyBinary(other.message);
-;
-      }
-      if (other.isSetTaskId()) {
-        this.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId(other.taskId);
-      }
-      if (other.isSetUser()) {
-        this.user = new edu.berkeley.sparrow.thrift.TUserGroupInfo(other.user);
-      }
-      if (other.isSetEstimatedResources()) {
-        this.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector(other.estimatedResources);
-      }
-    }
-
-    public launchTask_args deepCopy() {
-      return new launchTask_args(this);
-    }
-
-    public void clear() {
-      this.message = null;
-      this.taskId = null;
-      this.user = null;
-      this.estimatedResources = null;
-    }
-
-    public byte[] getMessage() {
-      setMessage(org.apache.thrift.TBaseHelper.rightSize(message));
-      return message == null ? null : message.array();
-    }
-
-    public ByteBuffer bufferForMessage() {
-      return message;
-    }
-
-    public launchTask_args setMessage(byte[] message) {
-      setMessage(message == null ? (ByteBuffer)null : ByteBuffer.wrap(message));
-      return this;
-    }
-
-    public launchTask_args setMessage(ByteBuffer message) {
-      this.message = message;
-      return this;
-    }
-
-    public void unsetMessage() {
-      this.message = null;
-    }
-
-    /** Returns true if field message is set (has been assigned a value) and false otherwise */
-    public boolean isSetMessage() {
-      return this.message != null;
-    }
-
-    public void setMessageIsSet(boolean value) {
-      if (!value) {
-        this.message = null;
-      }
-    }
-
-    public edu.berkeley.sparrow.thrift.TFullTaskId getTaskId() {
-      return this.taskId;
-    }
-
-    public launchTask_args setTaskId(edu.berkeley.sparrow.thrift.TFullTaskId taskId) {
-      this.taskId = taskId;
-      return this;
-    }
-
-    public void unsetTaskId() {
-      this.taskId = null;
-    }
-
-    /** Returns true if field taskId is set (has been assigned a value) and false otherwise */
-    public boolean isSetTaskId() {
-      return this.taskId != null;
-    }
-
-    public void setTaskIdIsSet(boolean value) {
-      if (!value) {
-        this.taskId = null;
-      }
-    }
-
-    public edu.berkeley.sparrow.thrift.TUserGroupInfo getUser() {
-      return this.user;
-    }
-
-    public launchTask_args setUser(edu.berkeley.sparrow.thrift.TUserGroupInfo user) {
-      this.user = user;
-      return this;
-    }
-
-    public void unsetUser() {
-      this.user = null;
-    }
-
-    /** Returns true if field user is set (has been assigned a value) and false otherwise */
-    public boolean isSetUser() {
-      return this.user != null;
-    }
-
-    public void setUserIsSet(boolean value) {
-      if (!value) {
-        this.user = null;
-      }
-    }
-
-    public edu.berkeley.sparrow.thrift.TResourceVector getEstimatedResources() {
-      return this.estimatedResources;
-    }
-
-    public launchTask_args setEstimatedResources(edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) {
-      this.estimatedResources = estimatedResources;
-      return this;
-    }
-
-    public void unsetEstimatedResources() {
-      this.estimatedResources = null;
-    }
-
-    /** Returns true if field estimatedResources is set (has been assigned a value) and false otherwise */
-    public boolean isSetEstimatedResources() {
-      return this.estimatedResources != null;
-    }
-
-    public void setEstimatedResourcesIsSet(boolean value) {
-      if (!value) {
-        this.estimatedResources = null;
-      }
-    }
-
-    public void setFieldValue(_Fields field, Object value) {
-      switch (field) {
-      case MESSAGE:
-        if (value == null) {
-          unsetMessage();
-        } else {
-          setMessage((ByteBuffer)value);
-        }
-        break;
-
-      case TASK_ID:
-        if (value == null) {
-          unsetTaskId();
-        } else {
-          setTaskId((edu.berkeley.sparrow.thrift.TFullTaskId)value);
-        }
-        break;
-
-      case USER:
-        if (value == null) {
-          unsetUser();
-        } else {
-          setUser((edu.berkeley.sparrow.thrift.TUserGroupInfo)value);
-        }
-        break;
-
-      case ESTIMATED_RESOURCES:
-        if (value == null) {
-          unsetEstimatedResources();
-        } else {
-          setEstimatedResources((edu.berkeley.sparrow.thrift.TResourceVector)value);
-        }
-        break;
-
-      }
-    }
-
-    public Object getFieldValue(_Fields field) {
-      switch (field) {
-      case MESSAGE:
-        return getMessage();
-
-      case TASK_ID:
-        return getTaskId();
-
-      case USER:
-        return getUser();
-
-      case ESTIMATED_RESOURCES:
-        return getEstimatedResources();
-
-      }
-      throw new IllegalStateException();
-    }
-
-    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
-    public boolean isSet(_Fields field) {
-      if (field == null) {
-        throw new IllegalArgumentException();
-      }
-
-      switch (field) {
-      case MESSAGE:
-        return isSetMessage();
-      case TASK_ID:
-        return isSetTaskId();
-      case USER:
-        return isSetUser();
-      case ESTIMATED_RESOURCES:
-        return isSetEstimatedResources();
-      }
-      throw new IllegalStateException();
-    }
-
-    @Override
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof launchTask_args)
-        return this.equals((launchTask_args)that);
-      return false;
-    }
-
-    public boolean equals(launchTask_args that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_message = true && this.isSetMessage();
-      boolean that_present_message = true && that.isSetMessage();
-      if (this_present_message || that_present_message) {
-        if (!(this_present_message && that_present_message))
-          return false;
-        if (!this.message.equals(that.message))
-          return false;
-      }
-
-      boolean this_present_taskId = true && this.isSetTaskId();
-      boolean that_present_taskId = true && that.isSetTaskId();
-      if (this_present_taskId || that_present_taskId) {
-        if (!(this_present_taskId && that_present_taskId))
-          return false;
-        if (!this.taskId.equals(that.taskId))
-          return false;
-      }
-
-      boolean this_present_user = true && this.isSetUser();
-      boolean that_present_user = true && that.isSetUser();
-      if (this_present_user || that_present_user) {
-        if (!(this_present_user && that_present_user))
-          return false;
-        if (!this.user.equals(that.user))
-          return false;
-      }
-
-      boolean this_present_estimatedResources = true && this.isSetEstimatedResources();
-      boolean that_present_estimatedResources = true && that.isSetEstimatedResources();
-      if (this_present_estimatedResources || that_present_estimatedResources) {
-        if (!(this_present_estimatedResources && that_present_estimatedResources))
-          return false;
-        if (!this.estimatedResources.equals(that.estimatedResources))
-          return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      return 0;
-    }
-
-    public int compareTo(launchTask_args other) {
-      if (!getClass().equals(other.getClass())) {
-        return getClass().getName().compareTo(other.getClass().getName());
-      }
-
-      int lastComparison = 0;
-      launchTask_args typedOther = (launchTask_args)other;
-
-      lastComparison = Boolean.valueOf(isSetMessage()).compareTo(typedOther.isSetMessage());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetMessage()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.message, typedOther.message);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetTaskId()).compareTo(typedOther.isSetTaskId());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetTaskId()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskId, typedOther.taskId);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetUser()).compareTo(typedOther.isSetUser());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetUser()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.user, typedOther.user);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      lastComparison = Boolean.valueOf(isSetEstimatedResources()).compareTo(typedOther.isSetEstimatedResources());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetEstimatedResources()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.estimatedResources, typedOther.estimatedResources);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      return 0;
-    }
-
-    public _Fields fieldForId(int fieldId) {
-      return _Fields.findByThriftId(fieldId);
-    }
-
-    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
-      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
-    }
-
-    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
-      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder("launchTask_args(");
-      boolean first = true;
-
-      sb.append("message:");
-      if (this.message == null) {
-        sb.append("null");
-      } else {
-        org.apache.thrift.TBaseHelper.toString(this.message, sb);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("taskId:");
-      if (this.taskId == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.taskId);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("user:");
-      if (this.user == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.user);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("estimatedResources:");
-      if (this.estimatedResources == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.estimatedResources);
-      }
-      first = false;
-      sb.append(")");
-      return sb.toString();
-    }
-
-    public void validate() throws org.apache.thrift.TException {
-      // check for required fields
-    }
-
-    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
-      try {
-        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
-      } catch (org.apache.thrift.TException te) {
-        throw new java.io.IOException(te.getMessage());
-      }
-    }
-
-    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
-      try {
-        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
-      } catch (org.apache.thrift.TException te) {
-        throw new java.io.IOException(te.getMessage());
-      }
-    }
-
-    private static class launchTask_argsStandardSchemeFactory implements SchemeFactory {
-      public launchTask_argsStandardScheme getScheme() {
-        return new launchTask_argsStandardScheme();
-      }
-    }
-
-    private static class launchTask_argsStandardScheme extends StandardScheme<launchTask_args> {
-
-      public void read(org.apache.thrift.protocol.TProtocol iprot, launchTask_args struct) throws org.apache.thrift.TException {
-        org.apache.thrift.protocol.TField schemeField;
-        iprot.readStructBegin();
-        while (true)
-        {
-          schemeField = iprot.readFieldBegin();
-          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
-            break;
-          }
-          switch (schemeField.id) {
-            case 1: // MESSAGE
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-                struct.message = iprot.readBinary();
-                struct.setMessageIsSet(true);
-              } else { 
-                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-              }
-              break;
-            case 2: // TASK_ID
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-                struct.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId();
-                struct.taskId.read(iprot);
-                struct.setTaskIdIsSet(true);
-              } else { 
-                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-              }
-              break;
-            case 3: // USER
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-                struct.user = new edu.berkeley.sparrow.thrift.TUserGroupInfo();
-                struct.user.read(iprot);
-                struct.setUserIsSet(true);
-              } else { 
-                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-              }
-              break;
-            case 4: // ESTIMATED_RESOURCES
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-                struct.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector();
-                struct.estimatedResources.read(iprot);
-                struct.setEstimatedResourcesIsSet(true);
-              } else { 
-                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-              }
-              break;
-            default:
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-          }
-          iprot.readFieldEnd();
-        }
-        iprot.readStructEnd();
-
-        // check for required fields of primitive type, which can't be checked in the validate method
-        struct.validate();
-      }
-
-      public void write(org.apache.thrift.protocol.TProtocol oprot, launchTask_args struct) throws org.apache.thrift.TException {
-        struct.validate();
-
-        oprot.writeStructBegin(STRUCT_DESC);
-        if (struct.message != null) {
-          oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
-          oprot.writeBinary(struct.message);
-          oprot.writeFieldEnd();
-        }
-        if (struct.taskId != null) {
-          oprot.writeFieldBegin(TASK_ID_FIELD_DESC);
-          struct.taskId.write(oprot);
-          oprot.writeFieldEnd();
-        }
-        if (struct.user != null) {
-          oprot.writeFieldBegin(USER_FIELD_DESC);
-          struct.user.write(oprot);
-          oprot.writeFieldEnd();
-        }
-        if (struct.estimatedResources != null) {
-          oprot.writeFieldBegin(ESTIMATED_RESOURCES_FIELD_DESC);
-          struct.estimatedResources.write(oprot);
-          oprot.writeFieldEnd();
-        }
-        oprot.writeFieldStop();
-        oprot.writeStructEnd();
-      }
-
-    }
-
-    private static class launchTask_argsTupleSchemeFactory implements SchemeFactory {
-      public launchTask_argsTupleScheme getScheme() {
-        return new launchTask_argsTupleScheme();
-      }
-    }
-
-    private static class launchTask_argsTupleScheme extends TupleScheme<launchTask_args> {
-
-      @Override
-      public void write(org.apache.thrift.protocol.TProtocol prot, launchTask_args struct) throws org.apache.thrift.TException {
-        TTupleProtocol oprot = (TTupleProtocol) prot;
-        BitSet optionals = new BitSet();
-        if (struct.isSetMessage()) {
-          optionals.set(0);
-        }
-        if (struct.isSetTaskId()) {
-          optionals.set(1);
-        }
-        if (struct.isSetUser()) {
-          optionals.set(2);
-        }
-        if (struct.isSetEstimatedResources()) {
-          optionals.set(3);
-        }
-        oprot.writeBitSet(optionals, 4);
-        if (struct.isSetMessage()) {
-          oprot.writeBinary(struct.message);
-        }
-        if (struct.isSetTaskId()) {
-          struct.taskId.write(oprot);
-        }
-        if (struct.isSetUser()) {
-          struct.user.write(oprot);
-        }
-        if (struct.isSetEstimatedResources()) {
-          struct.estimatedResources.write(oprot);
-        }
-      }
-
-      @Override
-      public void read(org.apache.thrift.protocol.TProtocol prot, launchTask_args struct) throws org.apache.thrift.TException {
-        TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
-        if (incoming.get(0)) {
-          struct.message = iprot.readBinary();
-          struct.setMessageIsSet(true);
-        }
-        if (incoming.get(1)) {
-          struct.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId();
-          struct.taskId.read(iprot);
-          struct.setTaskIdIsSet(true);
-        }
-        if (incoming.get(2)) {
-          struct.user = new edu.berkeley.sparrow.thrift.TUserGroupInfo();
-          struct.user.read(iprot);
-          struct.setUserIsSet(true);
-        }
-        if (incoming.get(3)) {
-          struct.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector();
-          struct.estimatedResources.read(iprot);
-          struct.setEstimatedResourcesIsSet(true);
-        }
-      }
-    }
-
-  }
-
-  public static class launchTask_result implements org.apache.thrift.TBase<launchTask_result, launchTask_result._Fields>, java.io.Serializable, Cloneable   {
-    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("launchTask_result");
-
-    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.BOOL, (short)0);
-
-    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
-    static {
-      schemes.put(StandardScheme.class, new launchTask_resultStandardSchemeFactory());
-      schemes.put(TupleScheme.class, new launchTask_resultTupleSchemeFactory());
-    }
-
-    public boolean success; // required
-
-    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
-    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-      SUCCESS((short)0, "success");
-
-      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
-
-      static {
-        for (_Fields field : EnumSet.allOf(_Fields.class)) {
-          byName.put(field.getFieldName(), field);
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, or null if its not found.
-       */
-      public static _Fields findByThriftId(int fieldId) {
-        switch(fieldId) {
-          case 0: // SUCCESS
-            return SUCCESS;
-          default:
-            return null;
-        }
-      }
-
-      /**
-       * Find the _Fields constant that matches fieldId, throwing an exception
-       * if it is not found.
-       */
-      public static _Fields findByThriftIdOrThrow(int fieldId) {
-        _Fields fields = findByThriftId(fieldId);
-        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
-        return fields;
-      }
-
-      /**
-       * Find the _Fields constant that matches name, or null if its not found.
-       */
-      public static _Fields findByName(String name) {
-        return byName.get(name);
-      }
-
-      private final short _thriftId;
-      private final String _fieldName;
-
-      _Fields(short thriftId, String fieldName) {
-        _thriftId = thriftId;
-        _fieldName = fieldName;
-      }
-
-      public short getThriftFieldId() {
-        return _thriftId;
-      }
-
-      public String getFieldName() {
-        return _fieldName;
-      }
-    }
-
-    // isset id assignments
-    private static final int __SUCCESS_ISSET_ID = 0;
-    private BitSet __isset_bit_vector = new BitSet(1);
-    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
-    static {
-      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
-      metaDataMap = Collections.unmodifiableMap(tmpMap);
-      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(launchTask_result.class, metaDataMap);
-    }
-
-    public launchTask_result() {
-    }
-
-    public launchTask_result(
-      boolean success)
-    {
-      this();
-      this.success = success;
-      setSuccessIsSet(true);
-    }
-
-    /**
-     * Performs a deep copy on <i>other</i>.
-     */
-    public launchTask_result(launchTask_result other) {
-      __isset_bit_vector.clear();
-      __isset_bit_vector.or(other.__isset_bit_vector);
-      this.success = other.success;
-    }
-
-    public launchTask_result deepCopy() {
-      return new launchTask_result(this);
-    }
-
-    public void clear() {
-      setSuccessIsSet(false);
-      this.success = false;
-    }
-
-    public boolean isSuccess() {
-      return this.success;
-    }
-
-    public launchTask_result setSuccess(boolean success) {
-      this.success = success;
-      setSuccessIsSet(true);
-      return this;
-    }
-
-    public void unsetSuccess() {
-      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
-    }
-
-    /** Returns true if field success is set (has been assigned a value) and false otherwise */
-    public boolean isSetSuccess() {
-      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
-    }
-
-    public void setSuccessIsSet(boolean value) {
-      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
-    }
-
-    public void setFieldValue(_Fields field, Object value) {
-      switch (field) {
-      case SUCCESS:
-        if (value == null) {
-          unsetSuccess();
-        } else {
-          setSuccess((Boolean)value);
-        }
-        break;
-
-      }
-    }
-
-    public Object getFieldValue(_Fields field) {
-      switch (field) {
-      case SUCCESS:
-        return Boolean.valueOf(isSuccess());
-
-      }
-      throw new IllegalStateException();
-    }
-
-    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
-    public boolean isSet(_Fields field) {
-      if (field == null) {
-        throw new IllegalArgumentException();
-      }
-
-      switch (field) {
-      case SUCCESS:
-        return isSetSuccess();
-      }
-      throw new IllegalStateException();
-    }
-
-    @Override
-    public boolean equals(Object that) {
-      if (that == null)
-        return false;
-      if (that instanceof launchTask_result)
-        return this.equals((launchTask_result)that);
-      return false;
-    }
-
-    public boolean equals(launchTask_result that) {
-      if (that == null)
-        return false;
-
-      boolean this_present_success = true;
-      boolean that_present_success = true;
-      if (this_present_success || that_present_success) {
-        if (!(this_present_success && that_present_success))
-          return false;
-        if (this.success != that.success)
-          return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      return 0;
-    }
-
-    public int compareTo(launchTask_result other) {
-      if (!getClass().equals(other.getClass())) {
-        return getClass().getName().compareTo(other.getClass().getName());
-      }
-
-      int lastComparison = 0;
-      launchTask_result typedOther = (launchTask_result)other;
-
-      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(typedOther.isSetSuccess());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetSuccess()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.success, typedOther.success);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
-      return 0;
-    }
-
-    public _Fields fieldForId(int fieldId) {
-      return _Fields.findByThriftId(fieldId);
-    }
-
-    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
-      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
-    }
-
-    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
-      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
-      }
-
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder("launchTask_result(");
-      boolean first = true;
-
-      sb.append("success:");
-      sb.append(this.success);
-      first = false;
-      sb.append(")");
-      return sb.toString();
-    }
-
-    public void validate() throws org.apache.thrift.TException {
-      // check for required fields
-    }
-
-    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
-      try {
-        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
-      } catch (org.apache.thrift.TException te) {
-        throw new java.io.IOException(te.getMessage());
-      }
-    }
-
-    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
-      try {
-        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
-      } catch (org.apache.thrift.TException te) {
-        throw new java.io.IOException(te.getMessage());
-      }
-    }
-
-    private static class launchTask_resultStandardSchemeFactory implements SchemeFactory {
-      public launchTask_resultStandardScheme getScheme() {
-        return new launchTask_resultStandardScheme();
-      }
-    }
-
-    private static class launchTask_resultStandardScheme extends StandardScheme<launchTask_result> {
-
-      public void read(org.apache.thrift.protocol.TProtocol iprot, launchTask_result struct) throws org.apache.thrift.TException {
-        org.apache.thrift.protocol.TField schemeField;
-        iprot.readStructBegin();
-        while (true)
-        {
-          schemeField = iprot.readFieldBegin();
-          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
-            break;
-          }
-          switch (schemeField.id) {
-            case 0: // SUCCESS
-              if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
-                struct.success = iprot.readBool();
-                struct.setSuccessIsSet(true);
-              } else { 
-                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-              }
-              break;
-            default:
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-          }
-          iprot.readFieldEnd();
-        }
-        iprot.readStructEnd();
-
-        // check for required fields of primitive type, which can't be checked in the validate method
-        struct.validate();
-      }
-
-      public void write(org.apache.thrift.protocol.TProtocol oprot, launchTask_result struct) throws org.apache.thrift.TException {
-        struct.validate();
-
-        oprot.writeStructBegin(STRUCT_DESC);
-        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-        oprot.writeBool(struct.success);
-        oprot.writeFieldEnd();
-        oprot.writeFieldStop();
-        oprot.writeStructEnd();
-      }
-
-    }
-
-    private static class launchTask_resultTupleSchemeFactory implements SchemeFactory {
-      public launchTask_resultTupleScheme getScheme() {
-        return new launchTask_resultTupleScheme();
-      }
-    }
-
-    private static class launchTask_resultTupleScheme extends TupleScheme<launchTask_result> {
-
-      @Override
-      public void write(org.apache.thrift.protocol.TProtocol prot, launchTask_result struct) throws org.apache.thrift.TException {
-        TTupleProtocol oprot = (TTupleProtocol) prot;
-        BitSet optionals = new BitSet();
-        if (struct.isSetSuccess()) {
-          optionals.set(0);
-        }
-        oprot.writeBitSet(optionals, 1);
-        if (struct.isSetSuccess()) {
-          oprot.writeBool(struct.success);
-        }
-      }
-
-      @Override
-      public void read(org.apache.thrift.protocol.TProtocol prot, launchTask_result struct) throws org.apache.thrift.TException {
-        TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(1);
-        if (incoming.get(0)) {
-          struct.success = iprot.readBool();
           struct.setSuccessIsSet(true);
         }
       }

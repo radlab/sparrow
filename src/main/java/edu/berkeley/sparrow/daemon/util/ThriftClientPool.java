@@ -110,7 +110,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
     @Override
     public T makeObject(InetSocketAddress socket) throws Exception {
       TNonblockingTransport nbTr = new TNonblockingSocket(
-          socket.getHostName(), socket.getPort());
+          socket.getAddress().getHostAddress(), socket.getPort());
       TProtocolFactory factory = new TBinaryProtocol.Factory();
       T client = maker.create(nbTr, clientManager, factory);
       transports.put(client, nbTr);

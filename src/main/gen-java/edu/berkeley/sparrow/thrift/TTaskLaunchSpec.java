@@ -27,28 +27,25 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, TTaskPlacement._Fields>, java.io.Serializable, Cloneable {
-  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TTaskPlacement");
+public class TTaskLaunchSpec implements org.apache.thrift.TBase<TTaskLaunchSpec, TTaskLaunchSpec._Fields>, java.io.Serializable, Cloneable {
+  private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("TTaskLaunchSpec");
 
-  private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskID", org.apache.thrift.protocol.TType.STRING, (short)1);
-  private static final org.apache.thrift.protocol.TField NODE_FIELD_DESC = new org.apache.thrift.protocol.TField("node", org.apache.thrift.protocol.TType.STRING, (short)2);
-  private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)3);
+  private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRING, (short)1);
+  private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)2);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
-    schemes.put(StandardScheme.class, new TTaskPlacementStandardSchemeFactory());
-    schemes.put(TupleScheme.class, new TTaskPlacementTupleSchemeFactory());
+    schemes.put(StandardScheme.class, new TTaskLaunchSpecStandardSchemeFactory());
+    schemes.put(TupleScheme.class, new TTaskLaunchSpecTupleSchemeFactory());
   }
 
-  public String taskID; // required
-  public String node; // required
-  public ByteBuffer message; // optional
+  public String taskId; // required
+  public ByteBuffer message; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-    TASK_ID((short)1, "taskID"),
-    NODE((short)2, "node"),
-    MESSAGE((short)3, "message");
+    TASK_ID((short)1, "taskId"),
+    MESSAGE((short)2, "message");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -65,9 +62,7 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
       switch(fieldId) {
         case 1: // TASK_ID
           return TASK_ID;
-        case 2: // NODE
-          return NODE;
-        case 3: // MESSAGE
+        case 2: // MESSAGE
           return MESSAGE;
         default:
           return null;
@@ -109,41 +104,35 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
   }
 
   // isset id assignments
-  private _Fields optionals[] = {_Fields.MESSAGE};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskID", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-    tmpMap.put(_Fields.NODE, new org.apache.thrift.meta_data.FieldMetaData("node", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-    tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+    tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING        , true)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
-    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TTaskPlacement.class, metaDataMap);
+    org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TTaskLaunchSpec.class, metaDataMap);
   }
 
-  public TTaskPlacement() {
+  public TTaskLaunchSpec() {
   }
 
-  public TTaskPlacement(
-    String taskID,
-    String node)
+  public TTaskLaunchSpec(
+    String taskId,
+    ByteBuffer message)
   {
     this();
-    this.taskID = taskID;
-    this.node = node;
+    this.taskId = taskId;
+    this.message = message;
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
-  public TTaskPlacement(TTaskPlacement other) {
-    if (other.isSetTaskID()) {
-      this.taskID = other.taskID;
-    }
-    if (other.isSetNode()) {
-      this.node = other.node;
+  public TTaskLaunchSpec(TTaskLaunchSpec other) {
+    if (other.isSetTaskId()) {
+      this.taskId = other.taskId;
     }
     if (other.isSetMessage()) {
       this.message = org.apache.thrift.TBaseHelper.copyBinary(other.message);
@@ -151,61 +140,36 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
     }
   }
 
-  public TTaskPlacement deepCopy() {
-    return new TTaskPlacement(this);
+  public TTaskLaunchSpec deepCopy() {
+    return new TTaskLaunchSpec(this);
   }
 
   public void clear() {
-    this.taskID = null;
-    this.node = null;
+    this.taskId = null;
     this.message = null;
   }
 
-  public String getTaskID() {
-    return this.taskID;
+  public String getTaskId() {
+    return this.taskId;
   }
 
-  public TTaskPlacement setTaskID(String taskID) {
-    this.taskID = taskID;
+  public TTaskLaunchSpec setTaskId(String taskId) {
+    this.taskId = taskId;
     return this;
   }
 
-  public void unsetTaskID() {
-    this.taskID = null;
+  public void unsetTaskId() {
+    this.taskId = null;
   }
 
-  /** Returns true if field taskID is set (has been assigned a value) and false otherwise */
-  public boolean isSetTaskID() {
-    return this.taskID != null;
+  /** Returns true if field taskId is set (has been assigned a value) and false otherwise */
+  public boolean isSetTaskId() {
+    return this.taskId != null;
   }
 
-  public void setTaskIDIsSet(boolean value) {
+  public void setTaskIdIsSet(boolean value) {
     if (!value) {
-      this.taskID = null;
-    }
-  }
-
-  public String getNode() {
-    return this.node;
-  }
-
-  public TTaskPlacement setNode(String node) {
-    this.node = node;
-    return this;
-  }
-
-  public void unsetNode() {
-    this.node = null;
-  }
-
-  /** Returns true if field node is set (has been assigned a value) and false otherwise */
-  public boolean isSetNode() {
-    return this.node != null;
-  }
-
-  public void setNodeIsSet(boolean value) {
-    if (!value) {
-      this.node = null;
+      this.taskId = null;
     }
   }
 
@@ -218,12 +182,12 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
     return message;
   }
 
-  public TTaskPlacement setMessage(byte[] message) {
+  public TTaskLaunchSpec setMessage(byte[] message) {
     setMessage(message == null ? (ByteBuffer)null : ByteBuffer.wrap(message));
     return this;
   }
 
-  public TTaskPlacement setMessage(ByteBuffer message) {
+  public TTaskLaunchSpec setMessage(ByteBuffer message) {
     this.message = message;
     return this;
   }
@@ -247,17 +211,9 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
     switch (field) {
     case TASK_ID:
       if (value == null) {
-        unsetTaskID();
+        unsetTaskId();
       } else {
-        setTaskID((String)value);
-      }
-      break;
-
-    case NODE:
-      if (value == null) {
-        unsetNode();
-      } else {
-        setNode((String)value);
+        setTaskId((String)value);
       }
       break;
 
@@ -275,10 +231,7 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
   public Object getFieldValue(_Fields field) {
     switch (field) {
     case TASK_ID:
-      return getTaskID();
-
-    case NODE:
-      return getNode();
+      return getTaskId();
 
     case MESSAGE:
       return getMessage();
@@ -295,9 +248,7 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
 
     switch (field) {
     case TASK_ID:
-      return isSetTaskID();
-    case NODE:
-      return isSetNode();
+      return isSetTaskId();
     case MESSAGE:
       return isSetMessage();
     }
@@ -308,30 +259,21 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
   public boolean equals(Object that) {
     if (that == null)
       return false;
-    if (that instanceof TTaskPlacement)
-      return this.equals((TTaskPlacement)that);
+    if (that instanceof TTaskLaunchSpec)
+      return this.equals((TTaskLaunchSpec)that);
     return false;
   }
 
-  public boolean equals(TTaskPlacement that) {
+  public boolean equals(TTaskLaunchSpec that) {
     if (that == null)
       return false;
 
-    boolean this_present_taskID = true && this.isSetTaskID();
-    boolean that_present_taskID = true && that.isSetTaskID();
-    if (this_present_taskID || that_present_taskID) {
-      if (!(this_present_taskID && that_present_taskID))
+    boolean this_present_taskId = true && this.isSetTaskId();
+    boolean that_present_taskId = true && that.isSetTaskId();
+    if (this_present_taskId || that_present_taskId) {
+      if (!(this_present_taskId && that_present_taskId))
         return false;
-      if (!this.taskID.equals(that.taskID))
-        return false;
-    }
-
-    boolean this_present_node = true && this.isSetNode();
-    boolean that_present_node = true && that.isSetNode();
-    if (this_present_node || that_present_node) {
-      if (!(this_present_node && that_present_node))
-        return false;
-      if (!this.node.equals(that.node))
+      if (!this.taskId.equals(that.taskId))
         return false;
     }
 
@@ -352,30 +294,20 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
     return 0;
   }
 
-  public int compareTo(TTaskPlacement other) {
+  public int compareTo(TTaskLaunchSpec other) {
     if (!getClass().equals(other.getClass())) {
       return getClass().getName().compareTo(other.getClass().getName());
     }
 
     int lastComparison = 0;
-    TTaskPlacement typedOther = (TTaskPlacement)other;
+    TTaskLaunchSpec typedOther = (TTaskLaunchSpec)other;
 
-    lastComparison = Boolean.valueOf(isSetTaskID()).compareTo(typedOther.isSetTaskID());
+    lastComparison = Boolean.valueOf(isSetTaskId()).compareTo(typedOther.isSetTaskId());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetTaskID()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskID, typedOther.taskID);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = Boolean.valueOf(isSetNode()).compareTo(typedOther.isSetNode());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetNode()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.node, typedOther.node);
+    if (isSetTaskId()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskId, typedOther.taskId);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -407,34 +339,24 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder("TTaskPlacement(");
+    StringBuilder sb = new StringBuilder("TTaskLaunchSpec(");
     boolean first = true;
 
-    sb.append("taskID:");
-    if (this.taskID == null) {
+    sb.append("taskId:");
+    if (this.taskId == null) {
       sb.append("null");
     } else {
-      sb.append(this.taskID);
+      sb.append(this.taskId);
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("node:");
-    if (this.node == null) {
+    sb.append("message:");
+    if (this.message == null) {
       sb.append("null");
     } else {
-      sb.append(this.node);
+      org.apache.thrift.TBaseHelper.toString(this.message, sb);
     }
     first = false;
-    if (isSetMessage()) {
-      if (!first) sb.append(", ");
-      sb.append("message:");
-      if (this.message == null) {
-        sb.append("null");
-      } else {
-        org.apache.thrift.TBaseHelper.toString(this.message, sb);
-      }
-      first = false;
-    }
     sb.append(")");
     return sb.toString();
   }
@@ -459,15 +381,15 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
     }
   }
 
-  private static class TTaskPlacementStandardSchemeFactory implements SchemeFactory {
-    public TTaskPlacementStandardScheme getScheme() {
-      return new TTaskPlacementStandardScheme();
+  private static class TTaskLaunchSpecStandardSchemeFactory implements SchemeFactory {
+    public TTaskLaunchSpecStandardScheme getScheme() {
+      return new TTaskLaunchSpecStandardScheme();
     }
   }
 
-  private static class TTaskPlacementStandardScheme extends StandardScheme<TTaskPlacement> {
+  private static class TTaskLaunchSpecStandardScheme extends StandardScheme<TTaskLaunchSpec> {
 
-    public void read(org.apache.thrift.protocol.TProtocol iprot, TTaskPlacement struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol iprot, TTaskLaunchSpec struct) throws org.apache.thrift.TException {
       org.apache.thrift.protocol.TField schemeField;
       iprot.readStructBegin();
       while (true)
@@ -479,21 +401,13 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
         switch (schemeField.id) {
           case 1: // TASK_ID
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-              struct.taskID = iprot.readString();
-              struct.setTaskIDIsSet(true);
+              struct.taskId = iprot.readString();
+              struct.setTaskIdIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // NODE
-            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-              struct.node = iprot.readString();
-              struct.setNodeIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 3: // MESSAGE
+          case 2: // MESSAGE
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.message = iprot.readBinary();
               struct.setMessageIsSet(true);
@@ -512,26 +426,19 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
       struct.validate();
     }
 
-    public void write(org.apache.thrift.protocol.TProtocol oprot, TTaskPlacement struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol oprot, TTaskLaunchSpec struct) throws org.apache.thrift.TException {
       struct.validate();
 
       oprot.writeStructBegin(STRUCT_DESC);
-      if (struct.taskID != null) {
+      if (struct.taskId != null) {
         oprot.writeFieldBegin(TASK_ID_FIELD_DESC);
-        oprot.writeString(struct.taskID);
-        oprot.writeFieldEnd();
-      }
-      if (struct.node != null) {
-        oprot.writeFieldBegin(NODE_FIELD_DESC);
-        oprot.writeString(struct.node);
+        oprot.writeString(struct.taskId);
         oprot.writeFieldEnd();
       }
       if (struct.message != null) {
-        if (struct.isSetMessage()) {
-          oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
-          oprot.writeBinary(struct.message);
-          oprot.writeFieldEnd();
-        }
+        oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
+        oprot.writeBinary(struct.message);
+        oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -539,33 +446,27 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
 
   }
 
-  private static class TTaskPlacementTupleSchemeFactory implements SchemeFactory {
-    public TTaskPlacementTupleScheme getScheme() {
-      return new TTaskPlacementTupleScheme();
+  private static class TTaskLaunchSpecTupleSchemeFactory implements SchemeFactory {
+    public TTaskLaunchSpecTupleScheme getScheme() {
+      return new TTaskLaunchSpecTupleScheme();
     }
   }
 
-  private static class TTaskPlacementTupleScheme extends TupleScheme<TTaskPlacement> {
+  private static class TTaskLaunchSpecTupleScheme extends TupleScheme<TTaskLaunchSpec> {
 
     @Override
-    public void write(org.apache.thrift.protocol.TProtocol prot, TTaskPlacement struct) throws org.apache.thrift.TException {
+    public void write(org.apache.thrift.protocol.TProtocol prot, TTaskLaunchSpec struct) throws org.apache.thrift.TException {
       TTupleProtocol oprot = (TTupleProtocol) prot;
       BitSet optionals = new BitSet();
-      if (struct.isSetTaskID()) {
+      if (struct.isSetTaskId()) {
         optionals.set(0);
       }
-      if (struct.isSetNode()) {
+      if (struct.isSetMessage()) {
         optionals.set(1);
       }
-      if (struct.isSetMessage()) {
-        optionals.set(2);
-      }
-      oprot.writeBitSet(optionals, 3);
-      if (struct.isSetTaskID()) {
-        oprot.writeString(struct.taskID);
-      }
-      if (struct.isSetNode()) {
-        oprot.writeString(struct.node);
+      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetTaskId()) {
+        oprot.writeString(struct.taskId);
       }
       if (struct.isSetMessage()) {
         oprot.writeBinary(struct.message);
@@ -573,18 +474,14 @@ public class TTaskPlacement implements org.apache.thrift.TBase<TTaskPlacement, T
     }
 
     @Override
-    public void read(org.apache.thrift.protocol.TProtocol prot, TTaskPlacement struct) throws org.apache.thrift.TException {
+    public void read(org.apache.thrift.protocol.TProtocol prot, TTaskLaunchSpec struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(3);
+      BitSet incoming = iprot.readBitSet(2);
       if (incoming.get(0)) {
-        struct.taskID = iprot.readString();
-        struct.setTaskIDIsSet(true);
+        struct.taskId = iprot.readString();
+        struct.setTaskIdIsSet(true);
       }
       if (incoming.get(1)) {
-        struct.node = iprot.readString();
-        struct.setNodeIsSet(true);
-      }
-      if (incoming.get(2)) {
         struct.message = iprot.readBinary();
         struct.setMessageIsSet(true);
       }

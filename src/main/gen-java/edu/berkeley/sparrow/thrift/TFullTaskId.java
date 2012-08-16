@@ -33,7 +33,7 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
   private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField REQUEST_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("requestId", org.apache.thrift.protocol.TType.STRING, (short)2);
   private static final org.apache.thrift.protocol.TField APP_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("appId", org.apache.thrift.protocol.TType.STRING, (short)3);
-  private static final org.apache.thrift.protocol.TField FRONTEND_SOCKET_FIELD_DESC = new org.apache.thrift.protocol.TField("frontendSocket", org.apache.thrift.protocol.TType.STRING, (short)4);
+  private static final org.apache.thrift.protocol.TField SCHEDULER_ADDRESS_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulerAddress", org.apache.thrift.protocol.TType.STRUCT, (short)4);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -44,14 +44,14 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
   public String taskId; // required
   public String requestId; // required
   public String appId; // required
-  public String frontendSocket; // required
+  public THostPort schedulerAddress; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     TASK_ID((short)1, "taskId"),
     REQUEST_ID((short)2, "requestId"),
     APP_ID((short)3, "appId"),
-    FRONTEND_SOCKET((short)4, "frontendSocket");
+    SCHEDULER_ADDRESS((short)4, "schedulerAddress");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -72,8 +72,8 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
           return REQUEST_ID;
         case 3: // APP_ID
           return APP_ID;
-        case 4: // FRONTEND_SOCKET
-          return FRONTEND_SOCKET;
+        case 4: // SCHEDULER_ADDRESS
+          return SCHEDULER_ADDRESS;
         default:
           return null;
       }
@@ -123,8 +123,8 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.APP_ID, new org.apache.thrift.meta_data.FieldMetaData("appId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-    tmpMap.put(_Fields.FRONTEND_SOCKET, new org.apache.thrift.meta_data.FieldMetaData("frontendSocket", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.SCHEDULER_ADDRESS, new org.apache.thrift.meta_data.FieldMetaData("schedulerAddress", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, THostPort.class)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TFullTaskId.class, metaDataMap);
   }
@@ -136,13 +136,13 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
     String taskId,
     String requestId,
     String appId,
-    String frontendSocket)
+    THostPort schedulerAddress)
   {
     this();
     this.taskId = taskId;
     this.requestId = requestId;
     this.appId = appId;
-    this.frontendSocket = frontendSocket;
+    this.schedulerAddress = schedulerAddress;
   }
 
   /**
@@ -158,8 +158,8 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
     if (other.isSetAppId()) {
       this.appId = other.appId;
     }
-    if (other.isSetFrontendSocket()) {
-      this.frontendSocket = other.frontendSocket;
+    if (other.isSetSchedulerAddress()) {
+      this.schedulerAddress = new THostPort(other.schedulerAddress);
     }
   }
 
@@ -171,7 +171,7 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
     this.taskId = null;
     this.requestId = null;
     this.appId = null;
-    this.frontendSocket = null;
+    this.schedulerAddress = null;
   }
 
   public String getTaskId() {
@@ -246,27 +246,27 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
     }
   }
 
-  public String getFrontendSocket() {
-    return this.frontendSocket;
+  public THostPort getSchedulerAddress() {
+    return this.schedulerAddress;
   }
 
-  public TFullTaskId setFrontendSocket(String frontendSocket) {
-    this.frontendSocket = frontendSocket;
+  public TFullTaskId setSchedulerAddress(THostPort schedulerAddress) {
+    this.schedulerAddress = schedulerAddress;
     return this;
   }
 
-  public void unsetFrontendSocket() {
-    this.frontendSocket = null;
+  public void unsetSchedulerAddress() {
+    this.schedulerAddress = null;
   }
 
-  /** Returns true if field frontendSocket is set (has been assigned a value) and false otherwise */
-  public boolean isSetFrontendSocket() {
-    return this.frontendSocket != null;
+  /** Returns true if field schedulerAddress is set (has been assigned a value) and false otherwise */
+  public boolean isSetSchedulerAddress() {
+    return this.schedulerAddress != null;
   }
 
-  public void setFrontendSocketIsSet(boolean value) {
+  public void setSchedulerAddressIsSet(boolean value) {
     if (!value) {
-      this.frontendSocket = null;
+      this.schedulerAddress = null;
     }
   }
 
@@ -296,11 +296,11 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
       }
       break;
 
-    case FRONTEND_SOCKET:
+    case SCHEDULER_ADDRESS:
       if (value == null) {
-        unsetFrontendSocket();
+        unsetSchedulerAddress();
       } else {
-        setFrontendSocket((String)value);
+        setSchedulerAddress((THostPort)value);
       }
       break;
 
@@ -318,8 +318,8 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
     case APP_ID:
       return getAppId();
 
-    case FRONTEND_SOCKET:
-      return getFrontendSocket();
+    case SCHEDULER_ADDRESS:
+      return getSchedulerAddress();
 
     }
     throw new IllegalStateException();
@@ -338,8 +338,8 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
       return isSetRequestId();
     case APP_ID:
       return isSetAppId();
-    case FRONTEND_SOCKET:
-      return isSetFrontendSocket();
+    case SCHEDULER_ADDRESS:
+      return isSetSchedulerAddress();
     }
     throw new IllegalStateException();
   }
@@ -384,12 +384,12 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
         return false;
     }
 
-    boolean this_present_frontendSocket = true && this.isSetFrontendSocket();
-    boolean that_present_frontendSocket = true && that.isSetFrontendSocket();
-    if (this_present_frontendSocket || that_present_frontendSocket) {
-      if (!(this_present_frontendSocket && that_present_frontendSocket))
+    boolean this_present_schedulerAddress = true && this.isSetSchedulerAddress();
+    boolean that_present_schedulerAddress = true && that.isSetSchedulerAddress();
+    if (this_present_schedulerAddress || that_present_schedulerAddress) {
+      if (!(this_present_schedulerAddress && that_present_schedulerAddress))
         return false;
-      if (!this.frontendSocket.equals(that.frontendSocket))
+      if (!this.schedulerAddress.equals(that.schedulerAddress))
         return false;
     }
 
@@ -439,12 +439,12 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetFrontendSocket()).compareTo(typedOther.isSetFrontendSocket());
+    lastComparison = Boolean.valueOf(isSetSchedulerAddress()).compareTo(typedOther.isSetSchedulerAddress());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetFrontendSocket()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.frontendSocket, typedOther.frontendSocket);
+    if (isSetSchedulerAddress()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.schedulerAddress, typedOther.schedulerAddress);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -493,11 +493,11 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
     }
     first = false;
     if (!first) sb.append(", ");
-    sb.append("frontendSocket:");
-    if (this.frontendSocket == null) {
+    sb.append("schedulerAddress:");
+    if (this.schedulerAddress == null) {
       sb.append("null");
     } else {
-      sb.append(this.frontendSocket);
+      sb.append(this.schedulerAddress);
     }
     first = false;
     sb.append(")");
@@ -566,10 +566,11 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 4: // FRONTEND_SOCKET
-            if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-              struct.frontendSocket = iprot.readString();
-              struct.setFrontendSocketIsSet(true);
+          case 4: // SCHEDULER_ADDRESS
+            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+              struct.schedulerAddress = new THostPort();
+              struct.schedulerAddress.read(iprot);
+              struct.setSchedulerAddressIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -604,9 +605,9 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
         oprot.writeString(struct.appId);
         oprot.writeFieldEnd();
       }
-      if (struct.frontendSocket != null) {
-        oprot.writeFieldBegin(FRONTEND_SOCKET_FIELD_DESC);
-        oprot.writeString(struct.frontendSocket);
+      if (struct.schedulerAddress != null) {
+        oprot.writeFieldBegin(SCHEDULER_ADDRESS_FIELD_DESC);
+        struct.schedulerAddress.write(oprot);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -636,7 +637,7 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
       if (struct.isSetAppId()) {
         optionals.set(2);
       }
-      if (struct.isSetFrontendSocket()) {
+      if (struct.isSetSchedulerAddress()) {
         optionals.set(3);
       }
       oprot.writeBitSet(optionals, 4);
@@ -649,8 +650,8 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
       if (struct.isSetAppId()) {
         oprot.writeString(struct.appId);
       }
-      if (struct.isSetFrontendSocket()) {
-        oprot.writeString(struct.frontendSocket);
+      if (struct.isSetSchedulerAddress()) {
+        struct.schedulerAddress.write(oprot);
       }
     }
 
@@ -671,8 +672,9 @@ public class TFullTaskId implements org.apache.thrift.TBase<TFullTaskId, TFullTa
         struct.setAppIdIsSet(true);
       }
       if (incoming.get(3)) {
-        struct.frontendSocket = iprot.readString();
-        struct.setFrontendSocketIsSet(true);
+        struct.schedulerAddress = new THostPort();
+        struct.schedulerAddress.read(iprot);
+        struct.setSchedulerAddressIsSet(true);
       }
     }
   }

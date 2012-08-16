@@ -17,10 +17,9 @@ import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
-import edu.berkeley.sparrow.thrift.TResourceVector;
-import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
  * This class extends the thrift Sparrow node monitor interface. It wraps the
@@ -51,7 +50,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
    */
   public void initialize(Configuration conf, int nmPort, int internalPort)
       throws IOException {
-    nodeMonitor.initialize(conf);
+    nodeMonitor.initialize(conf, nmPort);
 
     // Setup application-facing agent service.
     NodeMonitorService.Processor<NodeMonitorService.Iface> processor =
@@ -88,12 +87,6 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   }
 
   @Override
-  public boolean launchTask(ByteBuffer message, TFullTaskId taskId,
-      TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
-    return nodeMonitor.launchTask(message, taskId, user, estimatedResources);
-  }
-
-  @Override
   public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) throws TException {
     nodeMonitor.sendFrontendMessage(app, taskId, status, message);
@@ -102,5 +95,11 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   @Override
   public void tasksFinished(List<TFullTaskId> tasks) throws TException {
     nodeMonitor.tasksFinished(tasks);
+  }
+
+  @Override
+  public boolean enqueueTaskReservations(TEnqueueTaskReservationsRequest request)
+      throws TException {
+    return nodeMonitor.enqueueTaskReservations(request);
   }
 }

@@ -7,8 +7,9 @@ import java.util.Queue;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Maps;
+
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
@@ -20,37 +21,39 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 public class RoundRobinTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(RoundRobinTaskScheduler.class);
 
-  private HashMap<String, Queue<TaskDescription>> appQueues = 
-      new HashMap<String, Queue<TaskDescription>>();
+  private HashMap<String, Queue<TaskReservation>> appQueues = Maps.newHashMap();
 
   private ArrayList<String> apps = new ArrayList<String>();
   private int currentIndex = 0; // Round robin index, always used (mod n) where n is
                                 // the number of apps.
 
   @Override
-  void handleSubmitTask(TaskDescription task, String appId) {
-    if (TResources.isLessThanOrEqualTo(task.estimatedResources, getFreeResources())) {
-      LOG.info("Task: " + task.taskId + " instantly runnable. " 
-        + task.estimatedResources + "<=" + getFreeResources());
-      makeTaskRunnable(task);
+  synchronized void handleSubmitTaskReservation(TaskReservation taskReservation) {
+     /* Because of the need to check the free resources and then, depending on the result, start a
+      * new task, this method must be synchronized.
+      */
+    if (TResources.isLessThanOrEqualTo(taskReservation.estimatedResources, getFreeResources())) {
+      LOG.info("Task for request " + taskReservation.requestId + " instantly runnable. " 
+        + taskReservation.estimatedResources + "<=" + getFreeResources());
+      makeTaskRunnable(taskReservation);
     } else {
-      addTaskToAppQueue(appId, task);
+      addTaskToAppQueue(taskReservation.appId, taskReservation);
     }
   }
   
-  void addTaskToAppQueue(String app, TaskDescription task) {
+  void addTaskToAppQueue(String app, TaskReservation taskReservation) {
     synchronized(appQueues) {
       if (!appQueues.containsKey(app)) {
-        appQueues.put(app, new LinkedList<TaskDescription>());
+        appQueues.put(app, new LinkedList<TaskReservation>());
         apps.add(app);
       }
-      appQueues.get(app).add(task);
+      appQueues.get(app).add(taskReservation);
     }
   }
   
-  void removeTaskFromAppQueue(String app, TaskDescription task) {
+  void removeTaskFromAppQueue(String app, TaskReservation taskReservation) {
     synchronized(appQueues) {
-      appQueues.get(app).remove(task);
+      appQueues.get(app).remove(taskReservation);
       if (appQueues.get(app).size() == 0) {
         appQueues.remove(app);
         apps.remove(app);
@@ -59,7 +62,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected void handleTaskCompleted(TFullTaskId taskId) {
+  protected void handleTaskCompleted(String requestId) {
     synchronized(appQueues) {
       /* Scan through the list of apps (starting at currentIndex) and find the first
        * one with a pending task. If we find a pending task, make that task runnable
@@ -67,24 +70,25 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
        * 
        * Note that this implementation assumes that we can take an arbitrary task and,
        * by virtue of a task having just finished, have enough resources to execute it. 
-       * This makes sense for scheduling similar sized tasks (e.g. just scheduling cores)
+       * This makes sense for scheduling similarly sized tasks (e.g. just scheduling cores)
        * but will not be the case if tasks take different amounts of resources. */
       for (int i = 0; i < apps.size(); i++) {
         String app = apps.get((currentIndex + i) % apps.size());
-        Queue<TaskDescription> considering = appQueues.get(app);
-        TaskDescription nextTask = considering.poll();
+        Queue<TaskReservation> considering = appQueues.get(app);
+        TaskReservation nextTask = considering.poll();
         if (nextTask == null) {
+          LOG.debug("No available tasks for app " + app);
           // Shouldn't get here if we are removing non-empty queues
           continue;
-        }
-        else {
-          LOG.info("Task: " + nextTask.taskId + " now runnable");
+        } else {
+          LOG.info("Task for request: " + nextTask.requestId + " now runnable");
           makeTaskRunnable(nextTask);
           removeTaskFromAppQueue(app, nextTask);
           currentIndex = currentIndex + i + 1;
           return;
         }
       }
+      LOG.debug("No available tasks, so not launching anything.");
       // No one had a task, so do nothing.
     }
   }

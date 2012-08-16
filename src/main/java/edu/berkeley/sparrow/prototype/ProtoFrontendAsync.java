@@ -19,12 +19,10 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
-import org.apache.thrift.transport.TTransport;
 
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.SchedulerService;
-import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.registerFrontend_call;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.submitJob_call;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
@@ -43,19 +41,6 @@ public class ProtoFrontendAsync {
   public static final int DEFAULT_BENCHMARK_ITERATIONS = 10;  // # of benchmark iterations
   
   private static final Logger LOG = Logger.getLogger(ProtoFrontendAsync.class);
-  
-  private static class RegisterCallback implements AsyncMethodCallback<registerFrontend_call> {
-    @Override
-    public void onComplete(registerFrontend_call response) {
-      LOG.debug("Registered frontend");
-    }
-
-    @Override
-    public void onError(Exception exception) {
-      LOG.error("Error registering frontend");
-      System.exit(-1);
-    }
-  }
   
   private static class SubmitCallback implements  AsyncMethodCallback<submitJob_call> {
     TSchedulingRequest req;
@@ -92,7 +77,7 @@ public class ProtoFrontendAsync {
     List<TTaskSpec> out = new ArrayList<TTaskSpec>();
     for (int taskId = 0; taskId < numTasks; taskId++) {
       TTaskSpec spec = new TTaskSpec();
-      spec.setTaskID(Integer.toString(taskId));
+      spec.setTaskId(Integer.toString(taskId));
       spec.setMessage(message.array());
       spec.setEstimatedResources(resources);
       out.add(spec);
@@ -136,10 +121,8 @@ public class ProtoFrontendAsync {
           DEFAULT_BENCHMARK_ITERATIONS);
       int benchmarkId = conf.getInt("benchmark.id", DEFAULT_TASK_BENCHMARK);
       
-      
       int schedulerPort = conf.getInt("scheduler_port", 
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
-      
 
       TProtocolFactory factory = new TBinaryProtocol.Factory();
       TAsyncClientManager manager =  new TAsyncClientManager();

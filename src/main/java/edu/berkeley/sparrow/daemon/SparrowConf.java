@@ -60,9 +60,6 @@ public class SparrowConf {
   /** The hostname of this machine. */
   public final static String HOSTNAME = "hostname";
   
-  public final static String RESERVATION_MS = "reservation_ms";
-  public final static int DEFAULT_RESERVATION_MS = 15;
-  
   // Parameters for static operation (least usable system tests).
   // Expects a comma-separated list of host:port pairs describing the address of the
   // internal interface of the node monitors.
