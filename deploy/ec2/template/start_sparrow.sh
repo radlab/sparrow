@@ -21,7 +21,7 @@ if [ ! $APPCHK = '0' ]; then
 fi
 
 # -XX:MaxGCPauseMillis=3 
-nohup java -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCTimeStamps -Xmx2046m -XX:+PrintGCDetails -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.daemon.SparrowDaemon -c sparrow.conf > $LOG 2>&1 &
+nice -n 20 nohup java -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCTimeStamps -Xmx2046m -XX:+PrintGCDetails -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.daemon.SparrowDaemon -c sparrow.conf > $LOG 2>&1 &
 PID=$!
 echo "Logging to $LOG"
 sleep 1
