@@ -43,39 +43,39 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 public class Scheduler {
   private final static Logger LOG = Logger.getLogger(Scheduler.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(Scheduler.class);
-  
+
   /** Used to uniquely identify requests arriving at this scheduler. */
   private int counter = 0;
   private InetSocketAddress address;
-  
+
   /** Socket addresses for each frontend. */
-  HashMap<String, InetSocketAddress> frontendSockets = 
+  HashMap<String, InetSocketAddress> frontendSockets =
       new HashMap<String, InetSocketAddress>();
-  
+
   /** Thrift client pool for communicating with node monitors */
   ThriftClientPool<InternalService.AsyncClient> nodeMonitorClientPool =
       new ThriftClientPool<InternalService.AsyncClient>(
       new ThriftClientPool.InternalServiceMakerFactory());
-  
+
   /** Thrift client pool for communicating with front ends. */
-  private ThriftClientPool<FrontendService.AsyncClient> frontendClientPool =  
+  private ThriftClientPool<FrontendService.AsyncClient> frontendClientPool =
       new ThriftClientPool<FrontendService.AsyncClient>(
           new ThriftClientPool.FrontendServiceMakerFactory());
-  
+
   /** Information about cluster workload due to other schedulers. */
   SchedulerState state;
-  
+
   /** Logical task assignment. */
   // TODO: NOTE - this is a hack - we need to modify constrainedPlacer to have more
   // advanced features like waiting for some probes and configurable probe ratio.
   TaskPlacer constrainedPlacer;
   TaskPlacer unconstrainedPlacer;
-  
+
   private Configuration conf;
-  
+
   /**
    * A callback handler for asynchronous task launches.
-   * 
+   *
    * We use the thrift event-based interface for launching tasks. In parallel, we launch
    * several tasks, then we return when all have finished launching.
    */
@@ -91,7 +91,7 @@ public class Scheduler {
       this.client = client;
       this.socket = socket;
     }
-    
+
     @Override
     public void onComplete(launchTask_call response) {
       try {
@@ -130,12 +130,12 @@ public class Scheduler {
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
-    
+
     state.initialize(conf);
     constrainedPlacer.initialize(conf, nodeMonitorClientPool);
     unconstrainedPlacer.initialize(conf, nodeMonitorClientPool);
   }
-   
+
   public boolean registerFrontend(String appId, String addr) {
     LOG.debug(Logging.functionCall(appId, addr));
     Optional<InetSocketAddress> socketAddress = Serialization.strToSocket(addr);
@@ -150,7 +150,7 @@ public class Scheduler {
   public boolean submitJob(TSchedulingRequest req) throws TException {
     LOG.debug(Logging.functionCall(req));
     long start = System.currentTimeMillis();
-    
+
     String requestId = getRequestId();
     // Logging the address here is somewhat redundant, since all of the
     // messages in this particular log file come from the same address.
@@ -168,11 +168,11 @@ public class Scheduler {
       return false;
     }
     long probeFinish = System.currentTimeMillis();
-    
+
     // Launch tasks.
     CountDownLatch latch = new CountDownLatch(placement.size());
     for (TaskPlacementResponse response : placement) {
-      LOG.debug("Attempting to launch task " + response.getTaskSpec().getTaskID() 
+      LOG.debug("Attempting to launch task " + response.getTaskSpec().getTaskID()
           + " on " + response.getNodeAddr());
 
       InternalService.AsyncClient client;
@@ -181,7 +181,7 @@ public class Scheduler {
         client = nodeMonitorClientPool.borrowClient(response.getNodeAddr());
         long t1 = System.currentTimeMillis();
         if (t1 - t0 > 100) {
-          LOG.error("Took more than 100ms to create client for: " + 
+          LOG.error("Took more than 100ms to create client for: " +
             response.getNodeAddr());
         }
       } catch (Exception e) {
@@ -197,7 +197,7 @@ public class Scheduler {
       id.requestId = requestId;
       id.taskId = taskId;
       client.launchTask(response.getTaskSpec().message, id,
-          req.getUser(), response.getTaskSpec().getEstimatedResources(),          
+          req.getUser(), response.getTaskSpec().getEstimatedResources(),
           new TaskLaunchCallback(latch, client, response.getNodeAddr()));
     }
     // NOTE: Currently we just return rather than waiting for all tasks to launch
@@ -210,7 +210,7 @@ public class Scheduler {
     }
     */
     long end = System.currentTimeMillis();
-    LOG.debug("All tasks launched, returning. Total time: " + (end - start) + 
+    LOG.debug("All tasks launched, returning. Total time: " + (end - start) +
         "Probe time: " + (probeFinish - start));
     return true;
   }
@@ -219,9 +219,9 @@ public class Scheduler {
       throws IOException {
     LOG.debug(Logging.functionCall(req));
     // Get placement
-    Collection<TaskPlacementResponse> placements = getJobPlacementResp(req, 
+    Collection<TaskPlacementResponse> placements = getJobPlacementResp(req,
                                                                        getRequestId());
-    
+
     // Massage into correct Thrift output type
     Collection<TTaskPlacement> out = new HashSet<TTaskPlacement>(placements.size());
     for (TaskPlacementResponse placement : placements) {
@@ -233,7 +233,7 @@ public class Scheduler {
     Log.debug("Returning task placement: " + out);
     return out;
   }
-  
+
   /**
    * Internal method called by both submitJob() and getJobPlacement().
    */
@@ -251,18 +251,23 @@ public class Scheduler {
     for (TTaskSpec task : tasks) {
       constrained = constrained || (
           task.preference != null &&
-          task.preference.nodes != null && 
-          !task.preference.nodes.isEmpty()); 
+          task.preference.nodes != null &&
+          !task.preference.nodes.isEmpty());
     }
-    
+
     /* This is a hack to force Spark to cache data on multiple machines. We
      * use a probe ratio of three to signal that the scheduler should perform
-     * this hack rather than trying to do a "good" job scheduling. */
+     * this hack rather than trying to do a "good" job scheduling.
+     *
+     * This makes several assumptions, including the fact that after all preferences
+     * are excluded, there are still nodes left in the cluster. This works only under
+     * a very limited set of circumstances that correspond to our large scale tests.*/
+    /*
     if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
       if (tasks.get(0).preference.nodes != null &&
           (tasks.get(0).preference.nodes.size() == 1 ||
           tasks.get(0).preference.nodes.size() == 2)) {
-        
+
         // Explicitly avoid nodes with preferences, because those are nodes where
         // the data is already cached, and we're trying to force the data to be
         // cached on other nodes.
@@ -280,7 +285,7 @@ public class Scheduler {
        return new RandomTaskPlacer().placeTasks(
            app, requestId, subBackends, tasks, req.schedulingPref);
       }
-    }
+    }*/
     if (constrained) {
       return constrainedPlacer.placeTasks(
           app, requestId, backendList, tasks, req.schedulingPref);
@@ -289,13 +294,13 @@ public class Scheduler {
           app, requestId, backendList, tasks, req.schedulingPref);
     }
   }
-  
+
   /**
    * Returns an ID that identifies a request uniquely (across all Sparrow schedulers).
-   * 
+   *
    * This should only be called once for each request (it will return a different
    * identifier if called a second time).
-   * 
+   *
    * TODO: Include the port number, so this works when there are multiple schedulers
    * running on a single machine (as there will be when we do large scale testing).
    */
@@ -306,7 +311,7 @@ public class Scheduler {
     return String.format("%s_%d", Hostname.getIPAddress(conf), counter++);
   }
 
-  private class sendFrontendMessageCallback implements 
+  private class sendFrontendMessageCallback implements
       AsyncMethodCallback<frontendMessage_call> {
     private InetSocketAddress frontendSocket;
     private AsyncClient client;
@@ -314,9 +319,9 @@ public class Scheduler {
       frontendSocket = socket;
       this.client = client;
     }
-        
+
     public void onComplete(frontendMessage_call response) {
-      try { frontendClientPool.returnClient(frontendSocket, client); } 
+      try { frontendClientPool.returnClient(frontendSocket, client); }
       catch (Exception e) { LOG.error(e); }
     }
 
@@ -325,7 +330,7 @@ public class Scheduler {
       LOG.error(exception);
     }
   }
- 
+
   public void sendFrontendMessage(String app, String requestId,
       ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, requestId, message));
@@ -335,7 +340,7 @@ public class Scheduler {
     }
     try {
       AsyncClient client = frontendClientPool.borrowClient(frontend);
-      client.frontendMessage(requestId, message, 
+      client.frontendMessage(requestId, message,
           new sendFrontendMessageCallback(frontend, client));
     } catch (IOException e) {
       LOG.error("Error launching message on frontend: " + app, e);
