@@ -1,7 +1,6 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -19,7 +18,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.scheduler.TaskPlacer.TaskPlacementResponse;
@@ -332,7 +330,7 @@ public class Scheduler {
   }
 
   public void sendFrontendMessage(String app, String requestId,
-      ByteBuffer message) {
+      int status, ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, requestId, message));
     InetSocketAddress frontend = frontendSockets.get(app);
     if (frontend == null) {
@@ -340,7 +338,7 @@ public class Scheduler {
     }
     try {
       AsyncClient client = frontendClientPool.borrowClient(frontend);
-      client.frontendMessage(requestId, message,
+      client.frontendMessage(requestId, status, message,
           new sendFrontendMessageCallback(frontend, client));
     } catch (IOException e) {
       LOG.error("Error launching message on frontend: " + app, e);

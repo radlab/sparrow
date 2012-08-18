@@ -24,21 +24,21 @@ public class SchedulerThrift implements SchedulerService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_SCHEDULER_THRIFT_PORT = 20503;
   private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 8;
-  
+
   private Scheduler scheduler = new Scheduler();
 
   /**
    * Initialize this thrift service.
-   * 
+   *
    * This spawns a multi-threaded thrift server and listens for Sparrow
    * scheduler requests.
    */
   public void initialize(Configuration conf) throws IOException {
-    SchedulerService.Processor<SchedulerService.Iface> processor = 
+    SchedulerService.Processor<SchedulerService.Iface> processor =
         new SchedulerService.Processor<SchedulerService.Iface>(this);
-    int port = conf.getInt(SparrowConf.SCHEDULER_THRIFT_PORT, 
+    int port = conf.getInt(SparrowConf.SCHEDULER_THRIFT_PORT,
         DEFAULT_SCHEDULER_THRIFT_PORT);
-    int threads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS, 
+    int threads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS,
         DEFAULT_SCHEDULER_THRIFT_THREADS);
     String hostname = Hostname.getHostName(conf);
     InetSocketAddress addr = new InetSocketAddress(hostname, port);
@@ -71,7 +71,7 @@ public class SchedulerThrift implements SchedulerService.Iface {
 
   @Override
   public void sendFrontendMessage(String app, String requestId,
-      ByteBuffer message) throws TException {
-    scheduler.sendFrontendMessage(app, requestId, message);
+      int status, ByteBuffer message) throws TException {
+    scheduler.sendFrontendMessage(app, requestId, status, message);
   }
 }

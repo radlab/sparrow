@@ -33,31 +33,31 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   public final static int DEFAULT_NM_THRIFT_THREADS = 64;
   public final static int DEFAULT_INTERNAL_THRIFT_PORT = 20502;
   public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 8;
- 
+
   private NodeMonitor nodeMonitor = new NodeMonitor();
   // The socket addr (ip:port) where we listen for requests from other Sparrow daemons.
   // Used when registering backends with the state store.
   private InetSocketAddress internalAddr;
-  
+
   /**
    * Initialize this thrift service.
-   * 
+   *
    * This spawns 2 multi-threaded thrift servers, one exposing the app-facing
    * agent service and the other exposing the internal-facing agent service,
    * and listens for requests to both servers. We require explicit specification of the
    * ports for these respective interfaces, since they cannot always be determined from
    * within this class under certain configurations (e.g. a config file specifies
-   * multiple NodeMonitors). 
+   * multiple NodeMonitors).
    */
-  public void initialize(Configuration conf, int nmPort, int internalPort) 
+  public void initialize(Configuration conf, int nmPort, int internalPort)
       throws IOException {
     nodeMonitor.initialize(conf);
 
     // Setup application-facing agent service.
-    NodeMonitorService.Processor<NodeMonitorService.Iface> processor = 
+    NodeMonitorService.Processor<NodeMonitorService.Iface> processor =
         new NodeMonitorService.Processor<NodeMonitorService.Iface>(this);
 
-    int threads = conf.getInt(SparrowConf.NM_THRIFT_THREADS, 
+    int threads = conf.getInt(SparrowConf.NM_THRIFT_THREADS,
         DEFAULT_NM_THRIFT_THREADS);
     TServers.launchThreadedThriftServer(nmPort, threads, processor);
 
@@ -68,10 +68,10 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
         SparrowConf.INTERNAL_THRIFT_THREADS,
         DEFAULT_INTERNAL_THRIFT_THREADS);
     TServers.launchThreadedThriftServer(internalPort, internalThreads, internalProcessor);
-    
+
     internalAddr = new InetSocketAddress(InetAddress.getLocalHost(), internalPort);
   }
-  
+
   @Override
   public boolean registerBackend(String app, String backendSocket) throws TException {
     Optional<InetSocketAddress> backendAddr = Serialization.strToSocket(backendSocket);
@@ -80,7 +80,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
     }
     return nodeMonitor.registerBackend(app, internalAddr, backendAddr.get());
   }
-  
+
   @Override
   public Map<String, TResourceUsage> getLoad(String app, String requestId)
       throws TException {
@@ -102,8 +102,8 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
 
   @Override
   public void sendFrontendMessage(String app, String requestId,
-      ByteBuffer message) throws TException {
-    nodeMonitor.sendFrontendMessage(app, requestId, message);
+      int status, ByteBuffer message) throws TException {
+    nodeMonitor.sendFrontendMessage(app, requestId, status, message);
   }
 
   @Override

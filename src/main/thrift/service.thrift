@@ -19,7 +19,8 @@ service SchedulerService {
 
   # Send a message to be delivered to the frontend for {app} pertaining
   # to the request {request}. For now this is only a task status message.
-  void sendFrontendMessage(1: string app, 2: string requestId, 3: binary message);
+  void sendFrontendMessage(1: string app, 2: string requestId, 3: i32 status,
+                           4: binary message);
 }
 
 # A service used by application backends to coordinate with Sparrow.
@@ -37,7 +38,8 @@ service NodeMonitorService {
 
   # Send a message to be delivered to the frontend for {app} pertaining
   # to the request {request}. For now this is only a task status message.
-  void sendFrontendMessage(1: string app, 2: string requestId, 3: binary message);
+  void sendFrontendMessage(1: string app, 2: string requestId, 3: i32 status, 
+                           4: binary message);
   #
 }
 
@@ -59,7 +61,7 @@ service BackendService {
 service FrontendService {
   # Send a message to this frontend pertaining to {requestId} with value
   # {message}.
-  void frontendMessage(1: string requestId, 2: binary message);
+  void frontendMessage(1: string requestId, 2: i32 status, 3: binary message);
 }
 
 # The InternalService exposes state about application backends to:

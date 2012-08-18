@@ -40,41 +40,41 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
  * A Sparrow implementation of a Mesos Executor driver. NOTE: This is experimental.
- * 
- * The interface between Mesos slave daemons and application backends (termed Executors) 
- * is via an ExecutorDriver. The driver is capable of launching tasks on an executor 
+ *
+ * The interface between Mesos slave daemons and application backends (termed Executors)
+ * is via an ExecutorDriver. The driver is capable of launching tasks on an executor
  * process and sending messages from that process to frontends. The general API is mostly
- * compatible with Sparrow's notion of an application backend.  
- * 
+ * compatible with Sparrow's notion of an application backend.
+ *
  * This is a version of an ExecutorDriver which is also a Sparrow backend. Existing
- * applications can use this ExecutorDriver as a drop-in substitue for a Mesos 
+ * applications can use this ExecutorDriver as a drop-in substitue for a Mesos
  * ExecutorDriver, and launch tasks via Sparrow rather than Mesos.
  */
 public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Iface {
   private Executor executor;
-  
+
   ThriftClientPool<NodeMonitorService.AsyncClient> clientPool = // Async clients for
-                                                                // messages 
+                                                                // messages
       new ThriftClientPool<NodeMonitorService.AsyncClient>(
       new ThriftClientPool.NodeMonitorServiceMakerFactory());
-  
+
   Client client; // Sync client for registration
-  
+
   private HashMap<String, TFullTaskId> taskIdToFullTaskId = Maps.newHashMap();
 
   private InetSocketAddress localhost = new InetSocketAddress("localhost", 20501);
   private boolean isRunning = false;
   private Status stopStatus = Status.OK;
   private Lock runLock = new ReentrantLock();
-  final Condition stopped  = runLock.newCondition(); 
-  
+  final Condition stopped  = runLock.newCondition();
+
   private String appName = System.getProperty("sparrow.app.name", "spark");
   private int appPort = Integer.parseInt(System.getProperty("sparrow.app.port", "4310"));
-  
+
   public SparrowExecutorDriver(Executor executor) {
     this.executor = executor;
   }
-  
+
   @Override
   public Status join() {
     if (!isRunning) { return Status.DRIVER_NOT_RUNNING; }
@@ -101,11 +101,11 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     return abort();
   }
 
-  private class TaskFinishedCallback implements AsyncMethodCallback<tasksFinished_call> { 
+  private class TaskFinishedCallback implements AsyncMethodCallback<tasksFinished_call> {
     private AsyncClient client;
-    
+
     TaskFinishedCallback(AsyncClient client) { this.client = client; }
-      
+
     public void onComplete(tasksFinished_call response) {
       try {
         clientPool.returnClient(localhost, client);
@@ -118,12 +118,12 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       exception.printStackTrace(System.err);
     }
   }
-  
-  private class SendFrontendMessageCallback implements AsyncMethodCallback<sendFrontendMessage_call> { 
+
+  private class SendFrontendMessageCallback implements AsyncMethodCallback<sendFrontendMessage_call> {
     private AsyncClient client;
-    
+
     SendFrontendMessageCallback(AsyncClient client) { this.client = client; }
-      
+
     public void onComplete(sendFrontendMessage_call response) {
       try {
         clientPool.returnClient(localhost, client);
@@ -136,7 +136,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
       exception.printStackTrace(System.err);
     }
   }
-  
+
   @Override
   public synchronized Status sendStatusUpdate(TaskStatus status) {
     TFullTaskId fullId = taskIdToFullTaskId.get(status.getTaskId().getValue());
@@ -159,7 +159,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     String requestId = fullId.requestId;
 
     try {
-      client2.sendFrontendMessage(appName, requestId, 
+      client2.sendFrontendMessage(appName, requestId, 1,
           ByteBuffer.wrap(status.toByteArray()), new SendFrontendMessageCallback(client2));
     } catch (TException e) {
       e.printStackTrace();
@@ -170,8 +170,8 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
 
   @Override
   public Status start() {
-    if (isRunning) { 
-      return Status.DRIVER_ALREADY_RUNNING; 
+    if (isRunning) {
+      return Status.DRIVER_ALREADY_RUNNING;
     }
     try { // TODO switch to client pool here
       client = TClients.createBlockingNmClient("localhost", 20501, 500);
@@ -219,7 +219,7 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
     signalStopped();
     return stopStatus;
   }
-  
+
   private void signalStopped() {
     runLock.lock();
     stopStatus = Status.DRIVER_STOPPED;

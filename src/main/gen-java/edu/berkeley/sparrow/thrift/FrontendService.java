@@ -31,13 +31,13 @@ public class FrontendService {
 
   public interface Iface {
 
-    public void frontendMessage(String requestId, ByteBuffer message) throws org.apache.thrift.TException;
+    public void frontendMessage(String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException;
 
   }
 
   public interface AsyncIface {
 
-    public void frontendMessage(String requestId, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.frontendMessage_call> resultHandler) throws org.apache.thrift.TException;
+    public void frontendMessage(String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.frontendMessage_call> resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -61,16 +61,17 @@ public class FrontendService {
       super(iprot, oprot);
     }
 
-    public void frontendMessage(String requestId, ByteBuffer message) throws org.apache.thrift.TException
+    public void frontendMessage(String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException
     {
-      send_frontendMessage(requestId, message);
+      send_frontendMessage(requestId, status, message);
       recv_frontendMessage();
     }
 
-    public void send_frontendMessage(String requestId, ByteBuffer message) throws org.apache.thrift.TException
+    public void send_frontendMessage(String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException
     {
       frontendMessage_args args = new frontendMessage_args();
       args.setRequestId(requestId);
+      args.setStatus(status);
       args.setMessage(message);
       sendBase("frontendMessage", args);
     }
@@ -100,19 +101,21 @@ public class FrontendService {
       super(protocolFactory, clientManager, transport);
     }
 
-    public void frontendMessage(String requestId, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler) throws org.apache.thrift.TException {
+    public void frontendMessage(String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      frontendMessage_call method_call = new frontendMessage_call(requestId, message, resultHandler, this, ___protocolFactory, ___transport);
+      frontendMessage_call method_call = new frontendMessage_call(requestId, status, message, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
 
     public static class frontendMessage_call extends org.apache.thrift.async.TAsyncMethodCall {
       private String requestId;
+      private int status;
       private ByteBuffer message;
-      public frontendMessage_call(String requestId, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      public frontendMessage_call(String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.requestId = requestId;
+        this.status = status;
         this.message = message;
       }
 
@@ -120,6 +123,7 @@ public class FrontendService {
         prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("frontendMessage", org.apache.thrift.protocol.TMessageType.CALL, 0));
         frontendMessage_args args = new frontendMessage_args();
         args.setRequestId(requestId);
+        args.setStatus(status);
         args.setMessage(message);
         args.write(prot);
         prot.writeMessageEnd();
@@ -163,7 +167,7 @@ public class FrontendService {
 
       protected frontendMessage_result getResult(I iface, frontendMessage_args args) throws org.apache.thrift.TException {
         frontendMessage_result result = new frontendMessage_result();
-        iface.frontendMessage(args.requestId, args.message);
+        iface.frontendMessage(args.requestId, args.status, args.message);
         return result;
       }
     }
@@ -174,7 +178,8 @@ public class FrontendService {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("frontendMessage_args");
 
     private static final org.apache.thrift.protocol.TField REQUEST_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("requestId", org.apache.thrift.protocol.TType.STRING, (short)1);
-    private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)2);
+    private static final org.apache.thrift.protocol.TField STATUS_FIELD_DESC = new org.apache.thrift.protocol.TField("status", org.apache.thrift.protocol.TType.I32, (short)2);
+    private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)3);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -183,12 +188,14 @@ public class FrontendService {
     }
 
     public String requestId; // required
+    public int status; // required
     public ByteBuffer message; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       REQUEST_ID((short)1, "requestId"),
-      MESSAGE((short)2, "message");
+      STATUS((short)2, "status"),
+      MESSAGE((short)3, "message");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -205,7 +212,9 @@ public class FrontendService {
         switch(fieldId) {
           case 1: // REQUEST_ID
             return REQUEST_ID;
-          case 2: // MESSAGE
+          case 2: // STATUS
+            return STATUS;
+          case 3: // MESSAGE
             return MESSAGE;
           default:
             return null;
@@ -247,11 +256,15 @@ public class FrontendService {
     }
 
     // isset id assignments
+    private static final int __STATUS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
     public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
     static {
       Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
       tmpMap.put(_Fields.REQUEST_ID, new org.apache.thrift.meta_data.FieldMetaData("requestId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      tmpMap.put(_Fields.STATUS, new org.apache.thrift.meta_data.FieldMetaData("status", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
       tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
@@ -263,10 +276,13 @@ public class FrontendService {
 
     public frontendMessage_args(
       String requestId,
+      int status,
       ByteBuffer message)
     {
       this();
       this.requestId = requestId;
+      this.status = status;
+      setStatusIsSet(true);
       this.message = message;
     }
 
@@ -274,9 +290,12 @@ public class FrontendService {
      * Performs a deep copy on <i>other</i>.
      */
     public frontendMessage_args(frontendMessage_args other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
       if (other.isSetRequestId()) {
         this.requestId = other.requestId;
       }
+      this.status = other.status;
       if (other.isSetMessage()) {
         this.message = org.apache.thrift.TBaseHelper.copyBinary(other.message);
 ;
@@ -289,6 +308,8 @@ public class FrontendService {
 
     public void clear() {
       this.requestId = null;
+      setStatusIsSet(false);
+      this.status = 0;
       this.message = null;
     }
 
@@ -314,6 +335,29 @@ public class FrontendService {
       if (!value) {
         this.requestId = null;
       }
+    }
+
+    public int getStatus() {
+      return this.status;
+    }
+
+    public frontendMessage_args setStatus(int status) {
+      this.status = status;
+      setStatusIsSet(true);
+      return this;
+    }
+
+    public void unsetStatus() {
+      __isset_bit_vector.clear(__STATUS_ISSET_ID);
+    }
+
+    /** Returns true if field status is set (has been assigned a value) and false otherwise */
+    public boolean isSetStatus() {
+      return __isset_bit_vector.get(__STATUS_ISSET_ID);
+    }
+
+    public void setStatusIsSet(boolean value) {
+      __isset_bit_vector.set(__STATUS_ISSET_ID, value);
     }
 
     public byte[] getMessage() {
@@ -360,6 +404,14 @@ public class FrontendService {
         }
         break;
 
+      case STATUS:
+        if (value == null) {
+          unsetStatus();
+        } else {
+          setStatus((Integer)value);
+        }
+        break;
+
       case MESSAGE:
         if (value == null) {
           unsetMessage();
@@ -375,6 +427,9 @@ public class FrontendService {
       switch (field) {
       case REQUEST_ID:
         return getRequestId();
+
+      case STATUS:
+        return Integer.valueOf(getStatus());
 
       case MESSAGE:
         return getMessage();
@@ -392,6 +447,8 @@ public class FrontendService {
       switch (field) {
       case REQUEST_ID:
         return isSetRequestId();
+      case STATUS:
+        return isSetStatus();
       case MESSAGE:
         return isSetMessage();
       }
@@ -417,6 +474,15 @@ public class FrontendService {
         if (!(this_present_requestId && that_present_requestId))
           return false;
         if (!this.requestId.equals(that.requestId))
+          return false;
+      }
+
+      boolean this_present_status = true;
+      boolean that_present_status = true;
+      if (this_present_status || that_present_status) {
+        if (!(this_present_status && that_present_status))
+          return false;
+        if (this.status != that.status)
           return false;
       }
 
@@ -451,6 +517,16 @@ public class FrontendService {
       }
       if (isSetRequestId()) {
         lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.requestId, typedOther.requestId);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetStatus()).compareTo(typedOther.isSetStatus());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetStatus()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.status, typedOther.status);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -493,6 +569,10 @@ public class FrontendService {
       }
       first = false;
       if (!first) sb.append(", ");
+      sb.append("status:");
+      sb.append(this.status);
+      first = false;
+      if (!first) sb.append(", ");
       sb.append("message:");
       if (this.message == null) {
         sb.append("null");
@@ -518,6 +598,8 @@ public class FrontendService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te.getMessage());
@@ -550,7 +632,15 @@ public class FrontendService {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 2: // MESSAGE
+            case 2: // STATUS
+              if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+                struct.status = iprot.readI32();
+                struct.setStatusIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 3: // MESSAGE
               if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
                 struct.message = iprot.readBinary();
                 struct.setMessageIsSet(true);
@@ -578,6 +668,9 @@ public class FrontendService {
           oprot.writeString(struct.requestId);
           oprot.writeFieldEnd();
         }
+        oprot.writeFieldBegin(STATUS_FIELD_DESC);
+        oprot.writeI32(struct.status);
+        oprot.writeFieldEnd();
         if (struct.message != null) {
           oprot.writeFieldBegin(MESSAGE_FIELD_DESC);
           oprot.writeBinary(struct.message);
@@ -604,12 +697,18 @@ public class FrontendService {
         if (struct.isSetRequestId()) {
           optionals.set(0);
         }
-        if (struct.isSetMessage()) {
+        if (struct.isSetStatus()) {
           optionals.set(1);
         }
-        oprot.writeBitSet(optionals, 2);
+        if (struct.isSetMessage()) {
+          optionals.set(2);
+        }
+        oprot.writeBitSet(optionals, 3);
         if (struct.isSetRequestId()) {
           oprot.writeString(struct.requestId);
+        }
+        if (struct.isSetStatus()) {
+          oprot.writeI32(struct.status);
         }
         if (struct.isSetMessage()) {
           oprot.writeBinary(struct.message);
@@ -619,12 +718,16 @@ public class FrontendService {
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, frontendMessage_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(2);
+        BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           struct.requestId = iprot.readString();
           struct.setRequestIdIsSet(true);
         }
         if (incoming.get(1)) {
+          struct.status = iprot.readI32();
+          struct.setStatusIsSet(true);
+        }
+        if (incoming.get(2)) {
           struct.message = iprot.readBinary();
           struct.setMessageIsSet(true);
         }

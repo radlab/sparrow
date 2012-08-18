@@ -37,8 +37,8 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
  * A Node Monitor which is responsible for communicating with application
- * backends. This class is wrapped by multiple thrift servers, so it may 
- * be concurrently accessed when handling multiple function calls 
+ * backends. This class is wrapped by multiple thrift servers, so it may
+ * be concurrently accessed when handling multiple function calls
  * simultaneously.
  */
 public class NodeMonitor {
@@ -47,20 +47,20 @@ public class NodeMonitor {
   private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
   private final static int DEFAULT_CORES = 8;        // Default CPU capacity
   private static int reservationMs;
-  
+
   private static NodeMonitorState state;
-  private HashMap<String, InetSocketAddress> appSockets = 
+  private HashMap<String, InetSocketAddress> appSockets =
       new HashMap<String, InetSocketAddress>();
-  private HashMap<String, List<TFullTaskId>> appTasks = 
+  private HashMap<String, List<TFullTaskId>> appTasks =
       new HashMap<String, List<TFullTaskId>>();
   // Map to scheduler socket address for each request id.
   private ConcurrentMap<String, InetSocketAddress> requestSchedulers =
       Maps.newConcurrentMap();
-  private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool = 
+  private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
-  
-  private Map<String, ConcurrentLinkedQueue<ProbeWithTime>> pastProbes = 
+
+  private Map<String, ConcurrentLinkedQueue<ProbeWithTime>> pastProbes =
       Maps.newConcurrentMap();
   private TResourceVector capacity;
   private Configuration conf;
@@ -72,7 +72,7 @@ public class NodeMonitor {
     public long time;
     public String requestId;
   }
-  
+
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
@@ -92,30 +92,30 @@ public class NodeMonitor {
     capacity = new TResourceVector();
     this.conf = conf;
     ipAddress = Hostname.getIPAddress(conf);
-    
+
     int mem = Resources.getSystemMemoryMb(conf);
     capacity.setMemory(mem);
     LOG.info("Using memory allocation: " + mem);
-    
+
     int cores = Resources.getSystemCPUCount(conf);
     capacity.setCores(cores);
     LOG.info("Using core allocation: " + cores);
-    
+
     scheduler = new FifoTaskScheduler();
     scheduler.setMaxActiveTasks(cores);
     scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler);
-    
-    reservationMs = conf.getInt(SparrowConf.RESERVATION_MS, 
+
+    reservationMs = conf.getInt(SparrowConf.RESERVATION_MS,
         SparrowConf.DEFAULT_RESERVATION_MS);
   }
-  
+
   /**
    * Registers the backend with assumed 0 load, and returns true if successful.
    * Returns false if the backend was already registered.
    */
-  public boolean registerBackend(String appId, InetSocketAddress nmAddr, 
+  public boolean registerBackend(String appId, InetSocketAddress nmAddr,
       InetSocketAddress backendAddr) {
     LOG.debug(Logging.functionCall(appId, nmAddr, backendAddr));
     if (appSockets.containsKey(appId)) {
@@ -135,11 +135,11 @@ public class NodeMonitor {
    */
   public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
-    
+
     if (!pastProbes.containsKey(appId)) {
       pastProbes.put(appId, new ConcurrentLinkedQueue<ProbeWithTime>());
     }
-    
+
     // Return probes relating to all applications
     int numToAccountFor = 0;
     for (Entry<String, ConcurrentLinkedQueue<ProbeWithTime>> e : pastProbes.entrySet()) {
@@ -152,13 +152,13 @@ public class NodeMonitor {
         }
       }
     }
-  
+
     // Account for this guy
     ProbeWithTime record = new ProbeWithTime();
     record.time = System.currentTimeMillis();
     record.requestId = requestId;
     pastProbes.get(appId).add(record);
-    
+
     if (!requestId.equals("*")) { // Don't log state store request
       AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
                                               ipAddress));
@@ -166,14 +166,14 @@ public class NodeMonitor {
     Map<String, TResourceUsage> out = new HashMap<String, TResourceUsage>();
     if (appId.equals("*")) {
       for (String app : appSockets.keySet()) {
-        out.put(app, scheduler.getResourceUsage(app)); 
+        out.put(app, scheduler.getResourceUsage(app));
       }
     }
     else {
       TResourceUsage usage = scheduler.getResourceUsage(appId);
       if (numToAccountFor > 0) {
         LOG.debug("Accounting for " + numToAccountFor + " probes in flight." );
-        TResources.addTo(usage.getResources(), 
+        TResources.addTo(usage.getResources(),
             TResources.createResourceVector(0, numToAccountFor));
       }
       out.put(appId, scheduler.getResourceUsage(appId));
@@ -186,12 +186,12 @@ public class NodeMonitor {
    * Update the resource usage for a given application.
    */
   public void updateResourceUsage(
-      String app, Map<TUserGroupInfo, TResourceVector> load, 
+      String app, Map<TUserGroupInfo, TResourceVector> load,
       List<TFullTaskId> activeTaskIds) {
     LOG.debug(Logging.functionCall(app, load, activeTaskIds));
     LOG.error("UpdateResourceUsage not supported");
   }
-  
+
   /**
    * Account for tasks which have finished.
    */
@@ -199,10 +199,10 @@ public class NodeMonitor {
     LOG.debug(Logging.functionCall(tasks));
     scheduler.tasksFinished(tasks);
   }
-  
+
   /**
    * Launch a task for the given app.
-   * @param schedulerAddress 
+   * @param schedulerAddress
    */
   public boolean launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
@@ -215,28 +215,28 @@ public class NodeMonitor {
         }
       }
     }
-    
+
     Optional<InetSocketAddress> schedAddr = Serialization.strToSocket(
         taskId.frontendSocket);
     if (!schedAddr.isPresent()) {
-      LOG.error("No scheduler address specified in request for " + taskId.appId + " got " + 
+      LOG.error("No scheduler address specified in request for " + taskId.appId + " got " +
           taskId.frontendSocket);
       return false;
     }
     requestSchedulers.put(taskId.requestId, schedAddr.get());
-    
+
     InetSocketAddress socket = appSockets.get(taskId.appId);
     if (socket == null) {
       LOG.error("No socket stored for " + taskId.appId + " (never registered?). " +
       		"Can't launch task.");
       return false;
     }
-    scheduler.submitTask(scheduler.new TaskDescription(taskId, message, 
+    scheduler.submitTask(scheduler.new TaskDescription(taskId, message,
         estimatedResources, user, socket), taskId.appId);
     return true;
   }
 
-  private class sendFrontendMessageCallback implements 
+  private class sendFrontendMessageCallback implements
   AsyncMethodCallback<sendFrontendMessage_call> {
     private InetSocketAddress frontendSocket;
     private AsyncClient client;
@@ -244,33 +244,33 @@ public class NodeMonitor {
       frontendSocket = socket;
       this.client = client;
     }
-        
+
     public void onComplete(sendFrontendMessage_call response) {
-      try { schedulerClientPool.returnClient(frontendSocket, client); } 
+      try { schedulerClientPool.returnClient(frontendSocket, client); }
       catch (Exception e) { LOG.error(e); }
     }
-    
+
     public void onError(Exception exception) {
-      try { schedulerClientPool.returnClient(frontendSocket, client); } 
+      try { schedulerClientPool.returnClient(frontendSocket, client); }
       catch (Exception e) { LOG.error(e); }
       LOG.error(exception);
     }
   }
-  
+
   public void sendFrontendMessage(String app, String requestId,
-      ByteBuffer message) {
+      int status, ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, requestId, message));
     InetSocketAddress scheduler = requestSchedulers.get(requestId);
     if (scheduler == null) {
       LOG.error("Did not find any scheduler info for request: " + requestId);
       return;
     }
-    
+
     try {
-      LOG.debug("requestID: " + requestId + " scheduler: " + 
+      LOG.debug("requestID: " + requestId + " scheduler: " +
                 scheduler.getHostName() + " app:" + app);
       AsyncClient client = schedulerClientPool.borrowClient(scheduler);
-      client.sendFrontendMessage(app, requestId, message, 
+      client.sendFrontendMessage(app, requestId, status, message,
           new sendFrontendMessageCallback(scheduler, client));
       LOG.debug("finished sending message");
     } catch (IOException e) {
