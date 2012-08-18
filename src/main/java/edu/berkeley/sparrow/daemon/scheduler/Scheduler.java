@@ -329,16 +329,16 @@ public class Scheduler {
     }
   }
 
-  public void sendFrontendMessage(String app, String requestId,
+  public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) {
-    LOG.debug(Logging.functionCall(app, requestId, message));
+    LOG.debug(Logging.functionCall(app, taskId, message));
     InetSocketAddress frontend = frontendSockets.get(app);
     if (frontend == null) {
       LOG.error("Requested message sent to unregistered app: " + app);
     }
     try {
       AsyncClient client = frontendClientPool.borrowClient(frontend);
-      client.frontendMessage(requestId, status, message,
+      client.frontendMessage(taskId, status, message,
           new sendFrontendMessageCallback(frontend, client));
     } catch (IOException e) {
       LOG.error("Error launching message on frontend: " + app, e);

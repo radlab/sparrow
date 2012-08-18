@@ -230,7 +230,7 @@ public class ProtoBackend implements BackendService.Iface {
     executor.submit(new TaskRunnable(
         taskId.requestId, taskId, message, estimatedResources));
     synchronized (client) {
-      client.sendFrontendMessage(APP_ID, taskId.requestId, 1, ByteBuffer.wrap("Started".getBytes()));
+      client.sendFrontendMessage(APP_ID, taskId, 1, ByteBuffer.wrap("Started".getBytes()));
     }
   }
 

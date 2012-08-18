@@ -54,7 +54,7 @@ public class NodeMonitor {
   private HashMap<String, List<TFullTaskId>> appTasks =
       new HashMap<String, List<TFullTaskId>>();
   // Map to scheduler socket address for each request id.
-  private ConcurrentMap<String, InetSocketAddress> requestSchedulers =
+  private ConcurrentMap<TFullTaskId, InetSocketAddress> requestSchedulers =
       Maps.newConcurrentMap();
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
       new ThriftClientPool<SchedulerService.AsyncClient>(
@@ -223,7 +223,7 @@ public class NodeMonitor {
           taskId.frontendSocket);
       return false;
     }
-    requestSchedulers.put(taskId.requestId, schedAddr.get());
+    requestSchedulers.put(taskId, schedAddr.get());
 
     InetSocketAddress socket = appSockets.get(taskId.appId);
     if (socket == null) {
@@ -257,20 +257,20 @@ public class NodeMonitor {
     }
   }
 
-  public void sendFrontendMessage(String app, String requestId,
+  public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) {
-    LOG.debug(Logging.functionCall(app, requestId, message));
-    InetSocketAddress scheduler = requestSchedulers.get(requestId);
+    LOG.debug(Logging.functionCall(app, taskId, message));
+    InetSocketAddress scheduler = requestSchedulers.get(taskId);
     if (scheduler == null) {
-      LOG.error("Did not find any scheduler info for request: " + requestId);
+      LOG.error("Did not find any scheduler info for request: " + taskId);
       return;
     }
 
     try {
-      LOG.debug("requestID: " + requestId + " scheduler: " +
+      LOG.debug("taskID: " + taskId + " scheduler: " +
                 scheduler.getHostName() + " app:" + app);
       AsyncClient client = schedulerClientPool.borrowClient(scheduler);
-      client.sendFrontendMessage(app, requestId, status, message,
+      client.sendFrontendMessage(app, taskId, status, message,
           new sendFrontendMessageCallback(scheduler, client));
       LOG.debug("finished sending message");
     } catch (IOException e) {

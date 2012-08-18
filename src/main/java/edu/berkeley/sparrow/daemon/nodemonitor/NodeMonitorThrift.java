@@ -101,9 +101,9 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   }
 
   @Override
-  public void sendFrontendMessage(String app, String requestId,
+  public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) throws TException {
-    nodeMonitor.sendFrontendMessage(app, requestId, status, message);
+    nodeMonitor.sendFrontendMessage(app, taskId, status, message);
   }
 
   @Override

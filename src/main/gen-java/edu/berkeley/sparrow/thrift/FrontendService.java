@@ -31,13 +31,13 @@ public class FrontendService {
 
   public interface Iface {
 
-    public void frontendMessage(String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException;
+    public void frontendMessage(edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException;
 
   }
 
   public interface AsyncIface {
 
-    public void frontendMessage(String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.frontendMessage_call> resultHandler) throws org.apache.thrift.TException;
+    public void frontendMessage(edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.frontendMessage_call> resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -61,16 +61,16 @@ public class FrontendService {
       super(iprot, oprot);
     }
 
-    public void frontendMessage(String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException
+    public void frontendMessage(edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException
     {
-      send_frontendMessage(requestId, status, message);
+      send_frontendMessage(taskId, status, message);
       recv_frontendMessage();
     }
 
-    public void send_frontendMessage(String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException
+    public void send_frontendMessage(edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException
     {
       frontendMessage_args args = new frontendMessage_args();
-      args.setRequestId(requestId);
+      args.setTaskId(taskId);
       args.setStatus(status);
       args.setMessage(message);
       sendBase("frontendMessage", args);
@@ -101,20 +101,20 @@ public class FrontendService {
       super(protocolFactory, clientManager, transport);
     }
 
-    public void frontendMessage(String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler) throws org.apache.thrift.TException {
+    public void frontendMessage(edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      frontendMessage_call method_call = new frontendMessage_call(requestId, status, message, resultHandler, this, ___protocolFactory, ___transport);
+      frontendMessage_call method_call = new frontendMessage_call(taskId, status, message, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
 
     public static class frontendMessage_call extends org.apache.thrift.async.TAsyncMethodCall {
-      private String requestId;
+      private edu.berkeley.sparrow.thrift.TFullTaskId taskId;
       private int status;
       private ByteBuffer message;
-      public frontendMessage_call(String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      public frontendMessage_call(edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<frontendMessage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
-        this.requestId = requestId;
+        this.taskId = taskId;
         this.status = status;
         this.message = message;
       }
@@ -122,7 +122,7 @@ public class FrontendService {
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
         prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("frontendMessage", org.apache.thrift.protocol.TMessageType.CALL, 0));
         frontendMessage_args args = new frontendMessage_args();
-        args.setRequestId(requestId);
+        args.setTaskId(taskId);
         args.setStatus(status);
         args.setMessage(message);
         args.write(prot);
@@ -167,7 +167,7 @@ public class FrontendService {
 
       protected frontendMessage_result getResult(I iface, frontendMessage_args args) throws org.apache.thrift.TException {
         frontendMessage_result result = new frontendMessage_result();
-        iface.frontendMessage(args.requestId, args.status, args.message);
+        iface.frontendMessage(args.taskId, args.status, args.message);
         return result;
       }
     }
@@ -177,7 +177,7 @@ public class FrontendService {
   public static class frontendMessage_args implements org.apache.thrift.TBase<frontendMessage_args, frontendMessage_args._Fields>, java.io.Serializable, Cloneable   {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("frontendMessage_args");
 
-    private static final org.apache.thrift.protocol.TField REQUEST_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("requestId", org.apache.thrift.protocol.TType.STRING, (short)1);
+    private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRUCT, (short)1);
     private static final org.apache.thrift.protocol.TField STATUS_FIELD_DESC = new org.apache.thrift.protocol.TField("status", org.apache.thrift.protocol.TType.I32, (short)2);
     private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)3);
 
@@ -187,13 +187,13 @@ public class FrontendService {
       schemes.put(TupleScheme.class, new frontendMessage_argsTupleSchemeFactory());
     }
 
-    public String requestId; // required
+    public edu.berkeley.sparrow.thrift.TFullTaskId taskId; // required
     public int status; // required
     public ByteBuffer message; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
-      REQUEST_ID((short)1, "requestId"),
+      TASK_ID((short)1, "taskId"),
       STATUS((short)2, "status"),
       MESSAGE((short)3, "message");
 
@@ -210,8 +210,8 @@ public class FrontendService {
        */
       public static _Fields findByThriftId(int fieldId) {
         switch(fieldId) {
-          case 1: // REQUEST_ID
-            return REQUEST_ID;
+          case 1: // TASK_ID
+            return TASK_ID;
           case 2: // STATUS
             return STATUS;
           case 3: // MESSAGE
@@ -261,8 +261,8 @@ public class FrontendService {
     public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
     static {
       Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-      tmpMap.put(_Fields.REQUEST_ID, new org.apache.thrift.meta_data.FieldMetaData("requestId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TFullTaskId.class)));
       tmpMap.put(_Fields.STATUS, new org.apache.thrift.meta_data.FieldMetaData("status", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
       tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.DEFAULT, 
@@ -275,12 +275,12 @@ public class FrontendService {
     }
 
     public frontendMessage_args(
-      String requestId,
+      edu.berkeley.sparrow.thrift.TFullTaskId taskId,
       int status,
       ByteBuffer message)
     {
       this();
-      this.requestId = requestId;
+      this.taskId = taskId;
       this.status = status;
       setStatusIsSet(true);
       this.message = message;
@@ -292,8 +292,8 @@ public class FrontendService {
     public frontendMessage_args(frontendMessage_args other) {
       __isset_bit_vector.clear();
       __isset_bit_vector.or(other.__isset_bit_vector);
-      if (other.isSetRequestId()) {
-        this.requestId = other.requestId;
+      if (other.isSetTaskId()) {
+        this.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId(other.taskId);
       }
       this.status = other.status;
       if (other.isSetMessage()) {
@@ -307,33 +307,33 @@ public class FrontendService {
     }
 
     public void clear() {
-      this.requestId = null;
+      this.taskId = null;
       setStatusIsSet(false);
       this.status = 0;
       this.message = null;
     }
 
-    public String getRequestId() {
-      return this.requestId;
+    public edu.berkeley.sparrow.thrift.TFullTaskId getTaskId() {
+      return this.taskId;
     }
 
-    public frontendMessage_args setRequestId(String requestId) {
-      this.requestId = requestId;
+    public frontendMessage_args setTaskId(edu.berkeley.sparrow.thrift.TFullTaskId taskId) {
+      this.taskId = taskId;
       return this;
     }
 
-    public void unsetRequestId() {
-      this.requestId = null;
+    public void unsetTaskId() {
+      this.taskId = null;
     }
 
-    /** Returns true if field requestId is set (has been assigned a value) and false otherwise */
-    public boolean isSetRequestId() {
-      return this.requestId != null;
+    /** Returns true if field taskId is set (has been assigned a value) and false otherwise */
+    public boolean isSetTaskId() {
+      return this.taskId != null;
     }
 
-    public void setRequestIdIsSet(boolean value) {
+    public void setTaskIdIsSet(boolean value) {
       if (!value) {
-        this.requestId = null;
+        this.taskId = null;
       }
     }
 
@@ -396,11 +396,11 @@ public class FrontendService {
 
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
-      case REQUEST_ID:
+      case TASK_ID:
         if (value == null) {
-          unsetRequestId();
+          unsetTaskId();
         } else {
-          setRequestId((String)value);
+          setTaskId((edu.berkeley.sparrow.thrift.TFullTaskId)value);
         }
         break;
 
@@ -425,8 +425,8 @@ public class FrontendService {
 
     public Object getFieldValue(_Fields field) {
       switch (field) {
-      case REQUEST_ID:
-        return getRequestId();
+      case TASK_ID:
+        return getTaskId();
 
       case STATUS:
         return Integer.valueOf(getStatus());
@@ -445,8 +445,8 @@ public class FrontendService {
       }
 
       switch (field) {
-      case REQUEST_ID:
-        return isSetRequestId();
+      case TASK_ID:
+        return isSetTaskId();
       case STATUS:
         return isSetStatus();
       case MESSAGE:
@@ -468,12 +468,12 @@ public class FrontendService {
       if (that == null)
         return false;
 
-      boolean this_present_requestId = true && this.isSetRequestId();
-      boolean that_present_requestId = true && that.isSetRequestId();
-      if (this_present_requestId || that_present_requestId) {
-        if (!(this_present_requestId && that_present_requestId))
+      boolean this_present_taskId = true && this.isSetTaskId();
+      boolean that_present_taskId = true && that.isSetTaskId();
+      if (this_present_taskId || that_present_taskId) {
+        if (!(this_present_taskId && that_present_taskId))
           return false;
-        if (!this.requestId.equals(that.requestId))
+        if (!this.taskId.equals(that.taskId))
           return false;
       }
 
@@ -511,12 +511,12 @@ public class FrontendService {
       int lastComparison = 0;
       frontendMessage_args typedOther = (frontendMessage_args)other;
 
-      lastComparison = Boolean.valueOf(isSetRequestId()).compareTo(typedOther.isSetRequestId());
+      lastComparison = Boolean.valueOf(isSetTaskId()).compareTo(typedOther.isSetTaskId());
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetRequestId()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.requestId, typedOther.requestId);
+      if (isSetTaskId()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskId, typedOther.taskId);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -561,11 +561,11 @@ public class FrontendService {
       StringBuilder sb = new StringBuilder("frontendMessage_args(");
       boolean first = true;
 
-      sb.append("requestId:");
-      if (this.requestId == null) {
+      sb.append("taskId:");
+      if (this.taskId == null) {
         sb.append("null");
       } else {
-        sb.append(this.requestId);
+        sb.append(this.taskId);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -624,10 +624,11 @@ public class FrontendService {
             break;
           }
           switch (schemeField.id) {
-            case 1: // REQUEST_ID
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-                struct.requestId = iprot.readString();
-                struct.setRequestIdIsSet(true);
+            case 1: // TASK_ID
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId();
+                struct.taskId.read(iprot);
+                struct.setTaskIdIsSet(true);
               } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
@@ -663,9 +664,9 @@ public class FrontendService {
         struct.validate();
 
         oprot.writeStructBegin(STRUCT_DESC);
-        if (struct.requestId != null) {
-          oprot.writeFieldBegin(REQUEST_ID_FIELD_DESC);
-          oprot.writeString(struct.requestId);
+        if (struct.taskId != null) {
+          oprot.writeFieldBegin(TASK_ID_FIELD_DESC);
+          struct.taskId.write(oprot);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldBegin(STATUS_FIELD_DESC);
@@ -694,7 +695,7 @@ public class FrontendService {
       public void write(org.apache.thrift.protocol.TProtocol prot, frontendMessage_args struct) throws org.apache.thrift.TException {
         TTupleProtocol oprot = (TTupleProtocol) prot;
         BitSet optionals = new BitSet();
-        if (struct.isSetRequestId()) {
+        if (struct.isSetTaskId()) {
           optionals.set(0);
         }
         if (struct.isSetStatus()) {
@@ -704,8 +705,8 @@ public class FrontendService {
           optionals.set(2);
         }
         oprot.writeBitSet(optionals, 3);
-        if (struct.isSetRequestId()) {
-          oprot.writeString(struct.requestId);
+        if (struct.isSetTaskId()) {
+          struct.taskId.write(oprot);
         }
         if (struct.isSetStatus()) {
           oprot.writeI32(struct.status);
@@ -720,8 +721,9 @@ public class FrontendService {
         TTupleProtocol iprot = (TTupleProtocol) prot;
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
-          struct.requestId = iprot.readString();
-          struct.setRequestIdIsSet(true);
+          struct.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId();
+          struct.taskId.read(iprot);
+          struct.setTaskIdIsSet(true);
         }
         if (incoming.get(1)) {
           struct.status = iprot.readI32();

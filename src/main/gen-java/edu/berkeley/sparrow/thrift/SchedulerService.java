@@ -37,7 +37,7 @@ public class SchedulerService {
 
     public List<edu.berkeley.sparrow.thrift.TTaskPlacement> getJobPlacement(edu.berkeley.sparrow.thrift.TSchedulingRequest req) throws org.apache.thrift.TException;
 
-    public void sendFrontendMessage(String app, String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException;
+    public void sendFrontendMessage(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException;
 
   }
 
@@ -49,7 +49,7 @@ public class SchedulerService {
 
     public void getJobPlacement(edu.berkeley.sparrow.thrift.TSchedulingRequest req, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.getJobPlacement_call> resultHandler) throws org.apache.thrift.TException;
 
-    public void sendFrontendMessage(String app, String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException;
+    public void sendFrontendMessage(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -143,17 +143,17 @@ public class SchedulerService {
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "getJobPlacement failed: unknown result");
     }
 
-    public void sendFrontendMessage(String app, String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException
+    public void sendFrontendMessage(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException
     {
-      send_sendFrontendMessage(app, requestId, status, message);
+      send_sendFrontendMessage(app, taskId, status, message);
       recv_sendFrontendMessage();
     }
 
-    public void send_sendFrontendMessage(String app, String requestId, int status, ByteBuffer message) throws org.apache.thrift.TException
+    public void send_sendFrontendMessage(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException
     {
       sendFrontendMessage_args args = new sendFrontendMessage_args();
       args.setApp(app);
-      args.setRequestId(requestId);
+      args.setTaskId(taskId);
       args.setStatus(status);
       args.setMessage(message);
       sendBase("sendFrontendMessage", args);
@@ -283,22 +283,22 @@ public class SchedulerService {
       }
     }
 
-    public void sendFrontendMessage(String app, String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException {
+    public void sendFrontendMessage(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<sendFrontendMessage_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      sendFrontendMessage_call method_call = new sendFrontendMessage_call(app, requestId, status, message, resultHandler, this, ___protocolFactory, ___transport);
+      sendFrontendMessage_call method_call = new sendFrontendMessage_call(app, taskId, status, message, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
 
     public static class sendFrontendMessage_call extends org.apache.thrift.async.TAsyncMethodCall {
       private String app;
-      private String requestId;
+      private edu.berkeley.sparrow.thrift.TFullTaskId taskId;
       private int status;
       private ByteBuffer message;
-      public sendFrontendMessage_call(String app, String requestId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<sendFrontendMessage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      public sendFrontendMessage_call(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message, org.apache.thrift.async.AsyncMethodCallback<sendFrontendMessage_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.app = app;
-        this.requestId = requestId;
+        this.taskId = taskId;
         this.status = status;
         this.message = message;
       }
@@ -307,7 +307,7 @@ public class SchedulerService {
         prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("sendFrontendMessage", org.apache.thrift.protocol.TMessageType.CALL, 0));
         sendFrontendMessage_args args = new sendFrontendMessage_args();
         args.setApp(app);
-        args.setRequestId(requestId);
+        args.setTaskId(taskId);
         args.setStatus(status);
         args.setMessage(message);
         args.write(prot);
@@ -405,7 +405,7 @@ public class SchedulerService {
 
       protected sendFrontendMessage_result getResult(I iface, sendFrontendMessage_args args) throws org.apache.thrift.TException {
         sendFrontendMessage_result result = new sendFrontendMessage_result();
-        iface.sendFrontendMessage(args.app, args.requestId, args.status, args.message);
+        iface.sendFrontendMessage(args.app, args.taskId, args.status, args.message);
         return result;
       }
     }
@@ -2680,7 +2680,7 @@ public class SchedulerService {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("sendFrontendMessage_args");
 
     private static final org.apache.thrift.protocol.TField APP_FIELD_DESC = new org.apache.thrift.protocol.TField("app", org.apache.thrift.protocol.TType.STRING, (short)1);
-    private static final org.apache.thrift.protocol.TField REQUEST_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("requestId", org.apache.thrift.protocol.TType.STRING, (short)2);
+    private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRUCT, (short)2);
     private static final org.apache.thrift.protocol.TField STATUS_FIELD_DESC = new org.apache.thrift.protocol.TField("status", org.apache.thrift.protocol.TType.I32, (short)3);
     private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)4);
 
@@ -2691,14 +2691,14 @@ public class SchedulerService {
     }
 
     public String app; // required
-    public String requestId; // required
+    public edu.berkeley.sparrow.thrift.TFullTaskId taskId; // required
     public int status; // required
     public ByteBuffer message; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       APP((short)1, "app"),
-      REQUEST_ID((short)2, "requestId"),
+      TASK_ID((short)2, "taskId"),
       STATUS((short)3, "status"),
       MESSAGE((short)4, "message");
 
@@ -2717,8 +2717,8 @@ public class SchedulerService {
         switch(fieldId) {
           case 1: // APP
             return APP;
-          case 2: // REQUEST_ID
-            return REQUEST_ID;
+          case 2: // TASK_ID
+            return TASK_ID;
           case 3: // STATUS
             return STATUS;
           case 4: // MESSAGE
@@ -2770,8 +2770,8 @@ public class SchedulerService {
       Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
       tmpMap.put(_Fields.APP, new org.apache.thrift.meta_data.FieldMetaData("app", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-      tmpMap.put(_Fields.REQUEST_ID, new org.apache.thrift.meta_data.FieldMetaData("requestId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      tmpMap.put(_Fields.TASK_ID, new org.apache.thrift.meta_data.FieldMetaData("taskId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TFullTaskId.class)));
       tmpMap.put(_Fields.STATUS, new org.apache.thrift.meta_data.FieldMetaData("status", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
       tmpMap.put(_Fields.MESSAGE, new org.apache.thrift.meta_data.FieldMetaData("message", org.apache.thrift.TFieldRequirementType.DEFAULT, 
@@ -2785,13 +2785,13 @@ public class SchedulerService {
 
     public sendFrontendMessage_args(
       String app,
-      String requestId,
+      edu.berkeley.sparrow.thrift.TFullTaskId taskId,
       int status,
       ByteBuffer message)
     {
       this();
       this.app = app;
-      this.requestId = requestId;
+      this.taskId = taskId;
       this.status = status;
       setStatusIsSet(true);
       this.message = message;
@@ -2806,8 +2806,8 @@ public class SchedulerService {
       if (other.isSetApp()) {
         this.app = other.app;
       }
-      if (other.isSetRequestId()) {
-        this.requestId = other.requestId;
+      if (other.isSetTaskId()) {
+        this.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId(other.taskId);
       }
       this.status = other.status;
       if (other.isSetMessage()) {
@@ -2822,7 +2822,7 @@ public class SchedulerService {
 
     public void clear() {
       this.app = null;
-      this.requestId = null;
+      this.taskId = null;
       setStatusIsSet(false);
       this.status = 0;
       this.message = null;
@@ -2852,27 +2852,27 @@ public class SchedulerService {
       }
     }
 
-    public String getRequestId() {
-      return this.requestId;
+    public edu.berkeley.sparrow.thrift.TFullTaskId getTaskId() {
+      return this.taskId;
     }
 
-    public sendFrontendMessage_args setRequestId(String requestId) {
-      this.requestId = requestId;
+    public sendFrontendMessage_args setTaskId(edu.berkeley.sparrow.thrift.TFullTaskId taskId) {
+      this.taskId = taskId;
       return this;
     }
 
-    public void unsetRequestId() {
-      this.requestId = null;
+    public void unsetTaskId() {
+      this.taskId = null;
     }
 
-    /** Returns true if field requestId is set (has been assigned a value) and false otherwise */
-    public boolean isSetRequestId() {
-      return this.requestId != null;
+    /** Returns true if field taskId is set (has been assigned a value) and false otherwise */
+    public boolean isSetTaskId() {
+      return this.taskId != null;
     }
 
-    public void setRequestIdIsSet(boolean value) {
+    public void setTaskIdIsSet(boolean value) {
       if (!value) {
-        this.requestId = null;
+        this.taskId = null;
       }
     }
 
@@ -2943,11 +2943,11 @@ public class SchedulerService {
         }
         break;
 
-      case REQUEST_ID:
+      case TASK_ID:
         if (value == null) {
-          unsetRequestId();
+          unsetTaskId();
         } else {
-          setRequestId((String)value);
+          setTaskId((edu.berkeley.sparrow.thrift.TFullTaskId)value);
         }
         break;
 
@@ -2975,8 +2975,8 @@ public class SchedulerService {
       case APP:
         return getApp();
 
-      case REQUEST_ID:
-        return getRequestId();
+      case TASK_ID:
+        return getTaskId();
 
       case STATUS:
         return Integer.valueOf(getStatus());
@@ -2997,8 +2997,8 @@ public class SchedulerService {
       switch (field) {
       case APP:
         return isSetApp();
-      case REQUEST_ID:
-        return isSetRequestId();
+      case TASK_ID:
+        return isSetTaskId();
       case STATUS:
         return isSetStatus();
       case MESSAGE:
@@ -3029,12 +3029,12 @@ public class SchedulerService {
           return false;
       }
 
-      boolean this_present_requestId = true && this.isSetRequestId();
-      boolean that_present_requestId = true && that.isSetRequestId();
-      if (this_present_requestId || that_present_requestId) {
-        if (!(this_present_requestId && that_present_requestId))
+      boolean this_present_taskId = true && this.isSetTaskId();
+      boolean that_present_taskId = true && that.isSetTaskId();
+      if (this_present_taskId || that_present_taskId) {
+        if (!(this_present_taskId && that_present_taskId))
           return false;
-        if (!this.requestId.equals(that.requestId))
+        if (!this.taskId.equals(that.taskId))
           return false;
       }
 
@@ -3082,12 +3082,12 @@ public class SchedulerService {
           return lastComparison;
         }
       }
-      lastComparison = Boolean.valueOf(isSetRequestId()).compareTo(typedOther.isSetRequestId());
+      lastComparison = Boolean.valueOf(isSetTaskId()).compareTo(typedOther.isSetTaskId());
       if (lastComparison != 0) {
         return lastComparison;
       }
-      if (isSetRequestId()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.requestId, typedOther.requestId);
+      if (isSetTaskId()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.taskId, typedOther.taskId);
         if (lastComparison != 0) {
           return lastComparison;
         }
@@ -3140,11 +3140,11 @@ public class SchedulerService {
       }
       first = false;
       if (!first) sb.append(", ");
-      sb.append("requestId:");
-      if (this.requestId == null) {
+      sb.append("taskId:");
+      if (this.taskId == null) {
         sb.append("null");
       } else {
-        sb.append(this.requestId);
+        sb.append(this.taskId);
       }
       first = false;
       if (!first) sb.append(", ");
@@ -3211,10 +3211,11 @@ public class SchedulerService {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 2: // REQUEST_ID
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
-                struct.requestId = iprot.readString();
-                struct.setRequestIdIsSet(true);
+            case 2: // TASK_ID
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
+                struct.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId();
+                struct.taskId.read(iprot);
+                struct.setTaskIdIsSet(true);
               } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
@@ -3255,9 +3256,9 @@ public class SchedulerService {
           oprot.writeString(struct.app);
           oprot.writeFieldEnd();
         }
-        if (struct.requestId != null) {
-          oprot.writeFieldBegin(REQUEST_ID_FIELD_DESC);
-          oprot.writeString(struct.requestId);
+        if (struct.taskId != null) {
+          oprot.writeFieldBegin(TASK_ID_FIELD_DESC);
+          struct.taskId.write(oprot);
           oprot.writeFieldEnd();
         }
         oprot.writeFieldBegin(STATUS_FIELD_DESC);
@@ -3289,7 +3290,7 @@ public class SchedulerService {
         if (struct.isSetApp()) {
           optionals.set(0);
         }
-        if (struct.isSetRequestId()) {
+        if (struct.isSetTaskId()) {
           optionals.set(1);
         }
         if (struct.isSetStatus()) {
@@ -3302,8 +3303,8 @@ public class SchedulerService {
         if (struct.isSetApp()) {
           oprot.writeString(struct.app);
         }
-        if (struct.isSetRequestId()) {
-          oprot.writeString(struct.requestId);
+        if (struct.isSetTaskId()) {
+          struct.taskId.write(oprot);
         }
         if (struct.isSetStatus()) {
           oprot.writeI32(struct.status);
@@ -3322,8 +3323,9 @@ public class SchedulerService {
           struct.setAppIsSet(true);
         }
         if (incoming.get(1)) {
-          struct.requestId = iprot.readString();
-          struct.setRequestIdIsSet(true);
+          struct.taskId = new edu.berkeley.sparrow.thrift.TFullTaskId();
+          struct.taskId.read(iprot);
+          struct.setTaskIdIsSet(true);
         }
         if (incoming.get(2)) {
           struct.status = iprot.readI32();

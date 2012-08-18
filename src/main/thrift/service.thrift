@@ -18,9 +18,11 @@ service SchedulerService {
   list<types.TTaskPlacement> getJobPlacement(1: types.TSchedulingRequest req);
 
   # Send a message to be delivered to the frontend for {app} pertaining
-  # to the request {request}. For now this is only a task status message.
-  void sendFrontendMessage(1: string app, 2: string requestId, 3: i32 status,
-                           4: binary message);
+  # to the task {taskId}. The {status} field allows for application-specific
+  # status enumerations. Right now this is used only for Spark, which relies on
+  # the scheduler to send task completion messages to frontends.
+  void sendFrontendMessage(1: string app, 2: types.TFullTaskId taskId, 
+                           3: i32 status, 4: binary message);
 }
 
 # A service used by application backends to coordinate with Sparrow.
@@ -36,11 +38,9 @@ service NodeMonitorService {
   # Inform the NodeMonitor that a particular task has finished
   void tasksFinished(1: list<types.TFullTaskId> tasks);
 
-  # Send a message to be delivered to the frontend for {app} pertaining
-  # to the request {request}. For now this is only a task status message.
-  void sendFrontendMessage(1: string app, 2: string requestId, 3: i32 status, 
-                           4: binary message);
-  #
+  # See SchedulerService.sendFrontendMessage
+  void sendFrontendMessage(1: string app, 2: types.TFullTaskId taskId,
+                           3: i32 status, 4: binary message);
 }
 
 # A service that backends are expected to extend. Handles communication
@@ -59,9 +59,9 @@ service BackendService {
 # A service that frontends are expected to extend. Handles communication from
 # a Scheduler.
 service FrontendService {
-  # Send a message to this frontend pertaining to {requestId} with value
-  # {message}.
-  void frontendMessage(1: string requestId, 2: i32 status, 3: binary message);
+  # See SchedulerService.sendFrontendMessage
+  void frontendMessage(1: types.TFullTaskId taskId, 2: i32 status, 
+                       3: binary message);
 }
 
 # The InternalService exposes state about application backends to:

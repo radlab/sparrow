@@ -22,6 +22,7 @@ import edu.berkeley.sparrow.api.SparrowFrontendClient;
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -171,7 +172,7 @@ public class ProtoFrontend implements FrontendService.Iface {
   }
 
   @Override
-  public void frontendMessage(String requestId, int status, ByteBuffer message)
+  public void frontendMessage(TFullTaskId taskId, int status, ByteBuffer message)
       throws TException {
     // We don't use messages here, so just log it.
     LOG.debug("Got unexpected message: " + Serialization.getByteBufferContents(message));

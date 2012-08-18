@@ -155,11 +155,9 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
         e.printStackTrace(System.err);
       }
     }
-    // TODO check if null
-    String requestId = fullId.requestId;
 
     try {
-      client2.sendFrontendMessage(appName, requestId, 1,
+      client2.sendFrontendMessage(appName, fullId, 1,
           ByteBuffer.wrap(status.toByteArray()), new SendFrontendMessageCallback(client2));
     } catch (TException e) {
       e.printStackTrace();

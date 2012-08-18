@@ -13,6 +13,7 @@ import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.SchedulerService;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
 
@@ -70,8 +71,8 @@ public class SchedulerThrift implements SchedulerService.Iface {
   }
 
   @Override
-  public void sendFrontendMessage(String app, String requestId,
+  public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) throws TException {
-    scheduler.sendFrontendMessage(app, requestId, status, message);
+    scheduler.sendFrontendMessage(app, taskId, status, message);
   }
 }
