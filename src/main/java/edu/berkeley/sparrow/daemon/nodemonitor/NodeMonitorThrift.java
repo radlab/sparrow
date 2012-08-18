@@ -94,13 +94,6 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   }
 
   @Override
-  public void updateResourceUsage(String app,
-      Map<TUserGroupInfo, TResourceVector> usage, List<TFullTaskId> activeTaskIds)
-      throws TException {
-    nodeMonitor.updateResourceUsage(app, usage, activeTaskIds);
-  }
-
-  @Override
   public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) throws TException {
     nodeMonitor.sendFrontendMessage(app, taskId, status, message);

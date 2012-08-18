@@ -30,11 +30,6 @@ service NodeMonitorService {
   # Register this machine as a backend for the given application.
   bool registerBackend(1: string app, 2: string listenSocket);
 
-  # Inform the NodeMonitor of the node's current resource usage.
-  void updateResourceUsage(1: string app,
-                           2: map<types.TUserGroupInfo, types.TResourceVector> usage,
-                           3: list<types.TFullTaskId> activeTaskIds);
-
   # Inform the NodeMonitor that a particular task has finished
   void tasksFinished(1: list<types.TFullTaskId> tasks);
 
@@ -46,10 +41,6 @@ service NodeMonitorService {
 # A service that backends are expected to extend. Handles communication
 # from a NodeMonitor.
 service BackendService {  
-  # Update the limit on resources allowed for this application, per user. If 
-  # applications exceed their allowed usage, Sparrow may terminate the
-  # backend.
-  void updateResourceLimits(1: map<types.TUserGroupInfo, types.TResourceVector> resources);
   void launchTask(1: binary message, 2: types.TFullTaskId taskId,
                   3: types.TUserGroupInfo user,
                   4: types.TResourceVector estimatedResources);

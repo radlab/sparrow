@@ -1026,16 +1026,16 @@ public class InternalService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map44 = iprot.readMapBegin();
-                  struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map44.size);
-                  for (int _i45 = 0; _i45 < _map44.size; ++_i45)
+                  org.apache.thrift.protocol.TMap _map16 = iprot.readMapBegin();
+                  struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map16.size);
+                  for (int _i17 = 0; _i17 < _map16.size; ++_i17)
                   {
-                    String _key46; // required
-                    edu.berkeley.sparrow.thrift.TResourceUsage _val47; // required
-                    _key46 = iprot.readString();
-                    _val47 = new edu.berkeley.sparrow.thrift.TResourceUsage();
-                    _val47.read(iprot);
-                    struct.success.put(_key46, _val47);
+                    String _key18; // required
+                    edu.berkeley.sparrow.thrift.TResourceUsage _val19; // required
+                    _key18 = iprot.readString();
+                    _val19 = new edu.berkeley.sparrow.thrift.TResourceUsage();
+                    _val19.read(iprot);
+                    struct.success.put(_key18, _val19);
                   }
                   iprot.readMapEnd();
                 }
@@ -1063,10 +1063,10 @@ public class InternalService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter48 : struct.success.entrySet())
+            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter20 : struct.success.entrySet())
             {
-              oprot.writeString(_iter48.getKey());
-              _iter48.getValue().write(oprot);
+              oprot.writeString(_iter20.getKey());
+              _iter20.getValue().write(oprot);
             }
             oprot.writeMapEnd();
           }
@@ -1097,10 +1097,10 @@ public class InternalService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter49 : struct.success.entrySet())
+            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TResourceUsage> _iter21 : struct.success.entrySet())
             {
-              oprot.writeString(_iter49.getKey());
-              _iter49.getValue().write(oprot);
+              oprot.writeString(_iter21.getKey());
+              _iter21.getValue().write(oprot);
             }
           }
         }
@@ -1112,16 +1112,16 @@ public class InternalService {
         BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TMap _map50 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map50.size);
-            for (int _i51 = 0; _i51 < _map50.size; ++_i51)
+            org.apache.thrift.protocol.TMap _map22 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new HashMap<String,edu.berkeley.sparrow.thrift.TResourceUsage>(2*_map22.size);
+            for (int _i23 = 0; _i23 < _map22.size; ++_i23)
             {
-              String _key52; // required
-              edu.berkeley.sparrow.thrift.TResourceUsage _val53; // required
-              _key52 = iprot.readString();
-              _val53 = new edu.berkeley.sparrow.thrift.TResourceUsage();
-              _val53.read(iprot);
-              struct.success.put(_key52, _val53);
+              String _key24; // required
+              edu.berkeley.sparrow.thrift.TResourceUsage _val25; // required
+              _key24 = iprot.readString();
+              _val25 = new edu.berkeley.sparrow.thrift.TResourceUsage();
+              _val25.read(iprot);
+              struct.success.put(_key24, _val25);
             }
           }
           struct.setSuccessIsSet(true);

@@ -226,12 +226,6 @@ public class SparrowExecutorDriver implements ExecutorDriver, BackendService.Ifa
   }
 
   @Override
-  public void updateResourceLimits(
-      Map<TUserGroupInfo, TResourceVector> resources) throws TException {
-    // Ignored, we don't care about resource limits from Sparrow
-  }
-
-  @Override
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources)
       throws TException {

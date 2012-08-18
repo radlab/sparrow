@@ -478,16 +478,16 @@ public class SchedulerStateStoreService {
             case 1: // SNAPSHOT
               if (schemeField.type == org.apache.thrift.protocol.TType.MAP) {
                 {
-                  org.apache.thrift.protocol.TMap _map54 = iprot.readMapBegin();
-                  struct.snapshot = new HashMap<String,edu.berkeley.sparrow.thrift.TNodeState>(2*_map54.size);
-                  for (int _i55 = 0; _i55 < _map54.size; ++_i55)
+                  org.apache.thrift.protocol.TMap _map26 = iprot.readMapBegin();
+                  struct.snapshot = new HashMap<String,edu.berkeley.sparrow.thrift.TNodeState>(2*_map26.size);
+                  for (int _i27 = 0; _i27 < _map26.size; ++_i27)
                   {
-                    String _key56; // required
-                    edu.berkeley.sparrow.thrift.TNodeState _val57; // required
-                    _key56 = iprot.readString();
-                    _val57 = new edu.berkeley.sparrow.thrift.TNodeState();
-                    _val57.read(iprot);
-                    struct.snapshot.put(_key56, _val57);
+                    String _key28; // required
+                    edu.berkeley.sparrow.thrift.TNodeState _val29; // required
+                    _key28 = iprot.readString();
+                    _val29 = new edu.berkeley.sparrow.thrift.TNodeState();
+                    _val29.read(iprot);
+                    struct.snapshot.put(_key28, _val29);
                   }
                   iprot.readMapEnd();
                 }
@@ -515,10 +515,10 @@ public class SchedulerStateStoreService {
           oprot.writeFieldBegin(SNAPSHOT_FIELD_DESC);
           {
             oprot.writeMapBegin(new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, struct.snapshot.size()));
-            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TNodeState> _iter58 : struct.snapshot.entrySet())
+            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TNodeState> _iter30 : struct.snapshot.entrySet())
             {
-              oprot.writeString(_iter58.getKey());
-              _iter58.getValue().write(oprot);
+              oprot.writeString(_iter30.getKey());
+              _iter30.getValue().write(oprot);
             }
             oprot.writeMapEnd();
           }
@@ -549,10 +549,10 @@ public class SchedulerStateStoreService {
         if (struct.isSetSnapshot()) {
           {
             oprot.writeI32(struct.snapshot.size());
-            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TNodeState> _iter59 : struct.snapshot.entrySet())
+            for (Map.Entry<String, edu.berkeley.sparrow.thrift.TNodeState> _iter31 : struct.snapshot.entrySet())
             {
-              oprot.writeString(_iter59.getKey());
-              _iter59.getValue().write(oprot);
+              oprot.writeString(_iter31.getKey());
+              _iter31.getValue().write(oprot);
             }
           }
         }
@@ -564,16 +564,16 @@ public class SchedulerStateStoreService {
         BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TMap _map60 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.snapshot = new HashMap<String,edu.berkeley.sparrow.thrift.TNodeState>(2*_map60.size);
-            for (int _i61 = 0; _i61 < _map60.size; ++_i61)
+            org.apache.thrift.protocol.TMap _map32 = new org.apache.thrift.protocol.TMap(org.apache.thrift.protocol.TType.STRING, org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.snapshot = new HashMap<String,edu.berkeley.sparrow.thrift.TNodeState>(2*_map32.size);
+            for (int _i33 = 0; _i33 < _map32.size; ++_i33)
             {
-              String _key62; // required
-              edu.berkeley.sparrow.thrift.TNodeState _val63; // required
-              _key62 = iprot.readString();
-              _val63 = new edu.berkeley.sparrow.thrift.TNodeState();
-              _val63.read(iprot);
-              struct.snapshot.put(_key62, _val63);
+              String _key34; // required
+              edu.berkeley.sparrow.thrift.TNodeState _val35; // required
+              _key34 = iprot.readString();
+              _val35 = new edu.berkeley.sparrow.thrift.TNodeState();
+              _val35.read(iprot);
+              struct.snapshot.put(_key34, _val35);
             }
           }
           struct.setSnapshotIsSet(true);

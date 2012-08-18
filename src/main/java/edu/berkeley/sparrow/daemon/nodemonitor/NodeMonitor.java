@@ -183,16 +183,6 @@ public class NodeMonitor {
   }
 
   /**
-   * Update the resource usage for a given application.
-   */
-  public void updateResourceUsage(
-      String app, Map<TUserGroupInfo, TResourceVector> load,
-      List<TFullTaskId> activeTaskIds) {
-    LOG.debug(Logging.functionCall(app, load, activeTaskIds));
-    LOG.error("UpdateResourceUsage not supported");
-  }
-
-  /**
    * Account for tasks which have finished.
    */
   public void tasksFinished(List<TFullTaskId> tasks) {

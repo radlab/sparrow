@@ -211,12 +211,6 @@ public class ProtoBackend implements BackendService.Iface {
   }
 
   @Override
-  public void updateResourceLimits(
-      Map<TUserGroupInfo, TResourceVector> resources) throws TException {
-    // Does nothing
-  }
-
-  @Override
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
     // We want to add accounting for task start here, even though the task is actually
