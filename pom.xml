@@ -14,11 +14,6 @@
       <version>4.10</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-      <version>1.6.1</version>
-    </dependency>
 		<dependency>
 		  <groupId>com.google.guava</groupId>
 		  <artifactId>guava</artifactId>
@@ -28,11 +23,6 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
       <version>2.4.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro-ipc</artifactId>
-      <version>1.6.1</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
