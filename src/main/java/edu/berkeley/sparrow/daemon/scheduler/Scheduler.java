@@ -15,7 +15,6 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
-import org.mortbay.log.Log;
 
 import com.google.common.base.Optional;
 
@@ -228,7 +227,7 @@ public class Scheduler {
       tPlacement.taskID = placement.getTaskSpec().getTaskID();
       out.add(tPlacement);
     }
-    Log.debug("Returning task placement: " + out);
+    LOG.debug("Returning task placement: " + out);
     return out;
   }
 
