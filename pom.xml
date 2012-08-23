@@ -50,13 +50,6 @@
 		<artifactId>commons-pool</artifactId>
 	  <version>1.6</version>
   </dependency>
-	<dependency>
-    <groupId>edu.berkeley</groupId>
-    <artifactId>mesos</artifactId>
-    <version>1.0</version>
-    <scope>system</scope>
-    <systemPath>${project.basedir}/lib/mesos.jar</systemPath>
-  </dependency>
   <dependency>
     <groupId>net.sf.jopt-simple</groupId>
     <artifactId>jopt-simple</artifactId>
