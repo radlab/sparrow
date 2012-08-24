@@ -75,7 +75,7 @@ public class TestUnconstrainedTaskPlacer {
     
     final int NUM_ITERATIONS = 100;
     for (int i = 0; i < NUM_ITERATIONS; ++i) {
-      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(PROBE_RATIO);
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, PROBE_RATIO);
       
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
@@ -133,7 +133,7 @@ public class TestUnconstrainedTaskPlacer {
     final int numIterations = 100;
     final int expectedReservations = 3;
     for (int i = 0; i < numIterations; ++i) {
-      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(probeRatio);
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, probeRatio);
       
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
@@ -157,9 +157,71 @@ public class TestUnconstrainedTaskPlacer {
           assertEquals(null, spec);
         }
       }
-      assertTrue(taskPlacer.allResponsesReceived());
-    }
-    
+    } 
   }
 
+  /** 
+   * Verifies that allResonsesReceived() works correctly by first calling
+   * getEnqueueTaskReservationsRequests() for a job with two tasks. Then, dovetails calls to
+   * assignTasks() to calls of allResponsesReceived() to ensure that allResponsesReceived() returns
+   * the correct answer.
+   */
+  @Test
+  public void testAllResponsesReceived() {
+    final double probeRatio = 1.5;
+    
+    final int numTasks = 2;
+    List<TTaskSpec> tasks = Lists.newArrayList();
+    ByteBuffer message = ByteBuffer.allocate(1);
+    TPlacementPreference placementPreference = new TPlacementPreference();
+    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
+    Set<String> taskIds = Sets.newHashSet();
+    for (int i = 0; i < numTasks; ++i) {
+      String id = "test task " + i;
+      taskIds.add(id);
+      tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
+    }
+    
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+    TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
+    
+    List<InetSocketAddress> backendNodes = Lists.newArrayList();
+    backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
+    backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
+    backendNodes.add(new InetSocketAddress("123.4.5.6", 20000));
+    backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
+    backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
+    backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
+    
+    final int numIterations = 100;
+    final int expectedReservations = 3;
+    for (int i = 0; i < numIterations; ++i) {
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, probeRatio);
+      
+      Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
+          taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
+                                                        SCHEDULER_ADDRESS);
+
+      // Now try to get tasks, and ensure that the task placer will return exactly 2 tasks.
+      List<InetSocketAddress> nodes = Lists.newArrayList(requests.keySet());
+      assertEquals(nodes.size(), expectedReservations);
+      Collections.shuffle(nodes);
+      Set<String> taskIdsCopy = Sets.newHashSet(taskIds);
+      for (int j = 0; j < expectedReservations; ++j) {
+        assertTrue(!taskPlacer.allResponsesReceived());
+        THostPort hostPort = new THostPort(nodes.get(j).getHostName(), nodes.get(j).getPort());
+        TTaskLaunchSpec spec = taskPlacer.assignTask(hostPort);
+        if (j < numTasks) {
+          assertTrue("Expect to receive a task spec for task " + j + " at " +
+                     hostPort.getHost() + ":" + hostPort.getPort(), spec != null);
+          assertTrue("Expect list of unlaunched tasks to contain " + spec.getTaskId(),
+                     taskIdsCopy.contains(spec.getTaskId()));
+          taskIdsCopy.remove(spec.getTaskId());
+        } else {
+          assertEquals(null, spec);
+        }
+      }
+      assertTrue(taskPlacer.allResponsesReceived());
+    } 
+  }
 }

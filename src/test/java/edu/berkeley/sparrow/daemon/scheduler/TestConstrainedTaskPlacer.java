@@ -47,7 +47,7 @@ public class TestConstrainedTaskPlacer {
    */
   @Test
   public void testGetEnqueueTaskReservationsRequestsSimple() {
-    ConstrainedTaskPlacer taskPlacer = new ConstrainedTaskPlacer(2);
+    ConstrainedTaskPlacer taskPlacer = new ConstrainedTaskPlacer(REQUEST_ID, 2);
     
     Set<InetSocketAddress> preferredNodes = new HashSet<InetSocketAddress>();
     preferredNodes.add(new InetSocketAddress("127.0.0.1", 22));
@@ -144,7 +144,7 @@ public class TestConstrainedTaskPlacer {
     
     final int NUM_ITERATIONS = 1;
     for (int i = 0; i < NUM_ITERATIONS; ++i) {
-      ConstrainedTaskPlacer taskPlacer = new ConstrainedTaskPlacer(2);
+      ConstrainedTaskPlacer taskPlacer = new ConstrainedTaskPlacer(REQUEST_ID, 2);
       
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID,

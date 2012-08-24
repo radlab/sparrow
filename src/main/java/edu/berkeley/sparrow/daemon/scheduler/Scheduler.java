@@ -157,15 +157,15 @@ public class Scheduler {
     TaskPlacer taskPlacer;
     if (constrained) {
       if (request.isSetProbeRatio()) {
-        taskPlacer = new ConstrainedTaskPlacer(request.getProbeRatio());
+        taskPlacer = new ConstrainedTaskPlacer(requestId, request.getProbeRatio());
       } else {
-        taskPlacer = new ConstrainedTaskPlacer(defaultProbeRatioConstrained);
+        taskPlacer = new ConstrainedTaskPlacer(requestId, defaultProbeRatioConstrained);
       }
     } else {
       if (request.isSetProbeRatio()) {
-        taskPlacer = new UnconstrainedTaskPlacer(request.getProbeRatio());
+        taskPlacer = new UnconstrainedTaskPlacer(requestId, request.getProbeRatio());
       } else {
-        taskPlacer = new UnconstrainedTaskPlacer(defaultProbeRatioUnconstrained);
+        taskPlacer = new UnconstrainedTaskPlacer(requestId, defaultProbeRatioUnconstrained);
       }
     }
     requestTaskPlacers.put(requestId, taskPlacer);
@@ -211,7 +211,7 @@ public class Scheduler {
          enqueueTaskReservationsRequests.entrySet())  {
       try {
         InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
-        LOG.debug("Launching enqueueTask on node: " + entry.getKey());
+        LOG.debug("Launching enqueueTask for request on node: " + entry.getKey());
         AUDIT_LOG.info(Logging.auditEventString("enqueueTask_launch", requestId,
                                                 entry.getKey().toString(), 1));
         // Pass in null callback because the RPC doesn't return anything.
@@ -238,7 +238,6 @@ public class Scheduler {
       // requestTaskPlacers doesn't grow to be unbounded.
       requestTaskPlacers.remove(requestId);
     }
-    LOG.debug("returning task: " + taskLaunchSpec);
     return taskLaunchSpec;
   }
 

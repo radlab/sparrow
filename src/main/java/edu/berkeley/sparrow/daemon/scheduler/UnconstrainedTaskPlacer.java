@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
@@ -29,13 +30,26 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
   protected static final Logger AUDIT_LOG = Logging.getAuditLogger(UnconstrainedTaskPlacer.class);
 
   /** Specifications for tasks that have not yet been launched. */
- List<TTaskLaunchSpec> unlaunchedTasks;
+  List<TTaskLaunchSpec> unlaunchedTasks;
+ 
+  /**
+   * Number of outstanding reservations. Used to determine when all reservations have been
+   * responded to.
+   */
+  AtomicInteger numOutstandingReservations;
+  
+  /**
+   * Id of the request associated with this task placer.
+   */
+  String requestId;
   
   private double probeRatio;
 
-  UnconstrainedTaskPlacer(double probeRatio) {
+  UnconstrainedTaskPlacer(String requestId, double probeRatio) {
+    this.requestId = requestId;
     this.probeRatio = probeRatio;
     unlaunchedTasks = Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>());
+    this.numOutstandingReservations = new AtomicInteger(0);
   }
   
   @Override
@@ -46,18 +60,20 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
     LOG.debug(Logging.functionCall(schedulingRequest, requestId, nodes, schedulerAddress));
     
     int numTasks = schedulingRequest.getTasks().size();
-    int probesToLaunch = (int) Math.ceil(probeRatio * numTasks);
-    probesToLaunch = Math.min(probesToLaunch, nodes.size());
-    LOG.debug("Creating " + probesToLaunch + " task reservations");
+    int reservationsToLaunch = (int) Math.ceil(probeRatio * numTasks);
+    reservationsToLaunch = Math.min(reservationsToLaunch, nodes.size());
+    LOG.debug("Request " + requestId + ": Creating " + reservationsToLaunch +
+              " task reservations");
     
     // Get a random subset of nodes by shuffling list.
     List<InetSocketAddress> nodeList = Lists.newArrayList(nodes);
     Collections.shuffle(nodeList);
-    if (nodeList.size() < probesToLaunch) {
-      LOG.fatal("Cannot launch " + probesToLaunch + " reservations, because there are not enough "
-                + "nodes. This use case is not currently supported.");
+    if (nodeList.size() < reservationsToLaunch) {
+      LOG.fatal("Request " + requestId + ": Cannot launch " + reservationsToLaunch +
+                " reservations, because there are not enough nodes. This use case is not " +
+                "currently supported.");
     }
-    nodeList = nodeList.subList(0, probesToLaunch);
+    nodeList = nodeList.subList(0, reservationsToLaunch);
     
     TResourceVector estimatedResources = null;
     
@@ -83,21 +99,26 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
       requests.put(node, request);
     }
     
+    numOutstandingReservations.set(requests.size());
+    
     return requests;
   }
 
   @Override
   public TTaskLaunchSpec assignTask(THostPort nodeMonitorAddress) {
+    numOutstandingReservations.decrementAndGet();
     synchronized(unlaunchedTasks) {
       if (unlaunchedTasks.isEmpty()) {
-        LOG.debug("Not launching a task at " + nodeMonitorAddress.getHost() + ":" +
-                  nodeMonitorAddress.getPort() + "; no remaining unlaunched tasks");
+        LOG.debug("Request " + requestId + ": Not launching a task at " +
+                  nodeMonitorAddress.getHost() + ":" + nodeMonitorAddress.getPort() +
+                  "; no remaining unlaunched tasks");
         return null;
       } else {
         TTaskLaunchSpec launchSpec = unlaunchedTasks.get(0);
         unlaunchedTasks.remove(0);
-        LOG.debug("Assigning task " + launchSpec.getTaskId() + " to node monitor at " +
-                  nodeMonitorAddress.getHost() + ":" + nodeMonitorAddress.getPort());
+        LOG.debug("Request " + requestId + ": Assigning task " + launchSpec.getTaskId() +
+                  " to node monitor at " + nodeMonitorAddress.getHost() + ":" +
+                  nodeMonitorAddress.getPort());
         return launchSpec;
       }
     }
@@ -105,6 +126,6 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
   
   @Override
   public boolean allResponsesReceived() {
-    return unlaunchedTasks.isEmpty();
+    return numOutstandingReservations.get() == 0;
   }
 }

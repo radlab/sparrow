@@ -37,6 +37,9 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   
   private double probeRatio; 
   
+  /** Id of the request associated with this task placer. */
+  String requestId;
+  
   /**
    * For each backend machine, the tasks that can be launched there. Tasks for which reservations
    * were made on the backend are placed at the beginning of the list; any other tasks that can
@@ -44,7 +47,8 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
    */
   private Map<InetSocketAddress, List<TTaskLaunchSpec>> nodeMonitorsToTasks;
 
-  ConstrainedTaskPlacer(double probeRatio) {
+  ConstrainedTaskPlacer(String requestId, double probeRatio){
+    this.requestId = requestId;
     this.probeRatio = probeRatio;
     launchedTasks = Collections.synchronizedSet(new HashSet<TTaskLaunchSpec>());
     nodeMonitorsToTasks = Maps.newConcurrentMap();
