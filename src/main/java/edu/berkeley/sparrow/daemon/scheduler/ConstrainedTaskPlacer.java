@@ -168,8 +168,9 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
     InetSocketAddress nodeMonitorSocketAddress = new InetSocketAddress(
         nodeMonitorAddress.getHost(), nodeMonitorAddress.getPort());
     if (!nodeMonitorsToTasks.containsKey(nodeMonitorSocketAddress)) {
-      LOG.error("Cannot assign task to machine " + nodeMonitorSocketAddress + ", because it is " +
-                "not in the set of machines where tasks were enqueued");
+      LOG.error("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+          ": Not assigning a task (node monitor not in the set of node monitors where tasks " +
+          "were enqueued).");
       return Lists.newArrayList();
     }
     List<TTaskLaunchSpec> taskSpecs = nodeMonitorsToTasks.get(nodeMonitorSocketAddress);
@@ -188,11 +189,12 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       
     if (taskSpec != null) {
       this.launchedTasks.add(taskSpec);
-      LOG.debug("Assigning task " + taskSpec.getTaskId() + " to node monitor " +
-                nodeMonitorAddress);
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+          ": Assigning task.");
       return Lists.newArrayList(taskSpec);
     } else {
-      LOG.debug("No tasks remaining that can be assigned to node monitor " + nodeMonitorAddress);
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+          ": Not assigning a task (no remaining unlaunched tasks).");
       return Lists.newArrayList();
     }
   }

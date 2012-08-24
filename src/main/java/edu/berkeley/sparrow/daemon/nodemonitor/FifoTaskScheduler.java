@@ -27,6 +27,12 @@ public class FifoTaskScheduler extends TaskScheduler {
   synchronized void handleSubmitTaskReservation(TaskReservation taskReservation) {
     synchronized(activeTasks) {
       if (activeTasks < maxActiveTasks) {
+        if (taskReservations.size() > 0) {
+          String errorMessage = "activeTasks should be less than maxActiveTasks only " +
+                                "when no outstanding reservations.";
+          LOG.error(errorMessage);
+          throw new IllegalStateException(errorMessage);
+        }
         makeTaskRunnable(taskReservation);
         ++activeTasks;
         LOG.debug("Launching task for request " + taskReservation.requestId + " (" + activeTasks +
@@ -38,7 +44,8 @@ public class FifoTaskScheduler extends TaskScheduler {
     }
     try {
       LOG.debug("Enqueueing task reservation with request id " + taskReservation.requestId +
-               " because all task slots filled.");
+                " because all task slots filled. " + taskReservations.size() +
+                " already enqueued reservations.");
       taskReservations.put(taskReservation);
     } catch (InterruptedException e) {
       LOG.fatal(e);
