@@ -12,7 +12,7 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, command, collect-logs, destroy, login-fe, login-be")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, command, collect-logs, destroy, login-fe, login-be")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-7947f310",
@@ -332,7 +332,18 @@ def stop_mesos(frontends, backends, opts):
   ssh(frontends[0].public_dns_name, opts, "/root/stop_mesos_master.sh")
 
 
-def start_spark(frontends, backends, opts):
+""" Starts spark backends only to allow shark shell to launch. """
+def start_spark_shark(frontends, backends, opts):
+  if opts.scheduler != "sparrow":
+    print "ERROR: shark only supported w/ sparrow scheduler"
+    return
+  print "Starting Spark backends..."
+  ssh_all([be.public_dns_name for be in backends], opts,
+          "/root/start_spark_backend.sh")
+
+
+""" Starts spark TPCH runner w/ sparrow or mesos. """
+def start_spark_tpch(frontends, backends, opts):
   if opts.scheduler == "sparrow":
     print "Starting Spark backends..."
     ssh_all([be.public_dns_name for be in backends], opts,
@@ -341,7 +352,10 @@ def start_spark(frontends, backends, opts):
   print "Starting Spark frontends..."
   print opts.max_queries
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> shark stash
   # Adjustment to schedule all mesos work on one node
   if opts.scheduler == "mesos":
     driver = frontends[0]
@@ -500,8 +514,10 @@ def main():
     start_mesos(frontends, backends, opts)
   elif action == "stop-mesos":
     stop_mesos(frontends, backends, opts)
-  elif action == "start-spark":
-    start_spark(frontends, backends, opts)
+  elif action == "start-spark-tpch":
+    start_spark_tpch(frontends, backends, opts)
+  elif action == "start-spark-shark":
+    start_spark_shark(frontends, backends, opts)
   elif action == "stop-spark":
     stop_spark(frontends, backends, opts)
   elif action == "start-proto":

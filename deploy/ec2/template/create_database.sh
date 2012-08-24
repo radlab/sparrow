@@ -29,6 +29,7 @@ for fe in $FRONTENDS; do
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -rmr "hdfs://`hostname`:8020/$fe/"
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -mkdir "hdfs://`hostname`:8020/$fe/"
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -Ddfs.block.size=33554432 -copyFromLocal $fe/*.tbl hdfs://`hostname`:8020/$fe/
+  sudo -u hdfs /opt/hadoop/bin/hadoop dfs -chmod -R 777 "hdfs://`hostname`:8020/$fe/"
   rm -rf $fe
   cd -
 done
