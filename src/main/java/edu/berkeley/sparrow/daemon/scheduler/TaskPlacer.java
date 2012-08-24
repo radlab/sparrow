@@ -2,8 +2,10 @@ package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
+import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
@@ -37,9 +39,9 @@ public interface TaskPlacer {
   
   /**
    * Returns a {@link TTaskLaunchSpec} for a task that should be launched from the give node
-   * monitor.
+   * monitor.  Always returns either 0 or 1 tasks.
    */
-  public TTaskLaunchSpec assignTask(THostPort nodeMonitorAddress);
+  public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress);
   
   /** Returns true if all node monitors where task reservations were enqueued have replied. */
   public boolean allResponsesReceived();

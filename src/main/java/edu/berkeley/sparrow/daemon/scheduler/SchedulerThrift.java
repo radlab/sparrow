@@ -3,6 +3,7 @@ package edu.berkeley.sparrow.daemon.scheduler;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.TException;
@@ -64,7 +65,7 @@ public class SchedulerThrift implements SchedulerService.Iface {
   }
 
   @Override
-  public TTaskLaunchSpec getTask(String requestId, THostPort nodeMonitorAddress)
+  public List<TTaskLaunchSpec> getTask(String requestId, THostPort nodeMonitorAddress)
       throws TException {
     return scheduler.getTask(requestId, nodeMonitorAddress);
   }

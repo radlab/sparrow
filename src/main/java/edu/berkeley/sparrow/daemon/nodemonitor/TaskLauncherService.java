@@ -3,6 +3,7 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,6 +70,7 @@ public class TaskLauncherService {
           return;
         }
         try {
+          LOG.debug("Attempting to get task for node monitor at " + nodeMonitorAddress.toString());
           schedulerClient.getTask(task.requestId, nodeMonitorAddress, new GetTaskCallback(task));
         } catch (TException e) {
           LOG.error("Unable to getTask() from scheduler at " +
@@ -94,19 +96,26 @@ public class TaskLauncherService {
         LOG.error("Error getting client from scheduler client pool: " + e.getMessage());
         return;
       }
-      TTaskLaunchSpec taskLaunchSpec;
+      List<TTaskLaunchSpec> taskLaunchSpecs;
       try {
-        taskLaunchSpec = response.getResult();
+        taskLaunchSpecs = response.getResult();
       } catch (TException e) {
         LOG.error("Unable to read result of calling getTask() on scheduler " +
                   taskReservation.schedulerAddress.toString() + ": " + e);
-        taskLaunchSpec = null;
-      }
-      
-      if (taskLaunchSpec == null) {
         scheduler.taskCompleted(taskReservation.requestId);
         return;
       }
+      
+      if (taskLaunchSpecs.isEmpty()) {
+        scheduler.taskCompleted(taskReservation.requestId);
+        return;
+      }
+      
+      if (taskLaunchSpecs.size() > 1) {
+        LOG.warn("Received " + taskLaunchSpecs +
+                 " task launch specifications; ignoring all but the first one.");
+      }
+      TTaskLaunchSpec taskLaunchSpec = taskLaunchSpecs.get(0);
 
       // Launch the task on the backend.
       BackendService.Client client = null;

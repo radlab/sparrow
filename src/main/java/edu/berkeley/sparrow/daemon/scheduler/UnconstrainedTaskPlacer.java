@@ -105,21 +105,21 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
   }
 
   @Override
-  public TTaskLaunchSpec assignTask(THostPort nodeMonitorAddress) {
+  public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
     numOutstandingReservations.decrementAndGet();
     synchronized(unlaunchedTasks) {
       if (unlaunchedTasks.isEmpty()) {
         LOG.debug("Request " + requestId + ": Not launching a task at " +
                   nodeMonitorAddress.getHost() + ":" + nodeMonitorAddress.getPort() +
                   "; no remaining unlaunched tasks");
-        return null;
+        return Lists.newArrayList();
       } else {
         TTaskLaunchSpec launchSpec = unlaunchedTasks.get(0);
         unlaunchedTasks.remove(0);
         LOG.debug("Request " + requestId + ": Assigning task " + launchSpec.getTaskId() +
                   " to node monitor at " + nodeMonitorAddress.getHost() + ":" +
                   nodeMonitorAddress.getPort());
-        return launchSpec;
+        return Lists.newArrayList(launchSpec);
       }
     }
   }

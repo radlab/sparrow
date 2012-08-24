@@ -225,20 +225,24 @@ public class Scheduler {
     LOG.debug("All tasks enqueued; returning. Total time: " + (end - start) + " milliseconds");
   }
   
-  public TTaskLaunchSpec getTask(String requestId, THostPort nodeMonitorAddress) {
+  public List<TTaskLaunchSpec> getTask(String requestId, THostPort nodeMonitorAddress) {
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
                 "pending reservations");
-      return null;
+      return Lists.newArrayList();
     }
     TaskPlacer taskPlacer = requestTaskPlacers.get(requestId);
-    TTaskLaunchSpec taskLaunchSpec = taskPlacer.assignTask(nodeMonitorAddress);
+    List<TTaskLaunchSpec> taskLaunchSpecs = taskPlacer.assignTask(nodeMonitorAddress);
+    if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {
+      LOG.error("Received invalid task placement: " + taskLaunchSpecs.toString());
+      return Lists.newArrayList();
+    }
     if (taskPlacer.allResponsesReceived()) {
       // Remove the entry in requestTaskPlacers once all tasks have been placed, so that
       // requestTaskPlacers doesn't grow to be unbounded.
       requestTaskPlacers.remove(requestId);
     }
-    return taskLaunchSpec;
+    return taskLaunchSpecs;
   }
 
   /**

@@ -146,15 +146,18 @@ public class TestUnconstrainedTaskPlacer {
       Set<String> taskIdsCopy = Sets.newHashSet(taskIds);
       for (int j = 0; j < expectedReservations; ++j) {
         THostPort hostPort = new THostPort(nodes.get(j).getHostName(), nodes.get(j).getPort());
-        TTaskLaunchSpec spec = taskPlacer.assignTask(hostPort);
+        List<TTaskLaunchSpec> specs = taskPlacer.assignTask(hostPort);
+        assertTrue(specs != null);
         if (j < numTasks) {
+          assertEquals(specs.size(), 1);
+          TTaskLaunchSpec spec = specs.get(0);
           assertTrue("Expect to receive a task spec for task " + j + " at " +
                      hostPort.getHost() + ":" + hostPort.getPort(), spec != null);
           assertTrue("Expect list of unlaunched tasks to contain " + spec.getTaskId(),
                      taskIdsCopy.contains(spec.getTaskId()));
           taskIdsCopy.remove(spec.getTaskId());
         } else {
-          assertEquals(null, spec);
+          assertEquals(specs.size(), 0);
         }
       }
     } 
@@ -210,15 +213,18 @@ public class TestUnconstrainedTaskPlacer {
       for (int j = 0; j < expectedReservations; ++j) {
         assertTrue(!taskPlacer.allResponsesReceived());
         THostPort hostPort = new THostPort(nodes.get(j).getHostName(), nodes.get(j).getPort());
-        TTaskLaunchSpec spec = taskPlacer.assignTask(hostPort);
+        List<TTaskLaunchSpec> specs = taskPlacer.assignTask(hostPort);
+        assertTrue(specs != null);
         if (j < numTasks) {
+          assertEquals(1, specs.size());
+          TTaskLaunchSpec spec = specs.get(0);
           assertTrue("Expect to receive a task spec for task " + j + " at " +
                      hostPort.getHost() + ":" + hostPort.getPort(), spec != null);
           assertTrue("Expect list of unlaunched tasks to contain " + spec.getTaskId(),
                      taskIdsCopy.contains(spec.getTaskId()));
           taskIdsCopy.remove(spec.getTaskId());
         } else {
-          assertEquals(null, spec);
+          assertEquals(0, specs.size());
         }
       }
       assertTrue(taskPlacer.allResponsesReceived());

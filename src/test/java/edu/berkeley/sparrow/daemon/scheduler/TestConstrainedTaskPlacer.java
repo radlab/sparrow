@@ -170,7 +170,9 @@ public class TestConstrainedTaskPlacer {
       // Try to get tasks for the non-preferred machines. This should return null.
       for (int j = nodes.size(); j < backendNodes.size(); ++j) {
         THostPort hostPort = Network.socketAddressToThrift(backendNodes.get(j));
-        assertEquals(taskPlacer.assignTask(hostPort), null);
+        List<TTaskLaunchSpec> specs = taskPlacer.assignTask(hostPort);
+        assertTrue(specs != null);
+        assertEquals(0, specs.size());
       }
       
       // Now try to get the three tasks, all for the node that all three tasks prefer. Even if
@@ -179,7 +181,10 @@ public class TestConstrainedTaskPlacer {
       Set<String> taskIdsCopy = new HashSet<String>(taskIds);
       THostPort preferredHostPort = Network.socketAddressToThrift(nodes.get(2));
       for (int j = 0; j < NUM_TASKS; ++j) {
-        TTaskLaunchSpec spec = taskPlacer.assignTask(preferredHostPort);
+        List<TTaskLaunchSpec> specs = taskPlacer.assignTask(preferredHostPort);
+        assertTrue(specs != null);
+        assertEquals(specs.size(), 1);
+        TTaskLaunchSpec spec = specs.get(0);
         assertTrue(spec != null);
         assertTrue(taskIdsCopy.contains(spec.getTaskId()));
         taskIdsCopy.remove(spec.getTaskId());
@@ -188,7 +193,9 @@ public class TestConstrainedTaskPlacer {
       // Trying to get any more tasks should return null.
       for (int j = 0; j < backendNodes.size(); ++j) {
         THostPort hostPort = Network.socketAddressToThrift(backendNodes.get(j));
-        assertEquals(taskPlacer.assignTask(hostPort), null);
+        List<TTaskLaunchSpec> specs = taskPlacer.assignTask(hostPort);
+        assertTrue(specs != null);
+        assertEquals(0, specs.size());
       }
     }
     

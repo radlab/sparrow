@@ -37,7 +37,7 @@ public class SchedulerService {
 
     public void sendFrontendMessage(String app, edu.berkeley.sparrow.thrift.TFullTaskId taskId, int status, ByteBuffer message) throws org.apache.thrift.TException;
 
-    public edu.berkeley.sparrow.thrift.TTaskLaunchSpec getTask(String requestId, edu.berkeley.sparrow.thrift.THostPort nodeMonitorAddress) throws org.apache.thrift.TException;
+    public List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> getTask(String requestId, edu.berkeley.sparrow.thrift.THostPort nodeMonitorAddress) throws org.apache.thrift.TException;
 
   }
 
@@ -143,7 +143,7 @@ public class SchedulerService {
       return;
     }
 
-    public edu.berkeley.sparrow.thrift.TTaskLaunchSpec getTask(String requestId, edu.berkeley.sparrow.thrift.THostPort nodeMonitorAddress) throws org.apache.thrift.TException
+    public List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> getTask(String requestId, edu.berkeley.sparrow.thrift.THostPort nodeMonitorAddress) throws org.apache.thrift.TException
     {
       send_getTask(requestId, nodeMonitorAddress);
       return recv_getTask();
@@ -157,7 +157,7 @@ public class SchedulerService {
       sendBase("getTask", args);
     }
 
-    public edu.berkeley.sparrow.thrift.TTaskLaunchSpec recv_getTask() throws org.apache.thrift.TException
+    public List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> recv_getTask() throws org.apache.thrift.TException
     {
       getTask_result result = new getTask_result();
       receiveBase(result, "getTask");
@@ -318,7 +318,7 @@ public class SchedulerService {
         prot.writeMessageEnd();
       }
 
-      public edu.berkeley.sparrow.thrift.TTaskLaunchSpec getResult() throws org.apache.thrift.TException {
+      public List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> getResult() throws org.apache.thrift.TException {
         if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
           throw new IllegalStateException("Method call not finished!");
         }
@@ -3293,7 +3293,7 @@ public class SchedulerService {
   public static class getTask_result implements org.apache.thrift.TBase<getTask_result, getTask_result._Fields>, java.io.Serializable, Cloneable   {
     private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("getTask_result");
 
-    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.STRUCT, (short)0);
+    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.LIST, (short)0);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -3301,7 +3301,7 @@ public class SchedulerService {
       schemes.put(TupleScheme.class, new getTask_resultTupleSchemeFactory());
     }
 
-    public edu.berkeley.sparrow.thrift.TTaskLaunchSpec success; // required
+    public List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> success; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
@@ -3366,7 +3366,8 @@ public class SchedulerService {
     static {
       Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
       tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TTaskLaunchSpec.class)));
+          new org.apache.thrift.meta_data.ListMetaData(org.apache.thrift.protocol.TType.LIST, 
+              new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TTaskLaunchSpec.class))));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(getTask_result.class, metaDataMap);
     }
@@ -3375,7 +3376,7 @@ public class SchedulerService {
     }
 
     public getTask_result(
-      edu.berkeley.sparrow.thrift.TTaskLaunchSpec success)
+      List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> success)
     {
       this();
       this.success = success;
@@ -3386,7 +3387,11 @@ public class SchedulerService {
      */
     public getTask_result(getTask_result other) {
       if (other.isSetSuccess()) {
-        this.success = new edu.berkeley.sparrow.thrift.TTaskLaunchSpec(other.success);
+        List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> __this__success = new ArrayList<edu.berkeley.sparrow.thrift.TTaskLaunchSpec>();
+        for (edu.berkeley.sparrow.thrift.TTaskLaunchSpec other_element : other.success) {
+          __this__success.add(new edu.berkeley.sparrow.thrift.TTaskLaunchSpec(other_element));
+        }
+        this.success = __this__success;
       }
     }
 
@@ -3398,11 +3403,26 @@ public class SchedulerService {
       this.success = null;
     }
 
-    public edu.berkeley.sparrow.thrift.TTaskLaunchSpec getSuccess() {
+    public int getSuccessSize() {
+      return (this.success == null) ? 0 : this.success.size();
+    }
+
+    public java.util.Iterator<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> getSuccessIterator() {
+      return (this.success == null) ? null : this.success.iterator();
+    }
+
+    public void addToSuccess(edu.berkeley.sparrow.thrift.TTaskLaunchSpec elem) {
+      if (this.success == null) {
+        this.success = new ArrayList<edu.berkeley.sparrow.thrift.TTaskLaunchSpec>();
+      }
+      this.success.add(elem);
+    }
+
+    public List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> getSuccess() {
       return this.success;
     }
 
-    public getTask_result setSuccess(edu.berkeley.sparrow.thrift.TTaskLaunchSpec success) {
+    public getTask_result setSuccess(List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec> success) {
       this.success = success;
       return this;
     }
@@ -3428,7 +3448,7 @@ public class SchedulerService {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((edu.berkeley.sparrow.thrift.TTaskLaunchSpec)value);
+          setSuccess((List<edu.berkeley.sparrow.thrift.TTaskLaunchSpec>)value);
         }
         break;
 
@@ -3575,9 +3595,19 @@ public class SchedulerService {
           }
           switch (schemeField.id) {
             case 0: // SUCCESS
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-                struct.success = new edu.berkeley.sparrow.thrift.TTaskLaunchSpec();
-                struct.success.read(iprot);
+              if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
+                {
+                  org.apache.thrift.protocol.TList _list0 = iprot.readListBegin();
+                  struct.success = new ArrayList<edu.berkeley.sparrow.thrift.TTaskLaunchSpec>(_list0.size);
+                  for (int _i1 = 0; _i1 < _list0.size; ++_i1)
+                  {
+                    edu.berkeley.sparrow.thrift.TTaskLaunchSpec _elem2; // required
+                    _elem2 = new edu.berkeley.sparrow.thrift.TTaskLaunchSpec();
+                    _elem2.read(iprot);
+                    struct.success.add(_elem2);
+                  }
+                  iprot.readListEnd();
+                }
                 struct.setSuccessIsSet(true);
               } else { 
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
@@ -3600,7 +3630,14 @@ public class SchedulerService {
         oprot.writeStructBegin(STRUCT_DESC);
         if (struct.success != null) {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-          struct.success.write(oprot);
+          {
+            oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
+            for (edu.berkeley.sparrow.thrift.TTaskLaunchSpec _iter3 : struct.success)
+            {
+              _iter3.write(oprot);
+            }
+            oprot.writeListEnd();
+          }
           oprot.writeFieldEnd();
         }
         oprot.writeFieldStop();
@@ -3626,7 +3663,13 @@ public class SchedulerService {
         }
         oprot.writeBitSet(optionals, 1);
         if (struct.isSetSuccess()) {
-          struct.success.write(oprot);
+          {
+            oprot.writeI32(struct.success.size());
+            for (edu.berkeley.sparrow.thrift.TTaskLaunchSpec _iter4 : struct.success)
+            {
+              _iter4.write(oprot);
+            }
+          }
         }
       }
 
@@ -3635,8 +3678,17 @@ public class SchedulerService {
         TTupleProtocol iprot = (TTupleProtocol) prot;
         BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {
-          struct.success = new edu.berkeley.sparrow.thrift.TTaskLaunchSpec();
-          struct.success.read(iprot);
+          {
+            org.apache.thrift.protocol.TList _list5 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<edu.berkeley.sparrow.thrift.TTaskLaunchSpec>(_list5.size);
+            for (int _i6 = 0; _i6 < _list5.size; ++_i6)
+            {
+              edu.berkeley.sparrow.thrift.TTaskLaunchSpec _elem7; // required
+              _elem7 = new edu.berkeley.sparrow.thrift.TTaskLaunchSpec();
+              _elem7.read(iprot);
+              struct.success.add(_elem7);
+            }
+          }
           struct.setSuccessIsSet(true);
         }
       }

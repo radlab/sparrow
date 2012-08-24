@@ -20,9 +20,12 @@ service SchedulerService {
   
   # Called by a node monitor when it has available responses to run a task. Always called in
   # response to an enqueueTask() request from this scheduler, requestId specifies the ID given
-  # in that enqueueTask() request. Returning null signals that the scheduler has already
-  # launched all tasks for the given request.
-  types.TTaskLaunchSpec getTask(1: string requestId, 2: types.THostPort nodeMonitorAddress);
+  # in that enqueueTask() request. Currently, we only support returning 0 or 1 task
+  # specs, where 0 signals that the given request has no more tasks that can be launched on the
+  # node.
+  # TODO: Add a numTasks parameter to signal how many slots are free, and support
+  #       returning more than 1 tasks.
+  list<types.TTaskLaunchSpec> getTask(1: string requestId, 2: types.THostPort nodeMonitorAddress);
 }
 
 # A service used by application backends to coordinate with Sparrow.
