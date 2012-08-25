@@ -12,15 +12,15 @@ from optparse import OptionParser
 
 def parse_args():
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start, stop, start-proto, stop-proto, command, collect-logs, destroy")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, command, collect-logs, destroy")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
-  parser.add_option("-a", "--ami", default="ami-d578cdbc",
+  parser.add_option("-a", "--ami", default="ami-7947f310",
       help="Amazon Machine Image ID to use")
   parser.add_option("-t", "--instance-type", default="m1.xlarge",
       help="Type of instance to launch (default: m1.large). " +
            "WARNING: must be 64 bit, thus small instances won't work")
-  parser.add_option("-l", "--arrival-rate", type="float", default=100,
+  parser.add_option("-l", "--arrival-rate", type="float", default=1,
       help = "Arrival rate of jobs in proto frontends (jobs/s)")
   parser.add_option("-k", "--key-pair",
       help="Key pair to use on instances")
@@ -164,7 +164,6 @@ def launch_cluster(conn, opts):
   except:
     print >> stderr, "Could not find AMI " + opts.ami
     sys.exit(1)
-
   frontend_res = image.run(key_name = opts.key_pair,
                           security_groups = [frontend_group],
                           instance_type = opts.instance_type,

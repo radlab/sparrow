@@ -1,7 +1,7 @@
 #!/bin/bash
 # Start Prototype backend
 
-LOG=/dis1/sparrow/protoBackend
+LOG=/disk1/sparrow/protoBackend
 
 APPCHK=$(ps aux | grep -v grep | grep -c ProtoBackend)
 
