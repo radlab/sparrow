@@ -14,6 +14,7 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
  */
 public class FifoTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(FifoTaskScheduler.class);
+
   public int maxActiveTasks = 4;
   public Integer activeTasks = 0;
   public LinkedBlockingQueue<TaskReservation> taskReservations =
@@ -22,44 +23,45 @@ public class FifoTaskScheduler extends TaskScheduler {
   public void setMaxActiveTasks(int max) {
     this.maxActiveTasks = max;
   }
-  
+
   @Override
-  synchronized void handleSubmitTaskReservation(TaskReservation taskReservation) {
-    synchronized(activeTasks) {
-      if (activeTasks < maxActiveTasks) {
-        if (taskReservations.size() > 0) {
-          String errorMessage = "activeTasks should be less than maxActiveTasks only " +
-                                "when no outstanding reservations.";
-          LOG.error(errorMessage);
-          throw new IllegalStateException(errorMessage);
-        }
-        makeTaskRunnable(taskReservation);
-        ++activeTasks;
-        LOG.debug("Launching task for request " + taskReservation.requestId + " (" + activeTasks +
-                  " of " + maxActiveTasks + " task slots currently filled)");
-        return;
-      } else {
-        LOG.debug("All " + maxActiveTasks + " task slots filled.");
+  int handleSubmitTaskReservation(TaskReservation taskReservation) {
+    // This method and handleTaskCompleted() are synchronized to avoid race conditions between
+    // updating activeTasks and taskReservations.
+    if (activeTasks < maxActiveTasks) {
+      if (taskReservations.size() > 0) {
+        String errorMessage = "activeTasks should be less than maxActiveTasks only " +
+                              "when no outstanding reservations.";
+        LOG.error(errorMessage);
+        throw new IllegalStateException(errorMessage);
       }
+      makeTaskRunnable(taskReservation);
+      ++activeTasks;
+      LOG.debug("Launching task for request " + taskReservation.requestId + " (" + activeTasks +
+                " of " + maxActiveTasks + " task slots currently filled)");
+      return 0;
+    } else {
+      LOG.debug("All " + maxActiveTasks + " task slots filled.");
     }
+    int queuedReservations = taskReservations.size();
     try {
       LOG.debug("Enqueueing task reservation with request id " + taskReservation.requestId +
-                " because all task slots filled. " + taskReservations.size() +
+                " because all task slots filled. " + queuedReservations +
                 " already enqueued reservations.");
       taskReservations.put(taskReservation);
     } catch (InterruptedException e) {
       LOG.fatal(e);
     }
+    return queuedReservations;
   }
 
   @Override
-  protected void handleTaskCompleted(String requestId) {
-    if (!taskReservations.isEmpty()) {
-      makeTaskRunnable(taskReservations.poll());
+  synchronized protected void handleTaskCompleted(String requestId) {
+    TaskReservation reservation = taskReservations.poll();
+    if (reservation != null) {
+      makeTaskRunnable(reservation);
     } else {
-      synchronized(activeTasks) {
-        activeTasks -= 1;
-      }
+      activeTasks -= 1;
     }
   }
 

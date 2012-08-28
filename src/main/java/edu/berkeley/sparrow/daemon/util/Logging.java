@@ -14,16 +14,16 @@ public class Logging {
   public final static String AUDIT_LOGGER_NAME = "audit";
   public final static String AUDIT_LOG_FILENAME_FORMAT = "sparrow_audit.%d.%d.log";
   public final static String AUDIT_LOG_FORMAT = "%c\t%m%n";
-  
+
   private static Joiner paramJoiner = Joiner.on(",").useForNull("null");
   private static Joiner auditParamJoiner = Joiner.on("\t");
   private static Joiner auditEventParamJoiner = Joiner.on(":");
-  
+
   /**
    * Sets up audit logging to log to a file named based on the current time (in ms).
-   * 
+   *
    * The logger is configured to effectively ignore the log level.
-   * 
+   *
    * @throws IOException if the audit log file could not be opened for writing.
    */
   public static void configureAuditLogging() throws IOException {
@@ -40,7 +40,7 @@ public class Logging {
      * intended for potentially user-facing messages. */
     auditLogger.setAdditivity(false);
   }
-  
+
   /**
    * Returns a log string for the given event, starting with the epoch time.
    */
@@ -48,7 +48,7 @@ public class Logging {
     return auditParamJoiner.join(System.currentTimeMillis(),
                                  auditEventParamJoiner.join(params));
   }
-  
+
   /**
    * Returns a logger to be used for audit logging messages for the given class.
    */
@@ -56,7 +56,7 @@ public class Logging {
   public static Logger getAuditLogger(Class clazz) {
     return Logger.getLogger(String.format("%s.%s", AUDIT_LOGGER_NAME, clazz.getName()));
   }
-  
+
   /**
    * Return a function name (determined via reflection) and all its parameters (passed)
    * in a consistent stringformat. Very helpful in logging function calls throughout

@@ -15,6 +15,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskReservation;
+import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
@@ -34,23 +35,25 @@ import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
  */
 public class TaskLauncherService {
   private final static Logger LOG = Logger.getLogger(TaskLauncherService.class);
+  private final static Logger AUDIT_LOG = Logging.getAuditLogger(TaskLauncherService.class);
+
   /* The number of threads we use to launch tasks on backends. We also use this
    * to determine how many thrift connections to keep open to each backend, so that
    * in the limit case where all threads are talking to the same backend, we don't run
    * out of connections.*/
   public final static int CLIENT_POOL_SIZE = 10;
-  
+
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool;
-  
+
   private THostPort nodeMonitorAddress;
-  
+
   private TaskScheduler scheduler;
 
   /** Cache of thrift clients pools for each backends. Clients are removed from the pool
    *  when in use. */
   private HashMap<InetSocketAddress, BlockingQueue<BackendService.Client>> backendClients =
       new HashMap<InetSocketAddress, BlockingQueue<BackendService.Client>>();
-  
+
   /** A runnable which spins in a loop asking for tasks to launch and launching them. */
   private class TaskLaunchRunnable implements Runnable {
     @Override
@@ -58,7 +61,7 @@ public class TaskLauncherService {
       while (true) {
         TaskReservation task = scheduler.getNextTask(); // blocks until task is ready
         LOG.debug("Launching task for app " + task.appId + ", request " + task.requestId);
-        
+
         // Request the task specification from the scheduler.
         SchedulerService.AsyncClient schedulerClient;
         try {
@@ -79,14 +82,14 @@ public class TaskLauncherService {
       }
     }
   }
-  
+
   private class GetTaskCallback implements AsyncMethodCallback<getTask_call> {
     private TaskReservation taskReservation;
-    
+
     public GetTaskCallback(TaskReservation taskReservation) {
       this.taskReservation = taskReservation;
     }
-    
+
     @Override
     public void onComplete(getTask_call response) {
       try {
@@ -105,24 +108,26 @@ public class TaskLauncherService {
         scheduler.taskCompleted(taskReservation.requestId);
         return;
       }
-      
+
       if (taskLaunchSpecs.isEmpty()) {
         scheduler.taskCompleted(taskReservation.requestId);
         return;
       }
-      
+
       if (taskLaunchSpecs.size() > 1) {
         LOG.warn("Received " + taskLaunchSpecs +
                  " task launch specifications; ignoring all but the first one.");
       }
       TTaskLaunchSpec taskLaunchSpec = taskLaunchSpecs.get(0);
+      AUDIT_LOG.info(Logging.auditEventString("task_launch", taskReservation.requestId,
+                                              taskLaunchSpec.getTaskId()));
 
       // Launch the task on the backend.
       BackendService.Client client = null;
       if (!backendClients.containsKey(taskReservation.appBackendAddress)) {
         createThriftClients(taskReservation.appBackendAddress);
       }
-      
+
       try {
         // Blocks until a client becomes available.
         client = backendClients.get(taskReservation.appBackendAddress).take();
@@ -131,7 +136,7 @@ public class TaskLauncherService {
                   + "backend at " + taskReservation.appBackendAddress.toString() + ":" +
                   e);
       }
-      
+
       THostPort schedulerHostPort = Network.socketAddressToThrift(
           taskReservation.schedulerAddress);
       TFullTaskId taskId = new TFullTaskId(taskLaunchSpec.getTaskId(), taskReservation.requestId,
@@ -143,7 +148,7 @@ public class TaskLauncherService {
         LOG.fatal("Unable to launch task on backend " + taskReservation.appBackendAddress + ":" +
                   e);
       }
-      
+
       try {
         backendClients.get(taskReservation.appBackendAddress).put(client);
       } catch (InterruptedException e) {
@@ -151,10 +156,10 @@ public class TaskLauncherService {
                   taskReservation.appBackendAddress.toString() +
                   " to the set of backend clients: " + e);
       }
-      
+
       LOG.debug("Launched task " + taskId.taskId);
     }
-    
+
     @Override
     public void onError(Exception exception) {
       // Do not return error client to pool.
@@ -162,7 +167,7 @@ public class TaskLauncherService {
       LOG.error("Error executing getTask() RPC:" + exception.getStackTrace().toString() + exception.toString());
     }
   }
-  
+
   public void initialize(Configuration conf, TaskScheduler scheduler,
                          ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool,
                          int nodeMonitorPort) {
@@ -174,10 +179,10 @@ public class TaskLauncherService {
       service.submit(new TaskLaunchRunnable());
     }
   }
-  
+
   /** Creates a set of thrift clients and adds them to the client pool. */
   public void createThriftClients(InetSocketAddress backendAddr) {
-    BlockingQueue<BackendService.Client> clients = new 
+    BlockingQueue<BackendService.Client> clients = new
         LinkedBlockingDeque<BackendService.Client>();
     for (int i = 0; i < CLIENT_POOL_SIZE; i++) {
       try {
@@ -189,9 +194,9 @@ public class TaskLauncherService {
         LOG.error("Error creating thrift client", e);
       }
     }
-    
+
     backendClients.put(backendAddr, clients);
   }
-  
-  
+
+
 }

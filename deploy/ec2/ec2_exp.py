@@ -105,15 +105,15 @@ def rsync_from_all(hosts, opts, dest_pattern, local_dir, errors=0):
       opts.identity_file, host, dest_pattern, local_dir)
     commands.append(cmd)
   parallel_commands(commands, errors)
-    
 
-# Execute a sequence of commands in parallel, raising an exception if 
+
+# Execute a sequence of commands in parallel, raising an exception if
 # more than tolerable_failures of them fail
 def parallel_commands(commands, tolerable_failures):
   processes = {} # popen object --> command string
   failures = []
   for c in commands:
-    p = subprocess.Popen(c, shell=True, stdout = subprocess.PIPE, 
+    p = subprocess.Popen(c, shell=True, stdout = subprocess.PIPE,
                          stderr = subprocess.PIPE, stdin=subprocess.PIPE)
     processes[p] = c
   for p in processes.keys():
@@ -154,7 +154,7 @@ def launch_cluster(conn, opts):
     if group.rules == []: # Group was now just created
       # Allow all access from all other sparrow machines
       for group2 in groups:
-        group.authorize(src_group=group2) 
+        group.authorize(src_group=group2)
       # Allow some access from all machines
       group.authorize('tcp', 22, 22, '0.0.0.0/0')
 
@@ -162,7 +162,7 @@ def launch_cluster(conn, opts):
   try:
     image = conn.get_all_images(image_ids=[opts.ami])[0]
   except:
-    print >> stderr, "Could not find AMI " + opts.ami
+    print >> sys.stderr, "Could not find AMI " + opts.ami
     sys.exit(1)
   frontend_res = image.run(key_name = opts.key_pair,
                           security_groups = [frontend_group],
@@ -222,6 +222,7 @@ def find_existing_cluster(conn, opts):
     for fe in frontend_nodes:
       print fe.public_dns_name
     print "Backends:"
+    backend_nodes = filter(lambda k: k.public_dns_name != "", backend_nodes)
     for be in backend_nodes:
       print be.public_dns_name
 
@@ -269,7 +270,7 @@ def deploy_cluster(frontends, backends, opts):
 
   driver_machine = frontends[0].public_dns_name
   print "Chose driver machine: %s ..." % driver_machine
- 
+
   # Rsync this to one machine
   command = (("rsync -rv -e 'ssh -o StrictHostKeyChecking=no -i %s' " +
       "'%s/' 'root@%s:~/'") % (opts.identity_file, tmp_dir, driver_machine))
@@ -286,13 +287,13 @@ def deploy_cluster(frontends, backends, opts):
                             "/root/build_sparrow.sh;")
 
   print "Deploying sparrow to other machines..."
-  ssh(driver_machine, opts, "/root/deploy_sparrow.sh")  
+  ssh(driver_machine, opts, "/root/deploy_sparrow.sh")
 
 def start_sparrow(frontends, backends, opts):
   all_machines = []
-  for fe in frontends: 
-    all_machines.append(fe.public_dns_name) 
-  for be in backends: 
+  for fe in frontends:
+    all_machines.append(fe.public_dns_name)
+  for be in backends:
     all_machines.append(be.public_dns_name)
 
   print "Starting sparrow on all machines..."
@@ -311,7 +312,7 @@ def start_mesos(frontends, backends, opts):
   print "Starting mesos master..."
   ssh(frontends[0].public_dns_name, opts, "/root/start_mesos_master.sh;")
   print "Starting mesos slaves..."
-  ssh_all([be.public_dns_name for be in backends], 
+  ssh_all([be.public_dns_name for be in backends],
            opts, "/root/start_mesos_slave.sh")
 
 def stop_mesos(frontends, backends, opts):
@@ -331,7 +332,7 @@ def start_spark(frontends, backends, opts):
   print "Starting Spark frontends..."
   print opts.max_queries
 
-  
+
   # Adjustment to schedule all mesos work on one node
   if opts.scheduler == "mesos":
     driver = frontends[0]
@@ -344,7 +345,7 @@ def start_spark(frontends, backends, opts):
     print "WARNING: started spark with adjusted rate:%s and max:%s " % (
       adjusted_rate, adjusted_max)
     return
-  
+
 
   for fe in frontends:
     ssh(fe.public_dns_name, opts,
@@ -432,7 +433,7 @@ def destroy_cluster(frontends, backends, opts):
       fe.terminate()
     print "Terminating backends"
     for be in backends:
-      be.terminate()   
+      be.terminate()
 
 # Execute a shell command on all machines
 def execute_command(frontends, backends, opts, cmd):

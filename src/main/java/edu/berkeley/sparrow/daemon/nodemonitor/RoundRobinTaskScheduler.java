@@ -14,7 +14,7 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
  * A {@link TaskScheduler} which round-robins requests over backlogged per-app queues.
- * 
+ *
  * NOTE: This current round-robins over applications, rather than users. Not sure
  * what we want here going forward.
  */
@@ -28,19 +28,21 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
                                 // the number of apps.
 
   @Override
-  synchronized void handleSubmitTaskReservation(TaskReservation taskReservation) {
+  synchronized int handleSubmitTaskReservation(TaskReservation taskReservation) {
      /* Because of the need to check the free resources and then, depending on the result, start a
       * new task, this method must be synchronized.
       */
     if (TResources.isLessThanOrEqualTo(taskReservation.estimatedResources, getFreeResources())) {
-      LOG.info("Task for request " + taskReservation.requestId + " instantly runnable. " 
+      LOG.info("Task for request " + taskReservation.requestId + " instantly runnable. "
         + taskReservation.estimatedResources + "<=" + getFreeResources());
       makeTaskRunnable(taskReservation);
     } else {
       addTaskToAppQueue(taskReservation.appId, taskReservation);
     }
+    // TODO: Return the queue length here once we start using this scheduler.
+    return 0;
   }
-  
+
   void addTaskToAppQueue(String app, TaskReservation taskReservation) {
     synchronized(appQueues) {
       if (!appQueues.containsKey(app)) {
@@ -50,7 +52,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       appQueues.get(app).add(taskReservation);
     }
   }
-  
+
   void removeTaskFromAppQueue(String app, TaskReservation taskReservation) {
     synchronized(appQueues) {
       appQueues.get(app).remove(taskReservation);
@@ -67,9 +69,9 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       /* Scan through the list of apps (starting at currentIndex) and find the first
        * one with a pending task. If we find a pending task, make that task runnable
        * and update the round robin index.
-       * 
+       *
        * Note that this implementation assumes that we can take an arbitrary task and,
-       * by virtue of a task having just finished, have enough resources to execute it. 
+       * by virtue of a task having just finished, have enough resources to execute it.
        * This makes sense for scheduling similarly sized tasks (e.g. just scheduling cores)
        * but will not be the case if tasks take different amounts of resources. */
       for (int i = 0; i < apps.size(); i++) {

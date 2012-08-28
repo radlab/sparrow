@@ -27,19 +27,18 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstrainedTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(ConstrainedTaskPlacer.class);
-  protected static final Logger AUDIT_LOG = Logging.getAuditLogger(ConstrainedTaskPlacer.class);
-  
+
   /** Tasks that have been launched. */
   private Set<TTaskLaunchSpec> launchedTasks;
-  
+
   /** Total number of tasks in the job. */
   private int numTasks;
-  
-  private double probeRatio; 
-  
+
+  private double probeRatio;
+
   /** Id of the request associated with this task placer. */
   String requestId;
-  
+
   /**
    * For each backend machine, the tasks that can be launched there. Tasks for which reservations
    * were made on the backend are placed at the beginning of the list; any other tasks that can
@@ -60,10 +59,10 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       TSchedulingRequest schedulingRequest, String requestId,
       Collection<InetSocketAddress> nodes, THostPort schedulerAddress) {
     LOG.debug(Logging.functionCall(schedulingRequest, requestId, nodes, schedulerAddress));
-    
+
     // Tracks number of tasks to be enqueued at each node monitor.
     HashMap<InetSocketAddress, TEnqueueTaskReservationsRequest> requests = Maps.newHashMap();
-    
+
     // Create a mapping of node monitor hostnames to socket addresses, to use to map node
     // preferences to the node monitor InetSocketAddresss.
     // TODO: Perform this in the scheduler, and reuse the mapping across multiple
@@ -77,27 +76,27 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       }
       addrToSocket.put(node.getAddress(), node);
     }
-    
+
     // Shuffle tasks, to ensure that we don't use the same set of machines each time a job is
     // submitted.
     List<TTaskSpec> taskList = Lists.newArrayList(schedulingRequest.getTasks());
     Collections.shuffle(taskList);
-    
+
     numTasks = taskList.size();
-    
+
     // We assume all tasks in a job have the same resource usage requirements.
     TResourceVector estimatedResources = taskList.get(0).getEstimatedResources();
-        
+
     for (TTaskSpec task : taskList) {
       if (task.preference == null || task.preference.nodes == null) {
         // TODO: Do we ever need to support this case?
         LOG.fatal("ConstrainedTaskPlacer excepts to receive only constrained tasks; received " +
                   "a mix of constrained and unconstrained tasks.");
       }
-      
+
       // Preferred nodes for this task.
       List<InetSocketAddress> preferredNodes = Lists.newLinkedList();
-      
+
       // Convert the preferences (which contain host names) to a list of socket addresses.
       Collections.shuffle(task.preference.nodes);
       for (String node : task.preference.nodes) {
@@ -118,10 +117,10 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           LOG.warn("Got placement constraint for unresolvable node " + node);
         }
       }
-      
+
       TTaskLaunchSpec taskLaunchSpec = new TTaskLaunchSpec(task.getTaskId(),
                                                            task.bufferForMessage());
-      
+
       int numEnqueuedNodes = 0;
       for (InetSocketAddress addr : preferredNodes) {
         if (!nodeMonitorsToTasks.containsKey(addr)) {
@@ -141,7 +140,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
             // created.
             requests.get(addr).numTasks += 1;
           }
-          
+
           nodeMonitorsToTasks.get(addr).add(0, taskLaunchSpec);
           numEnqueuedNodes += 1;
         } else {
@@ -153,13 +152,13 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           nodeMonitorsToTasks.get(addr).add(taskLaunchSpec);
         }
       }
-      
+
       if (numEnqueuedNodes < probeRatio) {
         LOG.fatal("Only created requests for " + numEnqueuedNodes + " (expected to create " +
                   probeRatio + " requests).");
       }
     }
-    
+
     return requests;
   }
 
@@ -186,7 +185,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
         }
       } while (taskSpec != null && this.launchedTasks.contains(taskSpec));
     }
-      
+
     if (taskSpec != null) {
       this.launchedTasks.add(taskSpec);
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +

@@ -64,17 +64,17 @@ public class Scheduler {
 
   /** Information about cluster workload due to other schedulers. */
   private SchedulerState state;
-  
+
   /** Probe ratios to use if the probe ratio is not explicitly set in the request. */
   private double defaultProbeRatioUnconstrained;
   private double defaultProbeRatioConstrained;
-  
+
   /**
    * For each request, the task placer that should be used to place the request's tasks. Indexed
    * by the request ID.
    */
   private Map<String, TaskPlacer> requestTaskPlacers;
-  
+
   private Configuration conf;
 
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
@@ -97,7 +97,7 @@ public class Scheduler {
                                                     SparrowConf.DEFAULT_SAMPLE_RATIO);
     defaultProbeRatioConstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO_CONSTRAINED,
                                                   SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
-    
+
     requestTaskPlacers = Maps.newConcurrentMap();
   }
 
@@ -133,7 +133,7 @@ public class Scheduler {
     long start = System.currentTimeMillis();
 
     String requestId = getRequestId();
-    
+
     // Logging the address here is somewhat redundant, since all of the
     // messages in this particular log file come from the same address.
     // However, it simplifies the process of aggregating the logs, and will
@@ -142,7 +142,7 @@ public class Scheduler {
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
                                             request.getTasks().size(),
                                             address.getHost(), address.getPort()));
-    
+
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
     Set<InetSocketAddress> backends = state.getBackends(app).keySet();
@@ -153,7 +153,7 @@ public class Scheduler {
           task.preference.nodes != null &&
           !task.preference.nodes.isEmpty());
     }
-    
+
     TaskPlacer taskPlacer;
     if (constrained) {
       if (request.isSetProbeRatio()) {
@@ -169,16 +169,16 @@ public class Scheduler {
       }
     }
     requestTaskPlacers.put(requestId, taskPlacer);
-    
+
     Map<InetSocketAddress, TEnqueueTaskReservationsRequest> enqueueTaskReservationsRequests;
-    
+
     if (request.isSetProbeRatio() && request.getProbeRatio() == 3 &&
         tasks.get(0).preference.nodes != null &&
         (tasks.get(0).preference.nodes.size() == 1 || tasks.get(0).preference.nodes.size() == 2)) {
       // This is a hack to force Spark to cache data on multiple machines. If a Spark job runs
       // on a machine where the input data is not already cached in memory, Spark will
       // automatically caches the data on those machines. So, we run a few dummy jobs at the
-      // beginning of each experiment to force the data for each job to be cached in three places. 
+      // beginning of each experiment to force the data for each job to be cached in three places.
       // To do this, we need to explicitly avoid the nodes where data is already cached.
       List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
       List<InetSocketAddress> toRemove = Lists.newArrayList();
@@ -198,33 +198,31 @@ public class Scheduler {
         }
       }
      subBackends.removeAll(toRemove);
-     
+
      enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
         request, requestId, subBackends, address);
     } else {
       enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
           request, requestId, backends, address);
     }
-    
+
     // Request to enqueue a task at each of the selected nodes.
     for (Entry<InetSocketAddress, TEnqueueTaskReservationsRequest> entry :
          enqueueTaskReservationsRequests.entrySet())  {
       try {
         InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
         LOG.debug("Launching enqueueTask for request on node: " + entry.getKey());
-        AUDIT_LOG.info(Logging.auditEventString("enqueueTask_launch", requestId,
-                                                entry.getKey().toString(), 1));
         // Pass in null callback because the RPC doesn't return anything.
         client.enqueueTaskReservations(entry.getValue(), new EnqueueTaskReservationsCallback());
       } catch (Exception e) {
         LOG.error(e);
       }
     }
-    
+
     long end = System.currentTimeMillis();
     LOG.debug("All tasks enqueued; returning. Total time: " + (end - start) + " milliseconds");
   }
-  
+
   public List<TTaskLaunchSpec> getTask(String requestId, THostPort nodeMonitorAddress) {
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
@@ -236,6 +234,11 @@ public class Scheduler {
     if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {
       LOG.error("Received invalid task placement: " + taskLaunchSpecs.toString());
       return Lists.newArrayList();
+    } else if (taskLaunchSpecs.size() == 1) {
+      AUDIT_LOG.info(Logging.auditEventString("assigned_task", requestId,
+                                              taskLaunchSpecs.get(0).taskId));
+    } else {
+      AUDIT_LOG.info(Logging.auditEventString("get_task_no_task", requestId));
     }
     if (taskPlacer.allResponsesReceived()) {
       // Remove the entry in requestTaskPlacers once all tasks have been placed, so that
@@ -290,7 +293,7 @@ public class Scheduler {
     }
     try {
       FrontendService.AsyncClient client = frontendClientPool.borrowClient(frontend);
-      client.frontendMessage(taskId, status, message, 
+      client.frontendMessage(taskId, status, message,
           new sendFrontendMessageCallback(frontend, client));
     } catch (IOException e) {
       LOG.error("Error launching message on frontend: " + app, e);

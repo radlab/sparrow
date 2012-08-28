@@ -19,7 +19,6 @@ import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
-import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.SchedulerService;
@@ -38,7 +37,6 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
  */
 public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
-  private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
 
   private static NodeMonitorState state;
   private HashMap<String, InetSocketAddress> appSockets =
@@ -51,12 +49,11 @@ public class NodeMonitor {
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
-  
+
   private TResourceVector capacity;
-  private String ipAddress;
   private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
-  
+
   public void initialize(Configuration conf, int nodeMonitorPort) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
@@ -74,7 +71,6 @@ public class NodeMonitor {
       LOG.fatal("Error initializing node monitor state.", e);
     }
     capacity = new TResourceVector();
-    ipAddress = Network.getIPAddress(conf);
     int mem = Resources.getSystemMemoryMb(conf);
     capacity.setMemory(mem);
     LOG.info("Using memory allocation: " + mem);
@@ -114,10 +110,6 @@ public class NodeMonitor {
    */
   public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
-    if (!requestId.equals("*")) { // Don't log state store request
-      AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
-                                              ipAddress));
-    }
     Map<String, TResourceUsage> out = new HashMap<String, TResourceUsage>();
     if (appId.equals("*")) {
       for (String app : appSockets.keySet()) {
@@ -135,14 +127,14 @@ public class NodeMonitor {
     LOG.debug(Logging.functionCall(tasks));
     scheduler.tasksFinished(tasks);
   }
-  
+
   public boolean enqueueTaskReservations(TEnqueueTaskReservationsRequest request) {
     LOG.debug(Logging.functionCall(request));
-    
+
     InetSocketAddress schedulerAddress = new InetSocketAddress(
         request.getSchedulerAddress().getHost(), request.getSchedulerAddress().getPort());
     requestSchedulers.put(request.getRequestId(), schedulerAddress);
-    
+
     InetSocketAddress socket = appSockets.get(request.getAppId());
     if (socket == null) {
       LOG.error("No socket stored for " + request.getAppId() + " (never registered?). " +

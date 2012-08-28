@@ -6,17 +6,18 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
  * A {@link TaskScheduler} which makes tasks instantly available for launch.
- * 
- * This does not perform any resource management or queuing. It can be used for 
- * applications which do not want Sparrow to perform any explicit resource management 
+ *
+ * This does not perform any resource management or queuing. It can be used for
+ * applications which do not want Sparrow to perform any explicit resource management
  * but still want Sparrow to launch tasks.
  */
 public class NoQueueTaskScheduler extends TaskScheduler {
 
   @Override
-  void handleSubmitTaskReservation(TaskReservation taskReservation) {
+  int handleSubmitTaskReservation(TaskReservation taskReservation) {
     // Make this task instantly runnable
     makeTaskRunnable(taskReservation);
+    return 0;
   }
 
 
@@ -24,7 +25,7 @@ public class NoQueueTaskScheduler extends TaskScheduler {
   TResourceUsage getResourceUsage(String appId) {
     TResourceUsage out = new TResourceUsage();
     out.resources = TResources.subtract(capacity, getFreeResources());
-    
+
     // We never queue
     out.queueLength = 0;
     return out;

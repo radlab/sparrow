@@ -23,7 +23,6 @@ import org.apache.thrift.transport.TTransportException;
 import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
-import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
@@ -142,7 +141,7 @@ public class ProtoBackend implements BackendService.Iface {
       }
       client.getInputProtocol().getTransport().close();
       client.getOutputProtocol().getTransport().close();
-      System.out.println(System.currentTimeMillis() - taskStart);
+      LOG.debug("Task running for " + (System.currentTimeMillis() - taskStart) + " ms");
     }
   }
 
@@ -245,9 +244,8 @@ public class ProtoBackend implements BackendService.Iface {
     // Logger configuration: log to the console
     BasicConfigurator.configure();
     LOG.setLevel(Level.DEBUG);
-    Logging.configureAuditLogging();
     LOG.debug("debug logging on");
-    
+
     Configuration conf = new PropertiesConfiguration();
 
     if (options.has("c")) {
@@ -266,7 +264,7 @@ public class ProtoBackend implements BackendService.Iface {
 
     // Register server
     client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
-    
+
     try {
       client.registerBackend(APP_ID, "localhost:" + listenPort);
     } catch (TTransportException e) {
