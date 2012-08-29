@@ -27,3 +27,4 @@ chown hdfs.hdfs /disk1/hdfs/data
 cat /etc/hosts | grep -v internal > tmp && mv tmp /etc/hosts
 
 cp ~/hdfs-site.xml /opt/hadoop/conf/
+cp ~/hive-default.xml /opt/hive/conf/

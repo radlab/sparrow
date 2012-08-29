@@ -15,9 +15,9 @@
   </property>
 
   <property>
-	<name>fs.default.name</name>
-	<value>hdfs://{{name_node}}:8020/</value>
-	</property>
+    <name>fs.default.name</name>
+    <value>hdfs://{{name_node}}:8020/</value>
+  </property>
 
   <property>
   <name>dfs.blocksize</name>
