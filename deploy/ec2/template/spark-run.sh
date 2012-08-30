@@ -25,7 +25,7 @@ export SPARK_MEM  # So that the process sees it and can report it to Mesos
 
 # Set JAVA_OPTS to be able to load native libraries and to set heap size
 JAVA_OPTS="$SPARK_JAVA_OPTS"
-JAVA_OPTS+="-XX:+UseConcMarkSweepGC -Dspark.kryoserializer.buffer.mb=10 -Djava.library.path=$SPARK_LIBRARY_PATH:$FWDIR/lib:$FWDIR/src/main/native:$MESOS_LIBRARY_PATH"
+JAVA_OPTS+="-Dspark.local.dir=/disk1/sparrow/tmp/ -XX:+UseConcMarkSweepGC -Dspark.kryoserializer.buffer.mb=10 -Djava.library.path=$SPARK_LIBRARY_PATH:$FWDIR/lib:$FWDIR/src/main/native:$MESOS_LIBRARY_PATH"
 JAVA_OPTS+=" -Xms$SPARK_MEM -Xmx$SPARK_MEM"
 # Load extra JAVA_OPTS from conf/java-opts, if it exists
 if [ -e $FWDIR/conf/java-opts ] ; then

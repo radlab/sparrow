@@ -12,10 +12,10 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, command, collect-logs, destroy, login-fe, login-be")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
-  parser.add_option("-a", "--ami", default="ami-7947f310",
+  parser.add_option("-a", "--ami", default="ami-9778cefe",
       help="Amazon Machine Image ID to use")
   parser.add_option("-t", "--instance-type", default="m1.xlarge",
       help="Type of instance to launch (default: m1.large). " +
@@ -352,10 +352,6 @@ def start_spark_tpch(frontends, backends, opts):
   print "Starting Spark frontends..."
   print opts.max_queries
 
-<<<<<<< HEAD
-
-=======
->>>>>>> shark stash
   # Adjustment to schedule all mesos work on one node
   if opts.scheduler == "mesos":
     driver = frontends[0]
@@ -520,6 +516,11 @@ def main():
     start_spark_shark(frontends, backends, opts)
   elif action == "stop-spark":
     stop_spark(frontends, backends, opts)
+  elif action == "restart-spark-shark":
+    stop_spark(frontends, backends, opts)
+    stop_sparrow(frontends, backends, opts)
+    start_sparrow(frontends, backends, opts)
+    start_spark_shark(frontends, backends, opts)
   elif action == "start-proto":
     start_proto(frontends, backends, opts)
   elif action == "stop-proto":
