@@ -21,7 +21,7 @@ public class TestTaskScheduler {
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
   }
-  
+
   private TEnqueueTaskReservationsRequest createTaskReservationRequest(
       int numTasks, int requestId, TaskScheduler scheduler, String appId) {
     String idStr = Integer.toString(requestId);
@@ -31,7 +31,7 @@ public class TestTaskScheduler {
     return new TEnqueueTaskReservationsRequest(
         appId, user, idStr, estimatedResources, schedulerAddress, numTasks);
   }
-  
+
   /**
    * Tests the fifo task scheduler.
    */
@@ -40,10 +40,10 @@ public class TestTaskScheduler {
     TaskScheduler scheduler = new FifoTaskScheduler();
     TResourceVector capacity = TResources.createResourceVector(0, 4);
     scheduler.initialize(capacity, new PropertiesConfiguration());
-    
+
     final String testApp = "test app";
     final InetSocketAddress backendAddress = new InetSocketAddress("123.4.5.6", 2);
-    
+
     // Make sure that tasks are launched right away, if resources are available.
     scheduler.submitTaskReservations(createTaskReservationRequest(1, 1, scheduler, testApp),
                                      backendAddress);
@@ -51,7 +51,7 @@ public class TestTaskScheduler {
     TaskReservation task = scheduler.getNextTask();
     assertEquals("1", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.submitTaskReservations(createTaskReservationRequest(2, 2, scheduler, testApp),
                                      backendAddress);
     assertEquals(2, scheduler.runnableTasks());
@@ -60,12 +60,14 @@ public class TestTaskScheduler {
     // now and others started later.
     scheduler.submitTaskReservations(createTaskReservationRequest(3, 3, scheduler, testApp),
                                      backendAddress);
-    assertEquals(4, scheduler.runnableTasks());
+    /* 4 tasks have been launched but one was already removed from the runnable queue using
+     * getTask(), leaving 3 runnable tasks. */
+    assertEquals(3, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("2", task.requestId);
     task = scheduler.getNextTask();
     assertEquals("2", task.requestId);
-    
+
     // Have a few tasks complete before the last runnable task is removed from the queue.
     scheduler.taskCompleted("2");
     scheduler.taskCompleted("2");
@@ -79,7 +81,7 @@ public class TestTaskScheduler {
     assertEquals("3", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
   }
-  
+
   /**
    * Tests the round robin task scheduler.
    */
@@ -88,7 +90,7 @@ public class TestTaskScheduler {
     TaskScheduler scheduler = new RoundRobinTaskScheduler();
     TResourceVector capacity = TResources.createResourceVector(0, 4);
     scheduler.initialize(capacity, new PropertiesConfiguration());
-        
+
     final String app1 = "app1";
     final InetSocketAddress address1 = new InetSocketAddress("localhost", 1);
     final String app2 = "app2";
@@ -97,7 +99,7 @@ public class TestTaskScheduler {
     final InetSocketAddress address3 = new InetSocketAddress("localhost", 1);
     final String app4 = "app4";
     final InetSocketAddress address4 = new InetSocketAddress("localhost", 1);
-    
+
     // Submit enough tasks to saturate the existing capacity.
     scheduler.submitTaskReservations(createTaskReservationRequest(1, 1, scheduler, app1), address1);
     assertEquals(1, scheduler.runnableTasks());
@@ -108,17 +110,17 @@ public class TestTaskScheduler {
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.submitTaskReservations(createTaskReservationRequest(1, 3, scheduler, app3), address3);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.submitTaskReservations(createTaskReservationRequest(1, 4, scheduler, app4), address4);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
-    
+
     /* Create the following backlogs.
      * app1: 2 tasks
      * app2: 3 tasks
@@ -131,58 +133,58 @@ public class TestTaskScheduler {
     scheduler.submitTaskReservations(createTaskReservationRequest(4, 9, scheduler, app3), address3);
 
     assertEquals(0, scheduler.runnableTasks());
-    
+
     // Make sure that as tasks finish (and space is freed up) new tasks are added to the
     // runqueue in round-robin order.
     scheduler.taskCompleted("1");
     assertEquals(1, scheduler.runnableTasks());
     TaskReservation task = scheduler.getNextTask();
     assertEquals("5", task.requestId);
-    assertEquals(0, scheduler.runnableTasks()); 
-    
+    assertEquals(0, scheduler.runnableTasks());
+
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("6", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.taskCompleted(task.requestId);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("5", task.requestId);
-    assertEquals(0, scheduler.runnableTasks()); 
-    
+    assertEquals(0, scheduler.runnableTasks());
+
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("7", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("8", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    
+
     scheduler.taskCompleted(task.requestId);
-    assertEquals(1, scheduler.runnableTasks()); 
+    assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());

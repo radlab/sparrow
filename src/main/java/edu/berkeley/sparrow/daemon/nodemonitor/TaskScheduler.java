@@ -9,6 +9,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Maps;
+
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.TResources;
@@ -48,6 +50,19 @@ public abstract class TaskScheduler {
     }
   }
 
+  protected class ResourceInfo {
+    /** Unlaunched tasks for which this resource information applies. */
+    public int remainingTasks;
+
+    /** Estimated resources. */
+    public TResourceVector resources;
+
+    public ResourceInfo(int tasks, TResourceVector resources) {
+     remainingTasks = tasks;
+     this.resources = resources;
+    }
+  }
+
   private final static Logger LOG = Logger.getLogger(TaskScheduler.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(TaskScheduler.class);
   private String ipAddress;
@@ -57,8 +72,7 @@ public abstract class TaskScheduler {
   protected TResourceVector inUse = TResources.clone(TResources.none());
   private final BlockingQueue<TaskReservation> runnableTaskQueue =
       new LinkedBlockingQueue<TaskReservation>();
-  private HashMap<String, TResourceVector> resourcesPerRequest = new
-      HashMap<String, TResourceVector>();
+  private HashMap<String, ResourceInfo> resourcesPerRequest = Maps.newHashMap();
 
   /** Initialize the task scheduler, passing it the current available resources
    *  on the machine. */
@@ -107,13 +121,16 @@ public abstract class TaskScheduler {
    */
   synchronized void taskCompleted(String requestId) {
     LOG.debug(Logging.functionCall(requestId));
-    TResourceVector res = resourcesPerRequest.get(requestId);
-    if (res == null) {
+    ResourceInfo resourceInfo = resourcesPerRequest.get(requestId);
+    if (resourceInfo == null) {
       LOG.error("Missing resources for request: " + requestId);
-      res = TResources.createResourceVector(0, 1);
+      resourceInfo = new ResourceInfo(1, TResources.createResourceVector(0, 1));
     }
-    resourcesPerRequest.remove(requestId);
-    freeResourceInUse(res);
+    resourceInfo.remainingTasks--;
+    if (resourceInfo.remainingTasks == 0) {
+      resourcesPerRequest.remove(requestId);
+    }
+    freeResourceInUse(resourceInfo.resources);
     handleTaskCompleted(requestId);
   }
 
@@ -128,7 +145,9 @@ public abstract class TaskScheduler {
 
   void submitTaskReservations(TEnqueueTaskReservationsRequest request,
                               InetSocketAddress appBackendAddress) {
-    resourcesPerRequest.put(request.getRequestId(), request.getEstimatedResources());
+    ResourceInfo resourceInfo = new ResourceInfo(request.getNumTasks(),
+                                                 request.getEstimatedResources());
+    resourcesPerRequest.put(request.getRequestId(), resourceInfo);
     for (int i = 0; i < request.getNumTasks(); ++i) {
       LOG.debug("Creating reservation " + i + " for request " + request.getRequestId());
       TaskReservation reservation = new TaskReservation(request, appBackendAddress);
