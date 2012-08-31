@@ -50,7 +50,7 @@ class Task:
     def __init__(self, id):
         self.__logger = logging.getLogger("Task")
 
-        # When the scheduler (resident with the frontend) launched the task
+        # When the scheduler (resident with the frontend) assigned the task to the slave.
         self.scheduler_launch_time = INVALID_TIME
         # When the node monitor (resident with the backend) launched the task
         self.node_monitor_launch_time = INVALID_TIME
@@ -118,7 +118,7 @@ class Request:
         task = self.__get_task(task_id)
         task.set_scheduler_launch_time(launch_time)
 
-    def add_node_monitor_task_launch(self, address, task_id, launch_time):
+    def add_node_monitor_task_launch(self, task_id, launch_time):
         task = self.__get_task(task_id)
         task.set_node_monitor_launch_time(launch_time)
 
@@ -152,69 +152,16 @@ class Request:
 
     def start_and_service_times(self):
         """ Returns a list of (start time, service time) tuples for complete __tasks. """
-        return [(x.scheduler_launch_time, x.service_time()) for x in self.__tasks
+        return [(x.scheduler_launch_time, x.service_time()) for x in self.__tasks.values()
                 if x.complete()]
 
     def service_times(self):
         """ Returns a list of service times for complete __tasks. """
-        return [task.service_time() for task in self.__tasks if task.complete()]
+        return [task.service_time() for task in self.__tasks.values() if task.complete()]
 
     def queue_times(self):
         """ Returns a list of queue times for all complete __tasks. """
-        return [task.queued_time() for task in self.__tasks if task.complete()]
-
-    def probe_times(self):
-        """ Returns a list of probe delays for all complete __probes. """
-        probe_times = []
-        for probe in self.__probes.values():
-            if probe.complete():
-                if probe.round_trip_time() > 20:
-                  "Long probe: %s " %self.__id
-                probe_times.append(probe.round_trip_time())
-        return probe_times
-
-    def receive_and_probing_time(self):
-        latest_completion = 0
-        for probe in self.__probes.values():
-            if probe.complete():
-                latest_completion = max(latest_completion, probe.completion_time)
-        return latest_completion - self.__arrival_time
-
-    def queue_lengths(self):
-       """ Returns an array of queue lengths observed during all probes. """
-       out = []
-       for probe in self.__probes.values():
-         if probe.complete():
-           out.append(probe.queue_length)
-       return out
-
-    def probing_time(self):
-       """ Returns the total time spent in probing for this request. """
-       earliest_launch = (time.time() * 1000)**2
-       latest_completion = 0
-       for probe in self.__probes.values():
-           if probe.complete():
-               earliest_launch = min(earliest_launch, probe.launch_time)
-               latest_completion = max(latest_completion, probe.completion_time)
-       return latest_completion - earliest_launch
-
-    def worst_necessary_probe_time(self):
-      """ Returns the nth longest probe time, where n is the number of tasks.
-
-          This represents the theoretical limit of the minimum time we could
-          have spent probing that actually gets a probe from as many machines
-          as we have tasks. Note that in practice, if we are only waiting
-          for ||tasks|| machines to respond we might as well just send the
-          tasks randomly. """
-      probe_times = self.probe_times()
-      num_tasks = len(self.__tasks)
-      if len(probe_times) < num_tasks:
-        self.__logger.warn("Fewer probes send than tasks for task %s."
-                           % self.__id)
-
-      if len(probe_times) == 0:
-        return 0
-      return sorted(probe_times)[min(num_tasks - 1, len(probe_times) - 1)]
+        return [task.queued_time() for task in self.__tasks.values() if task.complete()]
 
     def response_time(self):
         """ Returns the time from when the job arrived to when it completed.
@@ -234,19 +181,16 @@ class Request:
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
             task_completion_time = task.completion_time
-            if task.scheduler_launch_time > task.node_monitor_launch_time:
-                 self.__logger.warn("Task %s suggests clock skew: " % task_id)
+            #if task.scheduler_launch_time > task.node_monitor_launch_time:
+                 #self.__logger.warn(("Task %s suggests clock skew: scheduler launch time %d, node "
+                 #                    "monitor launch time %d") %
+
+                                    #(task_id, task.scheduler_launch_time,
+                                    # task.node_monitor_launch_time))
             completion_time = max(completion_time, task_completion_time)
 
         if (completion_time - self.__arrival_time) > 2000:
           pass
-          """
-          print "TRUE: %s" % (completion_time - self.__arrival_time)
-          print self.network_delays()
-          print self.service_times()
-          print self.probing_time()
-          print "EST: %s" % (max(self.service_times()) + max(self.network_delays()) + self.probing_time())
-          """
         return completion_time - self.__arrival_time
 
     def complete(self):
@@ -261,8 +205,6 @@ class Request:
         for task in self.__tasks.values():
             if not task.complete():
                 return False
-        if len(self.__probes) == 0:
-            return False # Don't consider non-probing requests
         return True
 
     def __get_task(self, task_id):
@@ -369,12 +311,11 @@ class LogParser:
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
         gnuplot_file.write("set output '%s_task_launches_vs_time.ps'\n" % file_prefix)
         gnuplot_file.write("set xlabel 'Time (ms)'\n")
-        gnuplot_file.write("set ylabel 'Queue Length'\n")
+        gnuplot_file.write("set ylabel 'Tasks Launched'\n")
         gnuplot_file.write("plot ")
 
         job_count = 0
         for id, request in self.__requests.items():
-            print id
             results_filename = "%s_%s_tasks_launched_vs_time" % (file_prefix, id)
             file = open(results_filename, "w")
             arrival_time, reservation_replies = request.get_reservation_replies()
@@ -404,10 +345,6 @@ class LogParser:
         start_and_service_times = []
         queue_times = []
         probe_times = []
-        probing_times = []
-        queue_lengths = []
-        rcv_probing_times = []
-        worst_probe_times = []
         start_time = self.__earliest_time + (START_SEC * 1000)
         end_time = self.__earliest_time + (END_SEC * 1000)
 
@@ -415,62 +352,55 @@ class LogParser:
                                      k.arrival_time() <= end_time and
                                      k.complete(),
                                      self.__requests.values())
+        print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
-            network_delays.extend(request.network_delays())
+            # TODO: Fix network delay calculation code.
+            #network_delays.extend(request.network_delays())
             service_times.extend(request.service_times())
             start_and_service_times.extend(request.start_and_service_times())
-            queue_times.extend(request.queue_times())
+            # TODO: Fix queue time calculation.
+            #queue_times.extend(request.queue_times())
             response_time = request.response_time()
-            probe_times.extend(request.probe_times())
-            probing_times.append(request.probing_time())
-            queue_lengths.extend(request.queue_lengths())
-            rcv_probing_times.append(request.receive_and_probing_time())
-            worst_probe_times.append(request.worst_necessary_probe_time())
             response_times.append(response_time)
 
         # Output data for response time and network delay CDFs.
         results_filename = "%s_results.data" % file_prefix
         file = open(results_filename, "w")
-        file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\tProbeTime\tRcvProbingTime\tProbingTime\tWorstProbeTime\tQueueLength\n")
+        file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\n")
         NUM_DATA_POINTS = 100
         response_times.sort()
         network_delays.sort()
         service_times.sort()
         queue_times.sort()
-        queue_lengths.sort()
-        probe_times.sort()
-        probing_times.sort()
-        rcv_probing_times.sort()
-        worst_probe_times.sort()
 
         for i in range(NUM_DATA_POINTS):
             i = float(i) / NUM_DATA_POINTS
-            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
+            file.write("%f\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
                 get_percentile(network_delays, i),
                 get_percentile(service_times, i),
-                get_percentile(queue_times, i),
-                get_percentile(probe_times, i),
-                get_percentile(rcv_probing_times, i),
-                get_percentile(probing_times, i),
-                get_percentile(worst_probe_times, i),
-                get_percentile(queue_lengths, i)))
+                get_percentile(queue_times, i)))
         file.close()
 
         # Output task run time as a function of start time.
+        start_and_service_times.sort(key = lambda x: x[0])
+        first_start_time = start_and_service_times[0][0]
+        print "first: %d" % first_start_time
         stride = max(1, len(start_and_service_times) / 500)
         start_and_service_filename = "%s_start_and_service_time.data" % file_prefix
         start_and_service_file = open(start_and_service_filename, "w")
         for start_time, service_time in start_and_service_times[::stride]:
-            start_and_service_file.write("%s\t%s\n" % (start_time, service_time))
+            start_and_service_file.write("%s\t%s\n" % (start_time - first_start_time,
+                                                       service_time))
         start_and_service_file.close();
         start_and_service_gnuplot_file = open("%s_start_and_service_time.gp" % file_prefix, "w")
         start_and_service_gnuplot_file.write("set terminal postscript color\n")
         start_and_service_gnuplot_file.write("set output '%s_start_and_service_time.ps'\n" %
                                              file_prefix)
         start_and_service_gnuplot_file.write("set xlabel 'Time'\n")
+        start_and_service_gnuplot_file.write("set yrange [0:]\n")
         start_and_service_gnuplot_file.write("set ylabel 'Task Duration'\n")
         start_and_service_gnuplot_file.write("plot '%s' using 1:2 with lp lw 4 notitle\n" %
                                              start_and_service_filename)
@@ -484,48 +414,13 @@ class LogParser:
                                          get_percentile(response_times, .99)))
         summary_file.close()
 
-        wait_times_per_queue_len = {}
-        for request in considered_requests:
-          for task in request._Request__tasks.values():
-            wait_time = task.queued_time()
-            if task.address not in request._Request__probes:
-              print "Excluding"
-              continue
-            queue_length = request._Request__probes[task.address].queue_length
-            arr = wait_times_per_queue_len.get(queue_length, [])
-            arr.append(wait_time)
-            wait_times_per_queue_len[queue_length] = arr
-
-        # Queue length vs response time
-        files = [] # (file name, queue length, # items)
-        for (queue_len, waits) in wait_times_per_queue_len.items():
-          fname = "data/queue_waits_%s.txt" % queue_len
-          files.append((fname, queue_len, len(waits)))
-          f = open(fname, 'w')
-          waits.sort()
-          for (i, wait) in enumerate(waits):
-            f.write("%s\t%s\n" % (float(i)/len(waits), wait))
-          f.close()
-        plot_fname = "wait_time.gp"
-        plot_file = open(plot_fname, 'w')
-        plot_file.write("set terminal postscript color\n")
-        plot_file.write("set output '%s_wait_time.ps'\n" % file_prefix)
-        plot_file.write("set xrange [0:500]\n")
-        parts = map(lambda x: "'%s' using 2:1 with lines lw 3 title '%s (n=%s)'"
-          % (x[0], x[1], x[2]), files)
-        plot = "plot " + ",\\\n".join(parts)
-        plot_file.write(plot + "\n")
-        plot_file.close()
-        subprocess.check_call("gnuplot %s" % plot_fname, shell=True)
-        #subprocess.check_call("rm queue_waits*.txt", shell=True)
-
     def plot_response_time_cdf(self, results_filename, file_prefix):
         gnuplot_file = open("%s_response_time_cdf.gp" % file_prefix, "w")
         gnuplot_file.write("set terminal postscript color\n")
-        gnuplot_file.write("set size 0.5,0.5\n")
+        #gnuplot_file.write("set size 0.5,0.5\n")
         gnuplot_file.write("set output '%s_response_time_cdf.ps'\n" %
                            file_prefix)
-        gnuplot_file.write("set xlabel 'Response Time'\n")
+        gnuplot_file.write("set xlabel 'Response Time (ms)'\n")
         gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
         gnuplot_file.write("set yrange [0:1]\n")
         gnuplot_file.write("plot '%s' using 2:1 lw 4 with lp\\\n" %
@@ -543,7 +438,6 @@ class LogParser:
         Creates a new request if a request with the given ID doesn't already
         exist.
         """
-        print "getting request for " + request_id
         if request_id not in self.__requests:
             self.__requests[request_id] = Request(request_id)
         return self.__requests[request_id]

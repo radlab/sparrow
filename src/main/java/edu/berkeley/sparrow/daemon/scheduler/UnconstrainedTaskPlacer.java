@@ -27,22 +27,21 @@ import edu.berkeley.sparrow.thrift.TTaskSpec;
  */
 public class UnconstrainedTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(UnconstrainedTaskPlacer.class);
-  protected static final Logger AUDIT_LOG = Logging.getAuditLogger(UnconstrainedTaskPlacer.class);
 
   /** Specifications for tasks that have not yet been launched. */
   List<TTaskLaunchSpec> unlaunchedTasks;
- 
+
   /**
    * Number of outstanding reservations. Used to determine when all reservations have been
    * responded to.
    */
   AtomicInteger numOutstandingReservations;
-  
+
   /**
    * Id of the request associated with this task placer.
    */
   String requestId;
-  
+
   private double probeRatio;
 
   UnconstrainedTaskPlacer(String requestId, double probeRatio) {
@@ -51,20 +50,20 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
     unlaunchedTasks = Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>());
     this.numOutstandingReservations = new AtomicInteger(0);
   }
-  
+
   @Override
   public Map<InetSocketAddress, TEnqueueTaskReservationsRequest>
       getEnqueueTaskReservationsRequests(
           TSchedulingRequest schedulingRequest, String requestId,
           Collection<InetSocketAddress> nodes, THostPort schedulerAddress) {
     LOG.debug(Logging.functionCall(schedulingRequest, requestId, nodes, schedulerAddress));
-    
+
     int numTasks = schedulingRequest.getTasks().size();
     int reservationsToLaunch = (int) Math.ceil(probeRatio * numTasks);
     reservationsToLaunch = Math.min(reservationsToLaunch, nodes.size());
     LOG.debug("Request " + requestId + ": Creating " + reservationsToLaunch +
               " task reservations");
-    
+
     // Get a random subset of nodes by shuffling list.
     List<InetSocketAddress> nodeList = Lists.newArrayList(nodes);
     Collections.shuffle(nodeList);
@@ -74,9 +73,9 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
                 "currently supported.");
     }
     nodeList = nodeList.subList(0, reservationsToLaunch);
-    
+
     TResourceVector estimatedResources = null;
-    
+
     // Create a TTaskLaunchSpec for each task. Do this before launching the requests to enqueue
     // tasks, to ensure that the list is populated before any of the node monitors signal that
     // they are ready to launch a task.
@@ -89,18 +88,18 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
                                                            task.bufferForMessage());
       unlaunchedTasks.add(taskLaunchSpec);
     }
-    
+
     HashMap<InetSocketAddress, TEnqueueTaskReservationsRequest> requests = Maps.newHashMap();
-    
+
     for (InetSocketAddress node : nodeList) {
       TEnqueueTaskReservationsRequest request = new TEnqueueTaskReservationsRequest(
           schedulingRequest.getApp(), schedulingRequest.getUser(), requestId, estimatedResources,
           schedulerAddress, 1);
       requests.put(node, request);
     }
-    
+
     numOutstandingReservations.set(requests.size());
-    
+
     return requests;
   }
 
@@ -121,7 +120,7 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
       }
     }
   }
-  
+
   @Override
   public boolean allResponsesReceived() {
     return numOutstandingReservations.get() == 0;
