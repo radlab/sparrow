@@ -5,6 +5,7 @@ exception IncompleteRequestException {
 }
 
 struct THostPort {
+  // The host should always be represented as an IP address!
   1: string host;
   2: i32 port;
 }
@@ -21,7 +22,7 @@ struct TResourceVector {
 }
 
 // Conveys both a quantity of resources in use and a task queue length
-struct TResourceUsage { 
+struct TResourceUsage {
   1: TResourceVector resources; // Current resource usage
   2: i32 queueLength;           // Number of queued tasks
 }
@@ -53,7 +54,7 @@ struct TSchedulingRequest {
   2: list<TTaskSpec> tasks;
   3: TUserGroupInfo user;
   # Hack to allow us to specify the probe ratio for certain types of requests.
-  4: optional double probeRatio; 
+  4: optional double probeRatio;
 }
 
 struct TEnqueueTaskReservationsRequest {
@@ -71,7 +72,7 @@ struct TEnqueueTaskReservationsRequest {
 struct TTaskLaunchSpec {
   # Task ID (originally assigned by the application)
   1: string taskId;
-  
+
   # Description of the task passed on to the application backend (opaque to Sparrow).
   2: binary message;
 }

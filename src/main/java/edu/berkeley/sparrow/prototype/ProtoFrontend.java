@@ -3,6 +3,7 @@ package edu.berkeley.sparrow.prototype;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -16,13 +17,14 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
-import edu.berkeley.sparrow.thrift.FrontendService;
 
 import edu.berkeley.sparrow.api.SparrowFrontendClient;
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TResources;
+import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
+import edu.berkeley.sparrow.thrift.TPlacementPreference;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
@@ -37,6 +39,23 @@ public class ProtoFrontend implements FrontendService.Iface {
   // Type of benchmark to run, see ProtoBackend static constant for benchmark types
   public static final int DEFAULT_TASK_BENCHMARK = ProtoBackend.BENCHMARK_TYPE_FP_CPU;
   public static final int DEFAULT_BENCHMARK_ITERATIONS = 10;  // # of benchmark iterations
+
+  /**
+   * The default number of preferred nodes for each task. 0 signals that tasks are
+   * unconstrained.
+   */
+  public static final int DEFAULT_NUM_PREFERRED_NODES = 0;
+
+  /**
+   * Configuration parameter name for the set of backends (used to set preferred nodes for
+   * tasks).
+   */
+  public static final String BACKENDS = "backends";
+
+  /**
+   * Default application name.
+   */
+  public static final String APPLICATION_ID = "testApp";
 
   private static final Logger LOG = Logger.getLogger(ProtoFrontend.class);
   public final static long startTime = System.currentTimeMillis();
@@ -59,7 +78,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       user.setUser("*");
       user.setGroup("*");
       try {
-        client.submitJob("testApp", request, user);
+        client.submitJob(APPLICATION_ID, request, user);
         LOG.debug("Submitted job: " + request);
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);
@@ -69,8 +88,8 @@ public class ProtoFrontend implements FrontendService.Iface {
     }
   }
 
-  public List<TTaskSpec> generateJob(int numTasks, int benchmarkId,
-      int benchmarkIterations) {
+  public List<TTaskSpec> generateJob(int numTasks, int numPreferredNodes, List<String> backends,
+                                     int benchmarkId, int benchmarkIterations) {
     TResourceVector resources = TResources.createResourceVector(300, 1);
 
     // Pack task parameters
@@ -84,6 +103,14 @@ public class ProtoFrontend implements FrontendService.Iface {
       spec.setTaskId(Integer.toString((new Random().nextInt())));
       spec.setMessage(message.array());
       spec.setEstimatedResources(resources);
+      if (numPreferredNodes > 0) {
+        Collections.shuffle(backends);
+        TPlacementPreference preference = new TPlacementPreference();
+        for (int i = 0; i < numPreferredNodes; i++) {
+          preference.addToNodes(backends.get(i));
+        }
+        spec.setPreference(preference);
+      }
       out.add(spec);
     }
     return out;
@@ -100,8 +127,7 @@ public class ProtoFrontend implements FrontendService.Iface {
   public void run(String[] args) {
     try {
       OptionParser parser = new OptionParser();
-      parser.accepts("c", "configuration file").
-        withRequiredArg().ofType(String.class);
+      parser.accepts("c", "configuration file").withRequiredArg().ofType(String.class);
       parser.accepts("help", "print help statement");
       OptionSet options = parser.parse(args);
 
@@ -125,14 +151,32 @@ public class ProtoFrontend implements FrontendService.Iface {
       double lambda = conf.getDouble("job_arrival_rate_s", DEFAULT_JOB_ARRIVAL_RATE_S);
       LOG.debug("Using arrival rate of  " + lambda + " tasks per second.");
       int tasksPerJob = conf.getInt("tasks_per_job", DEFAULT_TASKS_PER_JOB);
+      int numPreferredNodes = conf.getInt("num_preferred_nodes", DEFAULT_NUM_PREFERRED_NODES);
+      LOG.debug("Using " + numPreferredNodes + " preferred nodes for each task.");
       int benchmarkIterations = conf.getInt("benchmark.iterations",
           DEFAULT_BENCHMARK_ITERATIONS);
       int benchmarkId = conf.getInt("benchmark.id", DEFAULT_TASK_BENCHMARK);
 
+      List<String> backends = new ArrayList<String>();
+      if (numPreferredNodes > 0) {
+        /* Attempt to parse the list of slaves, which we'll need to (randomly) select preferred
+         * nodes. */
+        if (!conf.containsKey(BACKENDS)) {
+          LOG.fatal("Missing configuration backend list, which is needed to randomly select " +
+                    "preferred nodes (num_preferred_nodes set to " + numPreferredNodes + ")");
+        }
+        for (String node : conf.getStringArray(BACKENDS)) {
+          backends.add(node);
+        }
+        if (backends.size() < numPreferredNodes) {
+          LOG.fatal("Number of backends smaller than number of preferred nodes!");
+        }
+      }
+
       SparrowFrontendClient client = new SparrowFrontendClient();
       int schedulerPort = conf.getInt("scheduler_port",
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
-      client.initialize(new InetSocketAddress("localhost", schedulerPort), "testApp", this);
+      client.initialize(new InetSocketAddress("localhost", schedulerPort), APPLICATION_ID, this);
       long lastLaunch = System.currentTimeMillis();
 
       /* This is a little tricky.
@@ -161,7 +205,9 @@ public class ProtoFrontend implements FrontendService.Iface {
         }
         Thread.sleep(toWait);
         Runnable runnable =  new JobLaunchRunnable(
-            generateJob(tasksPerJob, benchmarkId, benchmarkIterations), client);
+            generateJob(tasksPerJob, numPreferredNodes, backends, benchmarkId,
+                        benchmarkIterations),
+            client);
         new Thread(runnable).start();
         int launched = tasksLaunched.addAndGet(1);
         double launchRate = (double) launched * 1000.0 /

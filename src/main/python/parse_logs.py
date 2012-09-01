@@ -320,6 +320,7 @@ class LogParser:
             file = open(results_filename, "w")
             arrival_time, reservation_replies = request.get_reservation_replies()
             reservation_count = 0
+            file.write("0\t0\n")
             for reservation in reservation_replies:
                 reservation_count += 1
                 # Write the elapsed time since the request arrived.
@@ -387,7 +388,6 @@ class LogParser:
         # Output task run time as a function of start time.
         start_and_service_times.sort(key = lambda x: x[0])
         first_start_time = start_and_service_times[0][0]
-        print "first: %d" % first_start_time
         stride = max(1, len(start_and_service_times) / 500)
         start_and_service_filename = "%s_start_and_service_time.data" % file_prefix
         start_and_service_file = open(start_and_service_filename, "w")

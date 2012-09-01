@@ -40,6 +40,8 @@ def parse_args():
       help="Local directory into which log files are copied")
   parser.add_option("-n", "--tasks-per-job", type="int", default=1,
       help="Number of tasks to launch for each job in prototype")
+  parser.add_option("-x", "--num-preferred-nodes", type="int", default=0,
+      help="Number of preferred nodes to use in the prototype frontend (0 means unconstrained)")
   parser.add_option("-c", "--benchmark-id", type="int", default=1,
       help="Which benchmark to run")
   parser.add_option("-e", "--benchmark-iterations", type="int", default=4,
@@ -248,12 +250,15 @@ def deploy_cluster(frontends, backends, opts):
     "name_node": frontends[0].public_dns_name,
     "backend_list": "\n".join(["%s" % i.public_dns_name \
                                  for i in backends]),
+    "backend_comma_joined_list": ",".join(["%s" % i.public_dns_name \
+                                           for i in backends]),
     "arrival_lambda": "%s" % opts.arrival_rate,
     "git_branch": "%s" % opts.branch,
     "spark_git_branch": "%s" % opts.spark_branch,
     "benchmark_iterations": "%s" % opts.benchmark_iterations,
     "benchmark_id": "%s" % opts.benchmark_id,
     "tasks_per_job": "%s" % opts.tasks_per_job,
+    "num_preferred_nodes": "%s" % opts.num_preferred_nodes,
     "sample_ratio": "%s" % opts.sample_ratio,
     "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained
   }

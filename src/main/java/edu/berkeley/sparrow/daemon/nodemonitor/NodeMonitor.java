@@ -54,7 +54,8 @@ public class NodeMonitor {
   private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
 
-  public void initialize(Configuration conf, int nodeMonitorPort) throws UnknownHostException {
+  public void initialize(Configuration conf, int nodeMonitorInternalPort)
+      throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     if (mode.equals("standalone")) {
       state = new StandaloneNodeMonitorState();
@@ -83,7 +84,7 @@ public class NodeMonitor {
     scheduler.setMaxActiveTasks(cores);
     scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
-    taskLauncherService.initialize(conf, scheduler, schedulerClientPool, nodeMonitorPort);
+    taskLauncherService.initialize(conf, scheduler, schedulerClientPool, nodeMonitorInternalPort);
   }
 
   /**

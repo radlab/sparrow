@@ -45,7 +45,7 @@ public class TaskLauncherService {
 
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool;
 
-  private THostPort nodeMonitorAddress;
+  private THostPort nodeMonitorInternalAddress;
 
   private TaskScheduler scheduler;
 
@@ -73,8 +73,10 @@ public class TaskLauncherService {
           return;
         }
         try {
-          LOG.debug("Attempting to get task for node monitor at " + nodeMonitorAddress.toString());
-          schedulerClient.getTask(task.requestId, nodeMonitorAddress, new GetTaskCallback(task));
+          LOG.debug("Attempting to get task for node monitor at " +
+                    nodeMonitorInternalAddress.toString());
+          schedulerClient.getTask(task.requestId, nodeMonitorInternalAddress,
+                                  new GetTaskCallback(task));
         } catch (TException e) {
           LOG.error("Unable to getTask() from scheduler at " +
                     task.schedulerAddress.toString() + ":" + e);
@@ -173,7 +175,7 @@ public class TaskLauncherService {
                          int nodeMonitorPort) {
     this.scheduler = scheduler;
     this.schedulerClientPool = schedulerClientPool;
-    nodeMonitorAddress = new THostPort(Network.getHostName(conf), nodeMonitorPort);
+    nodeMonitorInternalAddress = new THostPort(Network.getHostName(conf), nodeMonitorPort);
     ExecutorService service = Executors.newFixedThreadPool(CLIENT_POOL_SIZE);
     for (int i = 0; i < CLIENT_POOL_SIZE; i++) {
       service.submit(new TaskLaunchRunnable());

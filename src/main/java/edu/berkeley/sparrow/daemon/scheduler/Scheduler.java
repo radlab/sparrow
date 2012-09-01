@@ -224,6 +224,7 @@ public class Scheduler {
   }
 
   public List<TTaskLaunchSpec> getTask(String requestId, THostPort nodeMonitorAddress) {
+    LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
                 "pending reservations");
@@ -241,6 +242,7 @@ public class Scheduler {
       AUDIT_LOG.info(Logging.auditEventString("get_task_no_task", requestId));
     }
     if (taskPlacer.allResponsesReceived()) {
+      LOG.debug("All responses received.");
       // Remove the entry in requestTaskPlacers once all tasks have been placed, so that
       // requestTaskPlacers doesn't grow to be unbounded.
       requestTaskPlacers.remove(requestId);

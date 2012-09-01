@@ -31,8 +31,8 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   /** Tasks that have been launched. */
   private Set<TTaskLaunchSpec> launchedTasks;
 
-  /** Total number of tasks in the job. */
-  private int numTasks;
+  /** Total number of outstanding reservations. */
+  private int numOutstandingReservations;
 
   private double probeRatio;
 
@@ -44,13 +44,14 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
    * were made on the backend are placed at the beginning of the list; any other tasks that can
    * run on the backend are placed at the end of the list.
    */
-  private Map<InetSocketAddress, List<TTaskLaunchSpec>> nodeMonitorsToTasks;
+  private Map<THostPort, List<TTaskLaunchSpec>> nodeMonitorsToTasks;
 
   ConstrainedTaskPlacer(String requestId, double probeRatio){
     this.requestId = requestId;
     this.probeRatio = probeRatio;
     launchedTasks = Collections.synchronizedSet(new HashSet<TTaskLaunchSpec>());
     nodeMonitorsToTasks = Maps.newConcurrentMap();
+    numOutstandingReservations = 0;
   }
 
   @Override
@@ -81,8 +82,6 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
     // submitted.
     List<TTaskSpec> taskList = Lists.newArrayList(schedulingRequest.getTasks());
     Collections.shuffle(taskList);
-
-    numTasks = taskList.size();
 
     // We assume all tasks in a job have the same resource usage requirements.
     TResourceVector estimatedResources = taskList.get(0).getEstimatedResources();
@@ -123,9 +122,10 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
 
       int numEnqueuedNodes = 0;
       for (InetSocketAddress addr : preferredNodes) {
-        if (!nodeMonitorsToTasks.containsKey(addr)) {
+        THostPort hostPort = new THostPort(addr.getAddress().getHostAddress(), addr.getPort());
+        if (!nodeMonitorsToTasks.containsKey(hostPort)) {
           nodeMonitorsToTasks.put(
-              addr, Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>()));
+              hostPort, Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>()));
         }
 
         if (numEnqueuedNodes < probeRatio) {
@@ -135,13 +135,14 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
                 schedulingRequest.getApp(), schedulingRequest.getUser(), requestId,
                 estimatedResources, schedulerAddress, 1);
             requests.put(addr, request);
+            numOutstandingReservations++;
           } else {
             // IsSetNumTasks should already be true, because it was set when the request was
             // created.
             requests.get(addr).numTasks += 1;
           }
 
-          nodeMonitorsToTasks.get(addr).add(0, taskLaunchSpec);
+          nodeMonitorsToTasks.get(hostPort).add(0, taskLaunchSpec);
           numEnqueuedNodes += 1;
         } else {
           // As an optimization, add the task at the end of the list of tasks on the node monitor,
@@ -149,7 +150,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           // when the node monitor is ready to launch a task, and this task hasn't been launched
           // yet, this task can use the node monitor. This means that there may be more entries in
           // nodeMonitorsToTasks than in nodeMonitorTaskCount for some addresses.
-          nodeMonitorsToTasks.get(addr).add(taskLaunchSpec);
+          nodeMonitorsToTasks.get(hostPort).add(taskLaunchSpec);
         }
       }
 
@@ -163,16 +164,21 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   }
 
   @Override
-  public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
-    InetSocketAddress nodeMonitorSocketAddress = new InetSocketAddress(
-        nodeMonitorAddress.getHost(), nodeMonitorAddress.getPort());
-    if (!nodeMonitorsToTasks.containsKey(nodeMonitorSocketAddress)) {
+  public synchronized List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
+    if (!nodeMonitorsToTasks.containsKey(nodeMonitorAddress)) {
+      StringBuilder nodeMonitors = new StringBuilder();
+      for (THostPort nodeMonitor: nodeMonitorsToTasks.keySet()) {
+        if (nodeMonitors.length() > 0) {
+          nodeMonitors.append(",");
+        }
+        nodeMonitors.append(nodeMonitor.toString());
+      }
       LOG.error("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
           ": Not assigning a task (node monitor not in the set of node monitors where tasks " +
-          "were enqueued).");
+          "were enqueued: " + nodeMonitors.toString() + ").");
       return Lists.newArrayList();
     }
-    List<TTaskLaunchSpec> taskSpecs = nodeMonitorsToTasks.get(nodeMonitorSocketAddress);
+    List<TTaskLaunchSpec> taskSpecs = nodeMonitorsToTasks.get(nodeMonitorAddress);
     TTaskLaunchSpec taskSpec = null;
     synchronized(taskSpecs) {
       // Try to find a task that hasn't been launched yet.
@@ -190,6 +196,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       this.launchedTasks.add(taskSpec);
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
           ": Assigning task.");
+      numOutstandingReservations--;
       return Lists.newArrayList(taskSpec);
     } else {
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
@@ -199,7 +206,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   }
 
   @Override
-  public boolean allResponsesReceived() {
-    return numTasks == launchedTasks.size();
+  public synchronized boolean allResponsesReceived() {
+    return numOutstandingReservations == 0;
   }
 }
