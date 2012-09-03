@@ -283,17 +283,17 @@ class LogParser:
             else:
                 self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
 
-    def output_reservation_queue_lengths(self, file_prefix):
-        gnuplot_file = open("%s_reservation_queue_lengths.gp" % file_prefix, "w")
+    def output_reservation_queue_lengths(self, output_directory):
+        gnuplot_file = open("%s/reservation_queue_lengths.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
-        gnuplot_file.write("set output '%s_reservation_queue_length.ps'\n" %
-                           file_prefix)
+        gnuplot_file.write("set output '%s/reservation_queue_length.ps'\n" %
+                           output_directory)
         gnuplot_file.write("set xlabel 'Time (ms)'\n")
         gnuplot_file.write("set ylabel 'Queue Length'\n")
         gnuplot_file.write("plot ")
         is_first = True
         for (node_monitor_address, queue_lengths) in self.__node_monitor_queue_lengths.items():
-            results_filename = "%s_%s_queue_lengths" % (file_prefix, node_monitor_address)
+            results_filename = "%s/%s_queue_lengths" % (output_directory, node_monitor_address)
             file = open(results_filename, "w")
             file.write("time\tQueue Length\n")
             for time, queue_length in queue_lengths:
@@ -304,19 +304,19 @@ class LogParser:
             is_first = False
             gnuplot_file.write("'%s' using 1:2 lw 1 with lp" % results_filename)
 
-    def output_tasks_launched_versus_time(self, file_prefix):
+    def output_tasks_launched_versus_time(self, output_directory):
         """ Creates a gnuplot file to plot tasks launched versus time for 10 requests in the
             middle of the experiment. """
-        gnuplot_file = open("%s_task_launches_vs_time.gp" % file_prefix, "w")
+        gnuplot_file = open("%s/task_launches_vs_time.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
-        gnuplot_file.write("set output '%s_task_launches_vs_time.ps'\n" % file_prefix)
+        gnuplot_file.write("set output '%s/task_launches_vs_time.ps'\n" % output_directory)
         gnuplot_file.write("set xlabel 'Time (ms)'\n")
         gnuplot_file.write("set ylabel 'Tasks Launched'\n")
         gnuplot_file.write("plot ")
 
         job_count = 0
         for id, request in self.__requests.items():
-            results_filename = "%s_%s_tasks_launched_vs_time" % (file_prefix, id)
+            results_filename = "%s/%s_tasks_launched_vs_time" % (output_directory, id)
             file = open(results_filename, "w")
             arrival_time, reservation_replies = request.get_reservation_replies()
             reservation_count = 0
@@ -335,7 +335,7 @@ class LogParser:
                 break
         gnuplot_file.close()
 
-    def output_results(self, file_prefix):
+    def output_results(self, output_directory, aggregate_results_filename):
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
         response_times = []
@@ -349,6 +349,8 @@ class LogParser:
         start_time = self.__earliest_time + (START_SEC * 1000)
         end_time = self.__earliest_time + (END_SEC * 1000)
 
+        test_requests = filter(lambda k: k.complete(), self.__requests.values())
+        print len(test_requests)
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
                                      k.complete(),
@@ -367,7 +369,7 @@ class LogParser:
             response_times.append(response_time)
 
         # Output data for response time and network delay CDFs.
-        results_filename = "%s_results.data" % file_prefix
+        results_filename = "%s/results.data" % output_directory
         file = open(results_filename, "w")
         file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\n")
         NUM_DATA_POINTS = 100
@@ -389,16 +391,17 @@ class LogParser:
         start_and_service_times.sort(key = lambda x: x[0])
         first_start_time = start_and_service_times[0][0]
         stride = max(1, len(start_and_service_times) / 500)
-        start_and_service_filename = "%s_start_and_service_time.data" % file_prefix
+        start_and_service_filename = "%s/start_and_service_time.data" % output_directory
         start_and_service_file = open(start_and_service_filename, "w")
         for start_time, service_time in start_and_service_times[::stride]:
             start_and_service_file.write("%s\t%s\n" % (start_time - first_start_time,
                                                        service_time))
         start_and_service_file.close();
-        start_and_service_gnuplot_file = open("%s_start_and_service_time.gp" % file_prefix, "w")
+        start_and_service_gnuplot_file = open("%s/start_and_service_time.gp" % output_directory,
+                                              "w")
         start_and_service_gnuplot_file.write("set terminal postscript color\n")
-        start_and_service_gnuplot_file.write("set output '%s_start_and_service_time.ps'\n" %
-                                             file_prefix)
+        start_and_service_gnuplot_file.write("set output '%s/start_and_service_time.ps'\n" %
+                                             output_directory)
         start_and_service_gnuplot_file.write("set xlabel 'Time'\n")
         start_and_service_gnuplot_file.write("set yrange [0:]\n")
         start_and_service_gnuplot_file.write("set ylabel 'Task Duration'\n")
@@ -406,20 +409,20 @@ class LogParser:
                                              start_and_service_filename)
         start_and_service_gnuplot_file.close()
 
+        self.plot_response_time_cdf(results_filename, output_directory)
 
-        self.plot_response_time_cdf(results_filename, file_prefix)
-        summary_file = open("%s_response_time_summary" % file_prefix, 'w')
-        summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
+        summary_file = open("%s" % aggregate_results_filename, 'a')
+        summary_file.write("%s %s %s\n" % (get_percentile(response_times, .5),
                                          get_percentile(response_times, .95),
                                          get_percentile(response_times, .99)))
         summary_file.close()
 
-    def plot_response_time_cdf(self, results_filename, file_prefix):
-        gnuplot_file = open("%s_response_time_cdf.gp" % file_prefix, "w")
+    def plot_response_time_cdf(self, results_filename, output_directory):
+        gnuplot_file = open("%s/response_time_cdf.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color\n")
         #gnuplot_file.write("set size 0.5,0.5\n")
-        gnuplot_file.write("set output '%s_response_time_cdf.ps'\n" %
-                           file_prefix)
+        gnuplot_file.write("set output '%s/response_time_cdf.ps'\n" %
+                           output_directory)
         gnuplot_file.write("set xlabel 'Response Time (ms)'\n")
         gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
         gnuplot_file.write("set yrange [0:1]\n")
@@ -443,7 +446,7 @@ class LogParser:
         return self.__requests[request_id]
 
 def main(argv):
-    PARAMS = ["log_dir", "output_file", "start_sec", "end_sec"]
+    PARAMS = ["log_dir", "output_dir", "start_sec", "end_sec", "aggregate_results_filename"]
     if "help" in argv[0]:
         print ("Usage: python parse_logs.py " +
                " ".join(["[%s=v]" % k for k in PARAMS]))
@@ -452,7 +455,8 @@ def main(argv):
     log_parser = LogParser()
 
     log_files = []
-    output_filename = "experiment"
+    output_dir = "experiment"
+    aggregate_results_filename = ""
     for arg in argv:
         kv = arg.split("=")
         if kv[0] == PARAMS[0]:
@@ -462,13 +466,15 @@ def main(argv):
             log_files = [os.path.join(log_dir, filename) for \
                          filename in unqualified_log_files]
         elif kv[0] == PARAMS[1]:
-            output_filename = kv[1]
+            output_dir = kv[1]
         elif kv[0] == PARAMS[2]:
             global START_SEC
             START_SEC = int(kv[1])
         elif kv[0] == PARAMS[3]:
             global END_SEC
             END_SEC = int(kv[1])
+        elif kv[0] == PARAMS[4]:
+            aggregate_results_filename = kv[1]
         else:
             print "Warning: ignoring parameter %s" % kv[0]
 
@@ -476,19 +482,26 @@ def main(argv):
         print "No valid log files found!"
         return
 
+    if aggregate_results_filename == "":
+        aggregate_results_filename = os.path.join(output_dir, "response_time_summary")
+
     logging.basicConfig(level=logging.DEBUG)
 
     for filename in log_files:
         log_parser.parse_file(filename)
 
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+
     print "Outputting reservation queue length versus time"
-    log_parser.output_reservation_queue_lengths(output_filename)
+    log_parser.output_reservation_queue_lengths(output_dir)
 
     print "Outputting tasks launched versus time"
-    log_parser.output_tasks_launched_versus_time(output_filename)
+    log_parser.output_tasks_launched_versus_time(output_dir)
 
     print "Outputting general results"
-    log_parser.output_results(output_filename)
+
+    log_parser.output_results(output_dir, aggregate_results_filename)
 
 
 if __name__ == "__main__":

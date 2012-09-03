@@ -60,7 +60,7 @@ public class TaskLauncherService {
     public void run() {
       while (true) {
         TaskReservation task = scheduler.getNextTask(); // blocks until task is ready
-        LOG.debug("Launching task for app " + task.appId + ", request " + task.requestId);
+        LOG.debug("Tring to get task for app " + task.appId + ", request " + task.requestId);
 
         // Request the task specification from the scheduler.
         SchedulerService.AsyncClient schedulerClient;
@@ -107,12 +107,13 @@ public class TaskLauncherService {
       } catch (TException e) {
         LOG.error("Unable to read result of calling getTask() on scheduler " +
                   taskReservation.schedulerAddress.toString() + ": " + e);
-        scheduler.taskCompleted(taskReservation.requestId);
+        scheduler.noTaskForRequest(taskReservation.requestId);
         return;
       }
 
       if (taskLaunchSpecs.isEmpty()) {
-        scheduler.taskCompleted(taskReservation.requestId);
+        LOG.debug("Didn't receive a task for request " + taskReservation.requestId);
+        scheduler.noTaskForRequest(taskReservation.requestId);
         return;
       }
 

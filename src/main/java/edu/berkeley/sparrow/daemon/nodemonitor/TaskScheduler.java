@@ -103,11 +103,16 @@ public abstract class TaskScheduler {
     return runnableTaskQueue.size();
   }
 
-  synchronized void tasksFinished(List<TFullTaskId> finishedTasks) {
+  void tasksFinished(List<TFullTaskId> finishedTasks) {
     for (TFullTaskId t : finishedTasks) {
       AUDIT_LOG.info(Logging.auditEventString("task_completed", t.getRequestId(), t.getTaskId()));
       taskCompleted(t.getRequestId());
     }
+  }
+
+  void noTaskForRequest(String requestId) {
+    AUDIT_LOG.info(Logging.auditEventString("no_task", requestId));
+    taskCompleted(requestId);
   }
 
   /**
@@ -119,7 +124,7 @@ public abstract class TaskScheduler {
    * scheduler that scheduled the task returns null, likely because all tasks for the request were
    * already scheduled).
    */
-  synchronized void taskCompleted(String requestId) {
+  private synchronized void taskCompleted(String requestId) {
     LOG.debug(Logging.functionCall(requestId));
     ResourceInfo resourceInfo = resourcesPerRequest.get(requestId);
     if (resourceInfo == null) {
