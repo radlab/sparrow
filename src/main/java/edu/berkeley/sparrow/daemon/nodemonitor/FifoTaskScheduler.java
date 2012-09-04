@@ -37,8 +37,8 @@ public class FifoTaskScheduler extends TaskScheduler {
       }
       makeTaskRunnable(taskReservation);
       ++activeTasks;
-      LOG.debug("Launching task for request " + taskReservation.requestId + " (" + activeTasks +
-                " of " + maxActiveTasks + " task slots currently filled)");
+      LOG.debug("Making task for request " + taskReservation.requestId + " runnable (" +
+                activeTasks + " of " + maxActiveTasks + " task slots currently filled)");
       return 0;
     } else {
       LOG.debug("All " + maxActiveTasks + " task slots filled.");

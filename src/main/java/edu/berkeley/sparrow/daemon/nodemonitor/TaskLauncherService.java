@@ -73,8 +73,8 @@ public class TaskLauncherService {
           return;
         }
         try {
-          LOG.debug("Attempting to get task for node monitor at " +
-                    nodeMonitorInternalAddress.toString());
+          LOG.debug("Attempting to get task from node monitor at " +
+                    nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
           schedulerClient.getTask(task.requestId, nodeMonitorInternalAddress,
                                   new GetTaskCallback(task));
         } catch (TException e) {
@@ -94,6 +94,7 @@ public class TaskLauncherService {
 
     @Override
     public void onComplete(getTask_call response) {
+      LOG.debug(Logging.functionCall(response));
       try {
         schedulerClientPool.returnClient(taskReservation.schedulerAddress,
                                          (AsyncClient) response.getClient());
@@ -122,6 +123,8 @@ public class TaskLauncherService {
                  " task launch specifications; ignoring all but the first one.");
       }
       TTaskLaunchSpec taskLaunchSpec = taskLaunchSpecs.get(0);
+      LOG.debug("Received task for request " + taskReservation.requestId + ", task " +
+                taskLaunchSpec.getTaskId());
       AUDIT_LOG.info(Logging.auditEventString("task_launch", taskReservation.requestId,
                                               taskLaunchSpec.getTaskId()));
 
@@ -160,7 +163,7 @@ public class TaskLauncherService {
                   " to the set of backend clients: " + e);
       }
 
-      LOG.debug("Launched task " + taskId.taskId);
+      LOG.debug("Launched task " + taskId.taskId + " on backend at " + System.currentTimeMillis());
     }
 
     @Override

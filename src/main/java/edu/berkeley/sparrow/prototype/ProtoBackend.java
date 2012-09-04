@@ -213,7 +213,7 @@ public class ProtoBackend implements BackendService.Iface {
   @Override
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
-    LOG.info("Submitting task " + taskId.getTaskId());
+    LOG.info("Submitting task " + taskId.getTaskId() + "at " + System.currentTimeMillis());
     // We want to add accounting for task start here, even though the task is actually
     // queued. Note that this won't be propagated to the node monitor until another task
     // finishes.

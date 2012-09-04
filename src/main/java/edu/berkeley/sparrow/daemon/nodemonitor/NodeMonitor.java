@@ -177,8 +177,6 @@ public class NodeMonitor {
     }
 
     try {
-      LOG.debug("taskID: " + taskId + " scheduler: " +
-                scheduler.getHostName() + " app:" + app);
       AsyncClient client = schedulerClientPool.borrowClient(scheduler);
       client.sendFrontendMessage(app, taskId, status, message,
           new sendFrontendMessageCallback(scheduler, client));
