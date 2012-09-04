@@ -12,7 +12,7 @@ from optparse import OptionParser
 
 def parse_args():
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, command, collect-logs, destroy")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, command, collect-logs, destroy, login-fe, login-be")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-7947f310",
@@ -445,6 +445,20 @@ def execute_command(frontends, backends, opts, cmd):
   ssh_all([fe.public_dns_name for fe in frontends], opts, cmd)
   ssh_all([be.public_dns_name for be in backends], opts, cmd)
 
+# Login to a random frontend
+def login_frontend(frontends, backends, opts):
+  node = frontends[0].public_dns_name
+  print "Logging into a frontend " + node
+  subprocess.check_call("ssh -o StrictHostKeyChecking=no -i %s root@%s" % 
+    (opts.identity_file, node), shell=True)
+
+# Login to a random backend
+def login_backend(frontends, backends, opts):
+  node = backends[0].public_dns_name
+  print "Logging into a backend " + node
+  subprocess.check_call("ssh -o StrictHostKeyChecking=no -i %s root@%s" % 
+    (opts.identity_file, node), shell=True)
+
 def main():
   (opts, args) = parse_args()
   conn = boto.connect_ec2()
@@ -498,6 +512,10 @@ def main():
     collect_logs(frontends, backends, opts)
   elif action == "destroy":
     destroy_cluster(frontends, backends, opts)
+  elif action == "login-fe":
+    login_frontend(frontends, backends, opts)
+  elif action == "login-be":
+    login_backend(frontends, backends, opts)
   else:
     print "Unknown action: %s" % action
     sys.exit(1)
