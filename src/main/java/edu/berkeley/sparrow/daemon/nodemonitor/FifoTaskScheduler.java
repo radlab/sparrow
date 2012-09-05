@@ -25,7 +25,7 @@ public class FifoTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  int handleSubmitTaskReservation(TaskReservation taskReservation) {
+  synchronized int handleSubmitTaskReservation(TaskReservation taskReservation) {
     // This method and handleTaskCompleted() are synchronized to avoid race conditions between
     // updating activeTasks and taskReservations.
     if (activeTasks < maxActiveTasks) {
@@ -56,9 +56,12 @@ public class FifoTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  synchronized protected void handleTaskCompleted(String requestId) {
+  synchronized protected void handleTaskCompleted(
+      String requestId, String lastExecutedTaskRequestId, String lastExecutedTaskId) {
     TaskReservation reservation = taskReservations.poll();
     if (reservation != null) {
+      reservation.previousRequestId = lastExecutedTaskRequestId;
+      reservation.previousTaskId = lastExecutedTaskId;
       makeTaskRunnable(reservation);
     } else {
       activeTasks -= 1;

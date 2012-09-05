@@ -2,15 +2,19 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 import static org.junit.Assert.assertEquals;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.BasicConfigurator;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskReservation;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
+import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
@@ -67,11 +71,19 @@ public class TestTaskScheduler {
     assertEquals("2", task.requestId);
     task = scheduler.getNextTask();
     assertEquals("2", task.requestId);
+    /* Make a list of task ids to use in every call to tasksFinished, and just update the request
+     * id. */
+    TFullTaskId fullTaskId = new TFullTaskId();
+    fullTaskId.taskId = "";
+    List<TFullTaskId> completedTasks = Lists.newArrayList();
+    completedTasks.add(fullTaskId);
 
     // Have a few tasks complete before the last runnable task is removed from the queue.
-    scheduler.taskCompleted("2");
-    scheduler.taskCompleted("2");
-    scheduler.taskCompleted("1");
+    fullTaskId.requestId = "2";
+    scheduler.tasksFinished(completedTasks);
+    scheduler.tasksFinished(completedTasks);
+    fullTaskId.requestId = "1";
+    scheduler.tasksFinished(completedTasks);
 
     task = scheduler.getNextTask();
     assertEquals("3", task.requestId);
@@ -134,56 +146,72 @@ public class TestTaskScheduler {
 
     assertEquals(0, scheduler.runnableTasks());
 
-    // Make sure that as tasks finish (and space is freed up) new tasks are added to the
-    // runqueue in round-robin order.
-    scheduler.taskCompleted("1");
+    /* Make sure that as tasks finish (and space is freed up) new tasks are added to the runqueue
+     * in round-robin order.
+     * Make a list of task ids to use in every call to tasksFinished, and just update the request
+     * id. */
+    TFullTaskId fullTaskId = new TFullTaskId();
+    fullTaskId.taskId = "";
+    List<TFullTaskId> completedTasks = Lists.newArrayList();
+    completedTasks.add(fullTaskId);
+    fullTaskId.requestId = "1";
+
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     TaskReservation task = scheduler.getNextTask();
     assertEquals("5", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("6", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("5", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("7", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("8", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.taskCompleted(task.requestId);
+    fullTaskId.requestId = task.requestId;
+    scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);

@@ -60,7 +60,8 @@ public class TaskLauncherService {
     public void run() {
       while (true) {
         TaskReservation task = scheduler.getNextTask(); // blocks until task is ready
-        LOG.debug("Tring to get task for app " + task.appId + ", request " + task.requestId);
+        LOG.debug("Tring to get scheduler client to make getTask() request for app " + task.appId +
+                  ", request " + task.requestId);
 
         // Request the task specification from the scheduler.
         SchedulerService.AsyncClient schedulerClient;
@@ -75,6 +76,8 @@ public class TaskLauncherService {
         try {
           LOG.debug("Attempting to get task from node monitor at " +
                     nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
+          AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task",
+                                                   task.requestId, nodeMonitorInternalAddress));
           schedulerClient.getTask(task.requestId, nodeMonitorInternalAddress,
                                   new GetTaskCallback(task));
         } catch (TException e) {
@@ -108,13 +111,13 @@ public class TaskLauncherService {
       } catch (TException e) {
         LOG.error("Unable to read result of calling getTask() on scheduler " +
                   taskReservation.schedulerAddress.toString() + ": " + e);
-        scheduler.noTaskForRequest(taskReservation.requestId);
+        scheduler.noTaskForRequest(taskReservation);
         return;
       }
 
       if (taskLaunchSpecs.isEmpty()) {
         LOG.debug("Didn't receive a task for request " + taskReservation.requestId);
-        scheduler.noTaskForRequest(taskReservation.requestId);
+        scheduler.noTaskForRequest(taskReservation);
         return;
       }
 
@@ -125,8 +128,11 @@ public class TaskLauncherService {
       TTaskLaunchSpec taskLaunchSpec = taskLaunchSpecs.get(0);
       LOG.debug("Received task for request " + taskReservation.requestId + ", task " +
                 taskLaunchSpec.getTaskId());
-      AUDIT_LOG.info(Logging.auditEventString("task_launch", taskReservation.requestId,
-                                              taskLaunchSpec.getTaskId()));
+      AUDIT_LOG.info(Logging.auditEventString("node_monitor_task_launch",
+                                              taskReservation.requestId,
+                                              taskLaunchSpec.getTaskId(),
+                                              taskReservation.previousRequestId,
+                                              taskReservation.previousTaskId));
 
       // Launch the task on the backend.
       BackendService.Client client = null;
@@ -163,7 +169,8 @@ public class TaskLauncherService {
                   " to the set of backend clients: " + e);
       }
 
-      LOG.debug("Launched task " + taskId.taskId + " on backend at " + System.currentTimeMillis());
+      LOG.debug("Launched task " + taskId.taskId + " for request " + taskReservation.requestId +
+                " on application backend at system time " + System.currentTimeMillis());
     }
 
     @Override

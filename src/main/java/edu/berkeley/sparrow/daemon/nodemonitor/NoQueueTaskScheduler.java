@@ -33,7 +33,8 @@ public class NoQueueTaskScheduler extends TaskScheduler {
 
 
   @Override
-  protected void handleTaskCompleted(String requestId) {
+  protected void handleTaskCompleted(String requestId, String lastExecutedTaskRequestId,
+                                     String lastExecutedTaskId) {
     // Do nothing
   }
 

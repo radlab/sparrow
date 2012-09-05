@@ -64,7 +64,8 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected void handleTaskCompleted(String requestId) {
+  protected void handleTaskCompleted(String requestId, String lastExecutedTaskRequestId,
+                                     String lastExecutedTaskId) {
     synchronized(appQueues) {
       /* Scan through the list of apps (starting at currentIndex) and find the first
        * one with a pending task. If we find a pending task, make that task runnable
@@ -78,17 +79,17 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
         String app = apps.get((currentIndex + i) % apps.size());
         Queue<TaskReservation> considering = appQueues.get(app);
         TaskReservation nextTask = considering.poll();
-        if (nextTask == null) {
-          LOG.debug("No available tasks for app " + app);
-          // Shouldn't get here if we are removing non-empty queues
-          continue;
-        } else {
+        if (nextTask != null) {
           LOG.info("Task for request: " + nextTask.requestId + " now runnable");
+          nextTask.previousRequestId = lastExecutedTaskRequestId;
+          nextTask.previousTaskId = lastExecutedTaskId;
           makeTaskRunnable(nextTask);
           removeTaskFromAppQueue(app, nextTask);
           currentIndex = currentIndex + i + 1;
           return;
         }
+        LOG.debug("No available tasks for app " + app);
+        // Shouldn't get here if we are removing non-empty queues
       }
       LOG.debug("No available tasks, so not launching anything.");
       // No one had a task, so do nothing.

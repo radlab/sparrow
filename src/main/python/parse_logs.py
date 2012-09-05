@@ -59,6 +59,12 @@ class Task:
         # Address of the machine that the task ran on.
         self.id = id
 
+        # The task (and associated request) that ran immediately before this task on the worker
+        # machine. May be null if this task was launched straight from the queue, and not because
+        # an existing task finished.
+        self.previous_request_id = ""
+        self.previous_task_id = ""
+
     def set_scheduler_launch_time(self, time):
         if self.scheduler_launch_time != INVALID_TIME:
             self.__logger.warn(("Task %s launched at scheduler twice; expect "
@@ -76,6 +82,12 @@ class Task:
             self.__logger.warn(("Task %s completed twice; "
                               "expect task to only complete once") % id)
         self.completion_time = time
+
+    def set_previous_task(self, previous_request_id, previous_task_id):
+        if self.previous_request_id != "" or self.previous_task_id != "":
+            self.__logger.warn("Task %s had multiple previous tasks; expected just one" % id)
+        self.previous_request_id = previous_request_id
+        self.previous_task_id = previous_task_id
 
     def queued_time(self):
         """ Returns the time spent waiting to launch on the backend. """
@@ -118,15 +130,23 @@ class Request:
         task = self.__get_task(task_id)
         task.set_scheduler_launch_time(launch_time)
 
-    def add_node_monitor_task_launch(self, task_id, launch_time):
+    def add_node_monitor_task_launch(self, task_id, previous_request_id, previous_task_id,
+                                     launch_time):
         task = self.__get_task(task_id)
         task.set_node_monitor_launch_time(launch_time)
+        task.set_previous_task(previous_request_id, previous_task_id)
 
     def add_task_completion(self, task_id, completion_time):
         # We might see a task completion before a task launch, depending on the
         # order that we read log files in.
         task = self.__get_task(task_id)
         task.set_completion_time(completion_time)
+
+    def get_task_completion(self, task_id):
+        if task_id in self.__tasks:
+            return self.__tasks[task_id].completion_time
+        else:
+            return INVALID_TIME
 
     def arrival_time(self):
         """ Returns the time at which the job arrived at the scheduler. """
@@ -162,6 +182,12 @@ class Request:
     def queue_times(self):
         """ Returns a list of queue times for all complete __tasks. """
         return [task.queued_time() for task in self.__tasks.values() if task.complete()]
+
+    def get_previous_tasks(self):
+        """ Returns a list of tuples: (task_launch_time, previous_request_id, previous_task_id).
+        """
+        return [(task.node_monitor_launch_time, task.previous_request_id, task.previous_task_id)
+                for task in self.__tasks.values() if task.complete and task.previous_request_id]
 
     def response_time(self):
         """ Returns the time from when the job arrived to when it completed.
@@ -271,15 +297,19 @@ class LogParser:
                  request = self.__get_request(audit_event_params[1])
                  request.add_scheduler_task_launch(audit_event_params[2], time)
                  request.add_reservation_reply(time)
-            elif audit_event_params[0] == "get_task_no_task":
+            elif audit_event_params[0] == "node_monitor_get_task_no_task":
                 request = self.__get_request(audit_event_params[1])
                 request.add_reservation_reply(time)
-            elif audit_event_params[0] == "task_launch":
+            elif audit_event_params[0] == "node_monitor_task_launch":
                 request = self.__get_request(audit_event_params[1])
-                request.add_node_monitor_task_launch(audit_event_params[2], time)
+                request.add_node_monitor_task_launch(audit_event_params[2], audit_event_params[3],
+                                                     audit_event_params[4], time)
             elif audit_event_params[0] == "task_completed":
                 request = self.__get_request(audit_event_params[1])
                 request.add_task_completion(audit_event_params[2], time)
+            elif audit_event_params[0] == "node_monitor_get_task":
+                # TODO: deal with these.
+                pass
             else:
                 self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
 
@@ -303,6 +333,35 @@ class LogParser:
                 gnuplot_file.write(",\\\n")
             is_first = False
             gnuplot_file.write("'%s' using 1:2 lw 1 with lp" % results_filename)
+
+    def output_get_task_times(self, output_directory):
+        get_task_times = []
+        for request in self.__requests.values():
+            previous_task_info = request.get_previous_tasks()
+            for (task_launch_time, previous_request_id, previous_task_id) in previous_task_info:
+                if previous_request_id in self.__requests:
+                    previous_task_completion_time = self.__requests[
+                            previous_request_id].get_task_completion(previous_task_id)
+                    if previous_task_completion_time != INVALID_TIME:
+                        get_task_times.append(task_launch_time - previous_task_completion_time)
+
+        # Output data file.
+        data_filename = "%s/get_task_times.data" % output_directory
+        file = open(data_filename, "w")
+        NUM_DATA_POINTS = 100
+        for i in range(NUM_DATA_POINTS):
+            i = float(i) / NUM_DATA_POINTS
+            file.write("%f\t%d\n" % (i, get_percentile(get_task_times, i)))
+        file.close()
+
+        gnuplot_file = open("%s/get_task_times.gp" % output_directory, "w")
+        gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        gnuplot_file.write("set output '%s/get_task_times.ps'\n" % output_directory)
+        gnuplot_file.write("set xlabel 'Time to get next task (ms)'\n")
+        gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
+        gnuplot_file.write("set xrange [0:]\n")
+        gnuplot_file.write("set yrange [0:1]\n")
+        gnuplot_file.write("plot '%s' using 2:1 lw 4 with l" % data_filename)
 
     def output_tasks_launched_versus_time(self, output_directory):
         """ Creates a gnuplot file to plot tasks launched versus time for 10 requests in the
@@ -499,8 +558,10 @@ def main(argv):
     print "Outputting tasks launched versus time"
     log_parser.output_tasks_launched_versus_time(output_dir)
 
-    print "Outputting general results"
+    print "Outputting get task times"
+    log_parser.output_get_task_times(output_dir)
 
+    print "Outputting general results"
     log_parser.output_results(output_dir, aggregate_results_filename)
 
 

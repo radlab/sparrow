@@ -34,12 +34,21 @@ public abstract class TaskScheduler {
     public String appId;
     public TUserGroupInfo user;
     public String requestId;
+
+    /**
+     * ID of the task that previously ran in the slot this task is using. Used
+     * to track how long it takes to fill an empty slot on a slave. Empty if this task was launched
+     * immediately, because there were empty slots available on the slave.
+     */
+    public String previousRequestId;
+    public String previousTaskId;
+
     public TResourceVector estimatedResources;
     public InetSocketAddress schedulerAddress;
     public InetSocketAddress appBackendAddress;
 
-    public TaskReservation (TEnqueueTaskReservationsRequest request,
-                            InetSocketAddress appBackendAddress) {
+    public TaskReservation(TEnqueueTaskReservationsRequest request,
+                           InetSocketAddress appBackendAddress) {
       appId = request.getAppId();
       user = request.getUser();
       requestId = request.getRequestId();
@@ -47,6 +56,8 @@ public abstract class TaskScheduler {
       schedulerAddress = new InetSocketAddress(request.getSchedulerAddress().getHost(),
                                                request.getSchedulerAddress().getPort());
       this.appBackendAddress = appBackendAddress;
+      previousRequestId = "";
+      previousTaskId = "";
     }
   }
 
@@ -106,25 +117,29 @@ public abstract class TaskScheduler {
   void tasksFinished(List<TFullTaskId> finishedTasks) {
     for (TFullTaskId t : finishedTasks) {
       AUDIT_LOG.info(Logging.auditEventString("task_completed", t.getRequestId(), t.getTaskId()));
-      taskCompleted(t.getRequestId());
+      taskCompleted(t.getRequestId(), t.getRequestId(), t.getTaskId());
     }
   }
 
-  void noTaskForRequest(String requestId) {
-    AUDIT_LOG.info(Logging.auditEventString("no_task", requestId));
-    taskCompleted(requestId);
+  void noTaskForRequest(TaskReservation taskReservation) {
+    AUDIT_LOG.info(Logging.auditEventString("node_monitor_get_task_no_task",
+                                            taskReservation.requestId,
+                                            taskReservation.previousRequestId,
+                                            taskReservation.previousTaskId));
+    taskCompleted(taskReservation.requestId, taskReservation.previousRequestId,
+                  taskReservation.previousTaskId);
   }
 
   /**
-   * Signals that a task associated with the given requestId has completed.
-   *
-   * TODO: Currently, this may be called by TaskLauncherService to signal that a task was never
-   * launched. We may want to separate out the case where a task actually started and finished,
-   * and the case where a task was never launched (which occurs if calling getTask() on the
-   * scheduler that scheduled the task returns null, likely because all tasks for the request were
-   * already scheduled).
+   * Signals that a task associated with the given requestId has completed. lastExecutedTaskId
+   * and lastExecutedTaskRequestId describe the last task that executed (as opposed to tasks that
+   * the node monitor attempted to get from the scheduler, but the scheduler didn't return a task
+   * because all tasks for the job had been executed). Used to determine how long it takes the node
+   * monitor to launch a task from the queue. Empty strings indicate that the task was launched
+   * directly from the queue (so there was no immediately prevoius task).
    */
-  private synchronized void taskCompleted(String requestId) {
+  private synchronized void taskCompleted(String requestId, String lastExecutedTaskRequestId,
+                                          String lastExecutedTaskId) {
     LOG.debug(Logging.functionCall(requestId));
     ResourceInfo resourceInfo = resourcesPerRequest.get(requestId);
     if (resourceInfo == null) {
@@ -136,11 +151,12 @@ public abstract class TaskScheduler {
       resourcesPerRequest.remove(requestId);
     }
     freeResourceInUse(resourceInfo.resources);
-    handleTaskCompleted(requestId);
+    handleTaskCompleted(requestId, lastExecutedTaskRequestId, lastExecutedTaskId);
   }
 
   protected void makeTaskRunnable(TaskReservation taskReservation) {
-    LOG.debug("Making task for request " + taskReservation.requestId + " runnable");
+    LOG.debug("Making task for request " + taskReservation.requestId +
+              " runnable (previous task: " + taskReservation.previousTaskId + ")");
     try {
       runnableTaskQueue.put(taskReservation);
     } catch (InterruptedException e) {
@@ -194,7 +210,8 @@ public abstract class TaskScheduler {
   /**
    * Signal that a given task has completed.
    */
-  protected abstract void handleTaskCompleted(String requestId);
+  protected abstract void handleTaskCompleted(String requestId, String lastExecutedTaskRequestId,
+                                              String lastExecutedTaskId);
 
   /**
    * Returns the current resource usage. If the resource usage is equal to the
