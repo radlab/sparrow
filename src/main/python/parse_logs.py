@@ -99,6 +99,9 @@ class Task:
 
     def complete(self):
         """ Returns whether we have complete information on this task. """
+        #if self.scheduler_launch_time == INVALID_TIME: print "scheduler launch"
+        #if self.node_monitor_launch_time == INVALID_TIME: print "nm launch"
+        #if self.completion_time == INVALID_TIME: print "completion"
         return (self.scheduler_launch_time != INVALID_TIME and
                 self.node_monitor_launch_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME)
@@ -114,13 +117,35 @@ class Request:
         self.__logger = logging.getLogger("Request")
         # List of times when reservations were replied to.
         self.__reservation_replies = []
+        # Mapping of node monitor address to a pair of times, the first of which is the time when
+        # the request to enqueue a task reservation was launched, and the second of which is the
+        # time when the request completed.
+        self.__enqueue_reservation_rtts = {}
 
     def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
 
+    def add_enqueue_reservation_launch(self, time, address):
+        if address not in self.__enqueue_reservation_rtts:
+            self.__enqueue_reservation_rtts[address] = [INVALID_TIME, INVALID_TIME]
+        self.__enqueue_reservation_rtts[address][0] = time
+
+    def add_enqueue_reservation_completion(self, time, address):
+        if address not in self.__enqueue_reservation_rtts:
+            self.__enqueue_reservation_rtts[address] = [INVALID_TIME, INVALID_TIME]
+        self.__enqueue_reservation_rtts[address][1] = time
+
+    def get_enqueue_reservation_rtts(self):
+        rtts = []
+        for rtt_info in self.__enqueue_reservation_rtts.values():
+            if rtt_info[0] != INVALID_TIME and rtt_info[1] != INVALID_TIME:
+                rtts.append(rtt_info[1] - rtt_info[0])
+        return rtts
+
     def add_reservation_reply(self, time):
+        """ Adds a reply to a reservation (when getTask() was called and responded to). """
         self.__reservation_replies.append(time)
 
     def get_reservation_replies(self):
@@ -181,7 +206,8 @@ class Request:
 
     def queue_times(self):
         """ Returns a list of queue times for all complete __tasks. """
-        return [task.queued_time() for task in self.__tasks.values() if task.complete()]
+        return [task.scheduler_launch_time - self.__arrival_time
+                for task in self.__tasks.values() if task.complete()]
 
     def get_previous_tasks(self):
         """ Returns a list of tuples: (task_launch_time, previous_request_id, previous_task_id).
@@ -227,6 +253,7 @@ class Request:
         if (self.__num_tasks == 0 or
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
+            print "Warning: incomplete request"
             return False
         for task in self.__tasks.values():
             if not task.complete():
@@ -291,6 +318,12 @@ class LogParser:
                 request = self.__get_request(audit_event_params[1])
                 request.add_arrival(time, audit_event_params[2],
                                     audit_event_params[3])
+            elif audit_event_params[0] == "node_monitor_launch_enqueue_task":
+                request = self.__get_request(audit_event_params[1])
+                request.add_enqueue_reservation_launch(time, audit_event_params[2])
+            elif audit_event_params[0] == "node_monitor_complete_enqueue_task":
+                request = self.__get_request(audit_event_params[1])
+                request.add_enqueue_reservation_completion(time, audit_event_params[2])
             elif audit_event_params[0] == "reservation_enqueued":
                 self.__reservation_enqueued(time, audit_event_params[1], audit_event_params[3])
             elif audit_event_params[0] == "assigned_task":
@@ -344,6 +377,7 @@ class LogParser:
                             previous_request_id].get_task_completion(previous_task_id)
                     if previous_task_completion_time != INVALID_TIME:
                         get_task_times.append(task_launch_time - previous_task_completion_time)
+        get_task_times.sort()
 
         # Output data file.
         data_filename = "%s/get_task_times.data" % output_directory
@@ -399,7 +433,7 @@ class LogParser:
         # to when it completed.
         response_times = []
         # Network/processing delay for each task.
-        network_delays = []
+        network_rtts = []
         service_times = []
         # Used to look at the effects of jitting.
         start_and_service_times = []
@@ -409,7 +443,7 @@ class LogParser:
         end_time = self.__earliest_time + (END_SEC * 1000)
 
         test_requests = filter(lambda k: k.complete(), self.__requests.values())
-        print len(test_requests)
+        print "Complete requests: %d" % len(test_requests)
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
                                      k.complete(),
@@ -418,22 +452,20 @@ class LogParser:
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
-            # TODO: Fix network delay calculation code.
-            #network_delays.extend(request.network_delays())
+            network_rtts.extend(request.get_enqueue_reservation_rtts())
             service_times.extend(request.service_times())
             start_and_service_times.extend(request.start_and_service_times())
-            # TODO: Fix queue time calculation.
-            #queue_times.extend(request.queue_times())
+            queue_times.extend(request.queue_times())
             response_time = request.response_time()
             response_times.append(response_time)
 
         # Output data for response time and network delay CDFs.
         results_filename = "%s/results.data" % output_directory
         file = open(results_filename, "w")
-        file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\n")
+        file.write("%ile\tResponseTime\tNetworkRTT\tServiceTime\tQueuedTime\n")
         NUM_DATA_POINTS = 100
         response_times.sort()
-        network_delays.sort()
+        network_rtts.sort()
         service_times.sort()
         queue_times.sort()
 
@@ -441,10 +473,27 @@ class LogParser:
             i = float(i) / NUM_DATA_POINTS
             file.write("%f\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
-                get_percentile(network_delays, i),
+                get_percentile(network_rtts, i),
                 get_percentile(service_times, i),
                 get_percentile(queue_times, i)))
         file.close()
+
+        # Output summary CDFs.
+        gnuplot_file = open("%s/results.gp" % output_directory, "w")
+        gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        gnuplot_file.write("set output '%s/results.ps'\n" % output_directory)
+        gnuplot_file.write("set xlabel 'Time to get next task (ms)'\n")
+        gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
+        gnuplot_file.write("set xrange [0:]\n")
+        gnuplot_file.write("set yrange [0:1]\n")
+        gnuplot_file.write("plot '%s' using 2:1 lw 4 with l title 'ResponseTime',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 3:1 lw 4 with l title 'Network RTT',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'Service Time',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Queue Time'\n" %
+                           results_filename)
 
         # Output task run time as a function of start time.
         start_and_service_times.sort(key = lambda x: x[0])
