@@ -214,11 +214,11 @@ public class Scheduler {
         LOG.debug("Launching enqueueTask for request on node: " + entry.getKey());
         // Pass in null callback because the RPC doesn't return anything.
         AUDIT_LOG.debug(Logging.auditEventString(
-            "node_monitor_launch_enqueue_task", entry.getValue().requestId,
+            "scheduler_launch_enqueue_task", entry.getValue().requestId,
             entry.getKey().toString()));
         client.enqueueTaskReservations(entry.getValue(), new EnqueueTaskReservationsCallback());
         AUDIT_LOG.debug(Logging.auditEventString(
-            "node_monitor_complete_enqueue_task", entry.getValue().requestId,
+            "scheduler_complete_enqueue_task", entry.getValue().requestId,
             entry.getKey().toString()));
       } catch (Exception e) {
         LOG.error(e);

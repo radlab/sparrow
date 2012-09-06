@@ -253,7 +253,8 @@ class Request:
         if (self.__num_tasks == 0 or
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
-            print "Warning: incomplete request"
+            print ("Warning: incomplete request. Expected %d tasks; found %d tasks" %
+                   (self.__num_tasks, len(self.__tasks)))
             return False
         for task in self.__tasks.values():
             if not task.complete():
@@ -318,10 +319,10 @@ class LogParser:
                 request = self.__get_request(audit_event_params[1])
                 request.add_arrival(time, audit_event_params[2],
                                     audit_event_params[3])
-            elif audit_event_params[0] == "node_monitor_launch_enqueue_task":
+            elif audit_event_params[0] == "scheduler_launch_enqueue_task":
                 request = self.__get_request(audit_event_params[1])
                 request.add_enqueue_reservation_launch(time, audit_event_params[2])
-            elif audit_event_params[0] == "node_monitor_complete_enqueue_task":
+            elif audit_event_params[0] == "scheduler_complete_enqueue_task":
                 request = self.__get_request(audit_event_params[1])
                 request.add_enqueue_reservation_completion(time, audit_event_params[2])
             elif audit_event_params[0] == "reservation_enqueued":
