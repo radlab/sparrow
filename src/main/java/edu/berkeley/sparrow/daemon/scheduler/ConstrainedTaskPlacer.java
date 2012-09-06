@@ -24,12 +24,25 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
+import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
+/**
+ * The constrained task placer may be used to place jobs with tasks that are some combination of
+ * constrained and unconstrained, or jobs that just have constrained tasks.
+ */
 public class ConstrainedTaskPlacer implements TaskPlacer {
   private static final Logger LOG = Logger.getLogger(ConstrainedTaskPlacer.class);
 
-  /** Tasks that have been launched. */
-  private Set<TTaskLaunchSpec> launchedTasks;
+  /** Constrained tasks that have been launched. */
+  private Set<TTaskLaunchSpec> launchedConstrainedTasks;
+
+  /**
+   * For each backend machine, the constrained tasks that can be launched there. Unconstrained
+   * tasks will never appear in this mapping.  Constrained tasks for which
+   * reservations were made on the backend are placed at the beginning of the list; any other
+   * constrained tasks that can run on the backend are placed at the end of the list.
+   */
+  private Map<THostPort, List<TTaskLaunchSpec>> unlaunchedConstrainedTasks;
 
   /** Total number of outstanding reservations. */
   private int numOutstandingReservations;
@@ -40,18 +53,18 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   String requestId;
 
   /**
-   * For each backend machine, the tasks that can be launched there. Tasks for which reservations
-   * were made on the backend are placed at the beginning of the list; any other tasks that can
-   * run on the backend are placed at the end of the list.
+   * Tasks that are unconstrained, so can be placed on any nodemonitor, that have not yet been
+   * launched.
    */
-  private Map<THostPort, List<TTaskLaunchSpec>> nodeMonitorsToTasks;
+  List<TTaskLaunchSpec> unlaunchedUnconstrainedTasks;
 
   ConstrainedTaskPlacer(String requestId, double probeRatio){
     this.requestId = requestId;
     this.probeRatio = probeRatio;
-    launchedTasks = Collections.synchronizedSet(new HashSet<TTaskLaunchSpec>());
-    nodeMonitorsToTasks = Maps.newConcurrentMap();
+    launchedConstrainedTasks = Collections.synchronizedSet(new HashSet<TTaskLaunchSpec>());
+    unlaunchedConstrainedTasks = Maps.newConcurrentMap();
     numOutstandingReservations = 0;
+    unlaunchedUnconstrainedTasks = Lists.newArrayList();
   }
 
   @Override
@@ -78,44 +91,24 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       addrToSocket.put(node.getAddress(), node);
     }
 
-    // Shuffle tasks, to ensure that we don't use the same set of machines each time a job is
-    // submitted.
+    /* Shuffle tasks, to ensure that we don't use the same set of machines each time a job is
+     * submitted. */
     List<TTaskSpec> taskList = Lists.newArrayList(schedulingRequest.getTasks());
     Collections.shuffle(taskList);
+
+    List<TTaskSpec> unconstrainedTasks = Lists.newArrayList();
 
     // We assume all tasks in a job have the same resource usage requirements.
     TResourceVector estimatedResources = taskList.get(0).getEstimatedResources();
 
     for (TTaskSpec task : taskList) {
-      if (task.preference == null || task.preference.nodes == null) {
-        // TODO: Do we ever need to support this case?
-        LOG.fatal("ConstrainedTaskPlacer excepts to receive only constrained tasks; received " +
-                  "a mix of constrained and unconstrained tasks.");
+      if (task.preference == null || task.preference.nodes == null ||
+          task.preference.nodes.size() == 0) {
+        unconstrainedTasks.add(task);
+        continue;
       }
 
-      // Preferred nodes for this task.
-      List<InetSocketAddress> preferredNodes = Lists.newLinkedList();
-
-      // Convert the preferences (which contain host names) to a list of socket addresses.
-      Collections.shuffle(task.preference.nodes);
-      for (String node : task.preference.nodes) {
-        try {
-         InetAddress addr = InetAddress.getByName(node);
-         if (addrToSocket.containsKey(addr)) {
-           preferredNodes.add(addrToSocket.get(addr));
-         } else {
-           LOG.warn("Placement constraint for unknown node " + node);
-           LOG.warn("Node address: " + addr);
-           String knownAddrs = "";
-           for (InetAddress knownAddress: addrToSocket.keySet()) {
-             knownAddrs += " " + knownAddress.getHostAddress();
-           }
-           LOG.warn("Know about: " + knownAddrs);
-         }
-        } catch (UnknownHostException e) {
-          LOG.warn("Got placement constraint for unresolvable node " + node);
-        }
-      }
+      List<InetSocketAddress> preferredNodes = taskPreferencesToSocketList(task, addrToSocket);
 
       TTaskLaunchSpec taskLaunchSpec = new TTaskLaunchSpec(task.getTaskId(),
                                                            task.bufferForMessage());
@@ -123,8 +116,8 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       int numEnqueuedNodes = 0;
       for (InetSocketAddress addr : preferredNodes) {
         THostPort hostPort = new THostPort(addr.getAddress().getHostAddress(), addr.getPort());
-        if (!nodeMonitorsToTasks.containsKey(hostPort)) {
-          nodeMonitorsToTasks.put(
+        if (!unlaunchedConstrainedTasks.containsKey(hostPort)) {
+          unlaunchedConstrainedTasks.put(
               hostPort, Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>()));
         }
 
@@ -142,7 +135,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           }
           numOutstandingReservations++;
 
-          nodeMonitorsToTasks.get(hostPort).add(0, taskLaunchSpec);
+          unlaunchedConstrainedTasks.get(hostPort).add(0, taskLaunchSpec);
           numEnqueuedNodes += 1;
         } else {
           // As an optimization, add the task at the end of the list of tasks on the node monitor,
@@ -150,7 +143,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           // when the node monitor is ready to launch a task, and this task hasn't been launched
           // yet, this task can use the node monitor. This means that there may be more entries in
           // nodeMonitorsToTasks than in nodeMonitorTaskCount for some addresses.
-          nodeMonitorsToTasks.get(hostPort).add(taskLaunchSpec);
+          unlaunchedConstrainedTasks.get(hostPort).add(taskLaunchSpec);
         }
       }
 
@@ -162,25 +155,133 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       }
     }
 
+    LOG.debug("Created enqueue task reservation requests at " + requests.keySet().size() +
+              " node monitors for constrained tasks. " + unconstrainedTasks.size() +
+              " unconstrained tasks");
+
+    if (unconstrainedTasks.size() > 0) {
+      addRequestsForUnconstrainedTasks(
+          unconstrainedTasks, requestId, schedulingRequest.getApp(), schedulingRequest.getUser(),
+          estimatedResources, schedulerAddress, nodes, requests);
+    }
+
     return requests;
+  }
+
+  /**
+   * Adds enqueue task reservation requests for {@link unconstrainedTasks} to {@link requests}.
+   * {@link nodeMonitors} specifies the running node monitors that enqueue task reservations may
+   * be placed on.
+   */
+  private void addRequestsForUnconstrainedTasks(
+      List<TTaskSpec> unconstrainedTasks, String requestId, String appId, TUserGroupInfo user,
+      TResourceVector estimatedResources, THostPort schedulerAddress,
+      Collection<InetSocketAddress> nodeMonitors,
+      HashMap<InetSocketAddress, TEnqueueTaskReservationsRequest> requests) {
+    /* Identify the node monitors that aren't already being used for the constrained tasks, and
+     * place all of reservations on those nodes (to try to spread the reservations evenly
+     * throughout the cluster). */
+    List<InetSocketAddress> unusedNodeMonitors = Lists.newArrayList();
+    for (InetSocketAddress nodeMonitor : nodeMonitors) {
+      if (!requests.containsKey(nodeMonitor)) {
+         unusedNodeMonitors.add(nodeMonitor);
+      }
+    }
+    Collections.shuffle(unusedNodeMonitors);
+    LOG.info("Request " + requestId + ": " + unusedNodeMonitors.size() +
+             " node monitors that were unused by constrained tasks so may be used for " +
+             "unconstrained tasks.");
+
+    int reservationsToLaunch = (int) Math.ceil(probeRatio * unconstrainedTasks.size());
+    int reservationsCreated = 0;
+
+    for (InetSocketAddress nodeMonitor : unusedNodeMonitors) {
+      if (requests.containsKey(nodeMonitor)) {
+        LOG.error("Adding enqueueTaskReservations requests for unused node monitors, so they " +
+                  "should not already have any enqueueTaskReservation requests.");
+      }
+
+      TEnqueueTaskReservationsRequest request = new TEnqueueTaskReservationsRequest(
+          appId, user, requestId, estimatedResources, schedulerAddress, 1);
+      requests.put(nodeMonitor, request);
+      reservationsCreated++;
+      numOutstandingReservations += 1;
+
+      if (reservationsCreated >= reservationsToLaunch) {
+        break;
+      }
+    }
+
+    if (reservationsCreated < reservationsToLaunch) {
+      LOG.error("Trying to launch more reservations than there are nodes; this use case is not " +
+                "currently supported");
+    }
+
+    for (TTaskSpec task : unconstrainedTasks) {
+      TTaskLaunchSpec taskLaunchSpec = new TTaskLaunchSpec(
+          task.getTaskId(), task.bufferForMessage());
+      unlaunchedUnconstrainedTasks.add(taskLaunchSpec);
+    }
+
+  }
+
+  /**
+   * Converts the preferences for the task (which contain host names) to a list of socket
+   * addresses. We return the preferences as socket addresses because the addresses are used to
+   * open a client for the node monitor (so need to be InetSocketAddreses).
+   */
+  private List<InetSocketAddress> taskPreferencesToSocketList(
+      TTaskSpec task, HashMap<InetAddress, InetSocketAddress> addrToSocket) {
+    // Preferred nodes for this task.
+    List<InetSocketAddress> preferredNodes = Lists.newLinkedList();
+
+    // Convert the preferences (which contain host names) to a list of socket addresses.
+    Collections.shuffle(task.preference.nodes);
+    for (String node : task.preference.nodes) {
+      try {
+       InetAddress addr = InetAddress.getByName(node);
+       if (addrToSocket.containsKey(addr)) {
+         preferredNodes.add(addrToSocket.get(addr));
+       } else {
+         LOG.warn("Placement constraint for unknown node " + node);
+         LOG.warn("Node address: " + addr);
+         String knownAddrs = "";
+         for (InetAddress knownAddress: addrToSocket.keySet()) {
+           knownAddrs += " " + knownAddress.getHostAddress();
+         }
+         LOG.warn("Know about: " + knownAddrs);
+       }
+      } catch (UnknownHostException e) {
+        LOG.warn("Got placement constraint for unresolvable node " + node);
+      }
+    }
+
+    return preferredNodes;
   }
 
   @Override
   public synchronized List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
-    if (!nodeMonitorsToTasks.containsKey(nodeMonitorAddress)) {
-      StringBuilder nodeMonitors = new StringBuilder();
-      for (THostPort nodeMonitor: nodeMonitorsToTasks.keySet()) {
-        if (nodeMonitors.length() > 0) {
-          nodeMonitors.append(",");
+    if (!unlaunchedConstrainedTasks.containsKey(nodeMonitorAddress)) {
+      List<TTaskLaunchSpec> unconstrainedTasks = getUnconstrainedTasks(nodeMonitorAddress);
+
+      if (unconstrainedTasks.size() == 0) {
+        StringBuilder nodeMonitors = new StringBuilder();
+        for (THostPort nodeMonitor: unlaunchedConstrainedTasks.keySet()) {
+          if (nodeMonitors.length() > 0) {
+            nodeMonitors.append(",");
+          }
+          nodeMonitors.append(nodeMonitor.toString());
         }
-        nodeMonitors.append(nodeMonitor.toString());
+        LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+            ": Not assigning a task (node monitor not in the set of node monitors where tasks " +
+            "were enqueued: " + nodeMonitors.toString() +
+            ", and no remaining unconstrained tasks).");
+        return Lists.newArrayList();
+      } else {
+        return unconstrainedTasks;
       }
-      LOG.error("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-          ": Not assigning a task (node monitor not in the set of node monitors where tasks " +
-          "were enqueued: " + nodeMonitors.toString() + ").");
-      return Lists.newArrayList();
     }
-    List<TTaskLaunchSpec> taskSpecs = nodeMonitorsToTasks.get(nodeMonitorAddress);
+    List<TTaskLaunchSpec> taskSpecs = unlaunchedConstrainedTasks.get(nodeMonitorAddress);
     TTaskLaunchSpec taskSpec = null;
     synchronized(taskSpecs) {
       // Try to find a task that hasn't been launched yet.
@@ -191,20 +292,34 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
         } else {
           taskSpec = null;
         }
-      } while (taskSpec != null && this.launchedTasks.contains(taskSpec));
+      } while (taskSpec != null && this.launchedConstrainedTasks.contains(taskSpec));
     }
 
     if (taskSpec != null) {
-      this.launchedTasks.add(taskSpec);
+      this.launchedConstrainedTasks.add(taskSpec);
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
           ": Assigning task.");
       numOutstandingReservations--;
       return Lists.newArrayList(taskSpec);
     } else {
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-          ": Not assigning a task (no remaining unlaunched tasks).");
+          ": Not assigning a constrained task (no remaining unlaunched tasks that prefer " +
+          "this node).");
+      return getUnconstrainedTasks(nodeMonitorAddress);
+    }
+  }
+
+  private List<TTaskLaunchSpec> getUnconstrainedTasks(THostPort nodeMonitorAddress) {
+    if (this.unlaunchedUnconstrainedTasks.size() == 0) {
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+                ": Not assighning a task (no remaining unconstrained unlaunched tasks)");
       return Lists.newArrayList();
     }
+    TTaskLaunchSpec spec = unlaunchedUnconstrainedTasks.get(0);
+    unlaunchedUnconstrainedTasks.remove(0);
+    LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+              ": Assigning task " + spec.getTaskId());
+    return Lists.newArrayList(spec);
   }
 
   @Override
