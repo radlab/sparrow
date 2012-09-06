@@ -155,8 +155,10 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       }
 
       if (numEnqueuedNodes < probeRatio) {
-        LOG.fatal("Only created requests for " + numEnqueuedNodes + " (expected to create " +
-                  probeRatio + " requests).");
+        // This case can occur when the probeRatio is greater than the size of preferred nodes.
+        LOG.info("For task " + task.taskId + ", only created enqueueTaskRequests on " +
+                 numEnqueuedNodes + " node monitors, which is fewer than specified by the " +
+                 "probe ratio (" + probeRatio + ")");
       }
     }
 
