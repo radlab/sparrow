@@ -229,7 +229,8 @@ public class Scheduler {
     LOG.debug("All tasks enqueued; returning. Total time: " + (end - start) + " milliseconds");
   }
 
-  public List<TTaskLaunchSpec> getTask(String requestId, THostPort nodeMonitorAddress) {
+  public synchronized List<TTaskLaunchSpec> getTask(
+      String requestId, THostPort nodeMonitorAddress) {
     LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
@@ -248,7 +249,7 @@ public class Scheduler {
       AUDIT_LOG.info(Logging.auditEventString("get_task_no_task", requestId));
     }
     if (taskPlacer.allResponsesReceived()) {
-      LOG.debug("All responses received.");
+      LOG.debug("All responses received for request " + requestId);
       // Remove the entry in requestTaskPlacers once all tasks have been placed, so that
       // requestTaskPlacers doesn't grow to be unbounded.
       requestTaskPlacers.remove(requestId);

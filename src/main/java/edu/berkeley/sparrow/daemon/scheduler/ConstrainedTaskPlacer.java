@@ -135,12 +135,12 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
                 schedulingRequest.getApp(), schedulingRequest.getUser(), requestId,
                 estimatedResources, schedulerAddress, 1);
             requests.put(addr, request);
-            numOutstandingReservations++;
           } else {
             // IsSetNumTasks should already be true, because it was set when the request was
             // created.
             requests.get(addr).numTasks += 1;
           }
+          numOutstandingReservations++;
 
           nodeMonitorsToTasks.get(hostPort).add(0, taskLaunchSpec);
           numEnqueuedNodes += 1;
