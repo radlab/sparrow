@@ -33,6 +33,18 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  * Frontend for the prototype implementation.
  */
 public class ProtoFrontend implements FrontendService.Iface {
+  /** Jobs/second during warmup period. */
+  public static final double DEFAULT_WARMUP_JOB_ARRIVAL_RATE_S = 10;
+
+  /** Duration of warmup period. */
+  public static final int DEFAULT_WARMUP_S = 30;
+
+  /** Amount of time to wait for queues to drain once warmup period is over. */
+  public static final int DEFAULT_POST_WARMUP_S = 60;
+
+  /** Amount of time to launch tasks for (not including the warmup period). */
+  public static final int DEFAULT_EXPERIMENT_S = 300;
+
   public static final double DEFAULT_JOB_ARRIVAL_RATE_S = 10; // Jobs/second
   public static final int DEFAULT_TASKS_PER_JOB = 1;          // Tasks/job
 
@@ -147,9 +159,15 @@ public class ProtoFrontend implements FrontendService.Iface {
         conf = new PropertiesConfiguration(configFile);
       }
 
-      Random r = new Random();
+      double warmup_lambda = conf.getDouble("warmup_job_arrival_rate_s",
+                                            DEFAULT_WARMUP_JOB_ARRIVAL_RATE_S);
+      int warmup_duration_s = conf.getInt("warmup_s", DEFAULT_WARMUP_S);
+      int post_warmup_s = conf.getInt("post_warmup_s", DEFAULT_POST_WARMUP_S);
+
       double lambda = conf.getDouble("job_arrival_rate_s", DEFAULT_JOB_ARRIVAL_RATE_S);
-      LOG.debug("Using arrival rate of  " + lambda + " tasks per second.");
+      int experiment_duration_s = conf.getInt("experiment_s", DEFAULT_EXPERIMENT_S);
+      LOG.debug("Using arrival rate of  " + lambda +
+          " tasks per second and running experiment for " + experiment_duration_s + " seconds.");
       int tasksPerJob = conf.getInt("tasks_per_job", DEFAULT_TASKS_PER_JOB);
       int numPreferredNodes = conf.getInt("num_preferred_nodes", DEFAULT_NUM_PREFERRED_NODES);
       LOG.debug("Using " + numPreferredNodes + " preferred nodes for each task.");
@@ -177,46 +195,61 @@ public class ProtoFrontend implements FrontendService.Iface {
       int schedulerPort = conf.getInt("scheduler_port",
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
       client.initialize(new InetSocketAddress("localhost", schedulerPort), APPLICATION_ID, this);
-      long lastLaunch = System.currentTimeMillis();
 
-      /* This is a little tricky.
-       *
-       * We want to generate inter-arrival delays according to the arrival rate specified.
-       * The simplest option would be to generate an arrival delay and then sleep() for it
-       * before launching each task. This has in issue, however: sleep() might wait
-       * several ms longer than we ask it to. When task arrival rates get really fast,
-       * i.e. one task every 10 ms, sleeping an additional few ms will mean we launch
-       * tasks at a much lower rate than requested.
-       *
-       * Instead, we keep track of task launches in a way that does not depend on how long
-       * sleep() actually takes. We still might have tasks launch slightly after their
-       * scheduled launch time, but we will not systematically "fall behind" due to
-       * compounding time lost during sleep()'s;
-       */
-      while (true) {
-        // Lambda is the arrival rate in S, so we need to multiply the result here by
-        // 1000 to convert to ms.
-        long delay = (long) (generateInterarrivalDelay(r, lambda) * 1000);
-        long curLaunch = lastLaunch + delay;
-        long toWait = Math.max(0,  curLaunch - System.currentTimeMillis());
-        lastLaunch = curLaunch;
-        if (toWait == 0) {
-          LOG.warn("Lanching task after start time in generated workload.");
-        }
-        Thread.sleep(toWait);
-        Runnable runnable =  new JobLaunchRunnable(
-            generateJob(tasksPerJob, numPreferredNodes, backends, benchmarkId,
-                        benchmarkIterations),
-            client);
-        new Thread(runnable).start();
-        int launched = tasksLaunched.addAndGet(1);
-        double launchRate = (double) launched * 1000.0 /
-            (System.currentTimeMillis() - startTime);
-        LOG.debug("Aggregate launch rate: " + launchRate);
+      if (warmup_duration_s > 0) {
+        launchTasks(warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
+            benchmarkId, backends, client);
+        Thread.sleep(post_warmup_s);
       }
+      launchTasks(lambda, experiment_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
+          benchmarkId, backends, client);
     }
     catch (Exception e) {
       LOG.error("Fatal exception", e);
+    }
+  }
+
+  private void launchTasks(double lambda, int launch_duration_s, int tasksPerJob,
+      int numPreferredNodes, int benchmarkIterations, int benchmarkId,
+      List<String> backends, SparrowFrontendClient client)
+      throws InterruptedException {
+    /* This is a little tricky.
+     *
+     * We want to generate inter-arrival delays according to the arrival rate specified.
+     * The simplest option would be to generate an arrival delay and then sleep() for it
+     * before launching each task. However, this is problematic because sleep() might wait
+     * several ms longer than we ask it to. When task arrival rates get really fast,
+     * i.e. one task every 10 ms, sleeping an additional few ms will mean we launch
+     * tasks at a much lower rate than requested.
+     *
+     * Instead, we keep track of task launches in a way that does not depend on how long
+     * sleep() actually takes. We still might have tasks launch slightly after their
+     * scheduled launch time, but we will not systematically "fall behind" due to
+     * compounding time lost during sleep()'s;
+     */
+    Random r = new Random();
+    long mostRecentLaunch = System.currentTimeMillis();
+    long end = System.currentTimeMillis() + launch_duration_s * 1000;
+    while (System.currentTimeMillis() < end) {
+      // Lambda is the arrival rate in S, so we need to multiply the result here by
+      // 1000 to convert to ms.
+      long delay = (long) (generateInterarrivalDelay(r, lambda) * 1000);
+      long curLaunch = mostRecentLaunch + delay;
+      long toWait = Math.max(0,  curLaunch - System.currentTimeMillis());
+      mostRecentLaunch = curLaunch;
+      if (toWait == 0) {
+        LOG.warn("Lanching task after start time in generated workload.");
+      }
+      Thread.sleep(toWait);
+      Runnable runnable =  new JobLaunchRunnable(
+          generateJob(tasksPerJob, numPreferredNodes, backends, benchmarkId,
+                      benchmarkIterations),
+          client);
+      new Thread(runnable).start();
+      int launched = tasksLaunched.addAndGet(1);
+      double launchRate = (double) launched * 1000.0 /
+          (System.currentTimeMillis() - startTime);
+      LOG.debug("Aggregate launch rate: " + launchRate);
     }
   }
 

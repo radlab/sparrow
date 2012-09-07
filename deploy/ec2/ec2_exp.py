@@ -236,7 +236,8 @@ def find_existing_cluster(conn, opts):
 
 
 # Deploy Sparrow binaries and configuration on a launched cluster
-def deploy_cluster(frontends, backends, opts):
+def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0,
+                   post_warmup_s=0):
   # Replace template vars
   tmp_dir = tempfile.mkdtemp()
 
@@ -260,7 +261,10 @@ def deploy_cluster(frontends, backends, opts):
     "tasks_per_job": "%s" % opts.tasks_per_job,
     "num_preferred_nodes": "%s" % opts.num_preferred_nodes,
     "sample_ratio": "%s" % opts.sample_ratio,
-    "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained
+    "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained,
+    "warmup_job_arrival_rate_s": "%s" % warmup_job_arrival_s,
+    "warmup_s": "%s" % warmup_s,
+    "post_warmup_s": "%s" % post_warmup_s
   }
   for filename in os.listdir("template"):
     if filename[0] not in '#.~' and filename[-1] != '~':
@@ -449,14 +453,14 @@ def execute_command(frontends, backends, opts, cmd):
 def login_frontend(frontends, backends, opts):
   node = frontends[0].public_dns_name
   print "Logging into a frontend " + node
-  subprocess.check_call("ssh -o StrictHostKeyChecking=no -i %s root@%s" % 
+  subprocess.check_call("ssh -o StrictHostKeyChecking=no -i %s root@%s" %
     (opts.identity_file, node), shell=True)
 
 # Login to a random backend
 def login_backend(frontends, backends, opts):
   node = backends[0].public_dns_name
   print "Logging into a backend " + node
-  subprocess.check_call("ssh -o StrictHostKeyChecking=no -i %s root@%s" % 
+  subprocess.check_call("ssh -o StrictHostKeyChecking=no -i %s root@%s" %
     (opts.identity_file, node), shell=True)
 
 def main():
