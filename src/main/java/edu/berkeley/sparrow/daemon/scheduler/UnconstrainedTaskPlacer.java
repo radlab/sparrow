@@ -74,11 +74,16 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
     }
     nodeList = nodeList.subList(0, reservationsToLaunch);
 
+    StringBuilder debugString = new StringBuilder();
+    for (InetSocketAddress node : nodeList) {
+      debugString.append(node);
+      debugString.append(";");
+    }
+    LOG.debug("Request " + requestId + ": Launching enqueueReservation on " +
+              nodeList.size() + " node monitors: " + debugString.toString());
+
     TResourceVector estimatedResources = null;
 
-    // Create a TTaskLaunchSpec for each task. Do this before launching the requests to enqueue
-    // tasks, to ensure that the list is populated before any of the node monitors signal that
-    // they are ready to launch a task.
     for (TTaskSpec task : schedulingRequest.getTasks()) {
       if (estimatedResources == null) {
         // Assume estimated resources for all tasks in the job is the same.

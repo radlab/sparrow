@@ -245,6 +245,14 @@ class Request:
           pass
         return completion_time - self.__arrival_time
 
+    def complete_tasks(self):
+        complete_tasks = 0
+        for task in self.__tasks.values():
+            if task.complete():
+                complete_tasks += 1
+
+        return complete_tasks
+
     def complete(self):
         """ Returns whether we have complete info for the request.
 
@@ -384,8 +392,8 @@ class LogParser:
         get_task_times.sort()
 
         # Output data file.
-        data_filename = "%s/get_task_times.data" % output_directory
-        file = open(data_filename, "w")
+        data_filename = "get_task_times.data"
+        file = open("%s/%s" % (output_directory, data_filename), "w")
         NUM_DATA_POINTS = 100
         for i in range(NUM_DATA_POINTS):
             i = float(i) / NUM_DATA_POINTS
@@ -432,6 +440,64 @@ class LogParser:
                 break
         gnuplot_file.close()
 
+    def output_complete_incomplete_requests_vs_time(self, output_directory):
+        complete_requests = filter(lambda request: request.complete(), self.__requests.values())
+        complete_requests.sort(key=lambda request: request.arrival_time())
+
+        complete_requests_filename = "complete_requests.data"
+        complete_file = open(os.path.join(output_directory, complete_requests_filename), "w")
+        complete_file.write("ArrivalTime\tCount\n")
+        for count, request in enumerate(complete_requests):
+            complete_file.write("%s\t%s\n" %
+                                (request.arrival_time() - self.__earliest_time, count))
+        complete_file.close()
+
+        incomplete_requests = filter(lambda request: not request.complete(), self.__requests.values())
+        incomplete_requests.sort(key=lambda request: request.arrival_time())
+
+        incomplete_requests_filename = "incomplete_requests.data"
+        incomplete_file = open(os.path.join(output_directory, incomplete_requests_filename), "w")
+        incomplete_file.write("ArrivalTime\tCount\n")
+        for count, request in enumerate(incomplete_requests):
+            incomplete_file.write("%s\t%s\n" %
+                                  (request.arrival_time() - self.__earliest_time, count))
+        incomplete_file.close()
+
+        gnuplot_file = open(os.path.join(output_directory, "complete_incomplete.gp"), "w")
+        gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        gnuplot_file.write("set output 'complete_incomplete.ps'\n")
+        gnuplot_file.write("set xlabel 'Experiment time (ms)'\n")
+        gnuplot_file.write("set ylabel 'Request Count'\n")
+        gnuplot_file.write("set xrange [0:]\n")
+        gnuplot_file.write("set yrange [0:]\n")
+        gnuplot_file.write("plot '%s' using 1:2 lw 4 with l title 'Complete',\\\n" %
+                           complete_requests_filename)
+        gnuplot_file.write("'%s' using 1:2 lw 4 with l title 'Incomplete'\n" %
+                           incomplete_requests_filename)
+
+    def output_tasks_completed_vs_arrival(self, output_directory):
+        pairs = [(request.arrival_time() - self.__earliest_time, request.complete_tasks())
+                 for request in self.__requests.values()]
+        pairs.sort(key=lambda x: x[0])
+
+        data_filename = "tasks_completed_vs_arrival_time.data"
+        data_file = open(os.path.join(output_directory, data_filename), "w")
+        data_file.write("ArrivalTime\tTasksCompleted\n")
+        for pair in pairs:
+            data_file.write("%s\t%s\n" % (pair[0], pair[1]))
+        data_file.close()
+
+        gnuplot_file = open(os.path.join(output_directory, "tasks_completed_vs_arrival_time.gp"),
+                            "w")
+        gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        gnuplot_file.write("set output 'tasks_completed_vs_arrival_time.ps'\n")
+        gnuplot_file.write("set xlabel 'Experiment time (ms)'\n")
+        gnuplot_file.write("set ylabel 'Completed Tasks'\n")
+        gnuplot_file.write("set xrange [0:]\n")
+        gnuplot_file.write("set yrange [0:]\n")
+        gnuplot_file.write("plot '%s' using 1:2 lw 4 with p notitle\n" %
+                           data_filename)
+
     def output_results(self, output_directory, aggregate_results_filename):
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
@@ -464,8 +530,8 @@ class LogParser:
             response_times.append(response_time)
 
         # Output data for response time and network delay CDFs.
-        results_filename = "%s/results.data" % output_directory
-        file = open(results_filename, "w")
+        results_filename = "results.data"
+        file = open(os.path.join(output_directory, results_filename), "w")
         file.write("%ile\tResponseTime\tNetworkRTT\tServiceTime\tQueuedTime\n")
         NUM_DATA_POINTS = 100
         response_times.sort()
@@ -485,7 +551,7 @@ class LogParser:
         # Output summary CDFs.
         gnuplot_file = open("%s/results.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
-        gnuplot_file.write("set output '%s/results.ps'\n" % output_directory)
+        gnuplot_file.write("set output 'results.ps'\n")
         gnuplot_file.write("set xlabel 'Time to get next task (ms)'\n")
         gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
         gnuplot_file.write("set xrange [0:]\n")
@@ -616,6 +682,8 @@ def main(argv):
 
     print "Outputting general results"
     log_parser.output_results(output_dir, aggregate_results_filename)
+    log_parser.output_complete_incomplete_requests_vs_time(output_dir)
+    log_parser.output_tasks_completed_vs_arrival(output_dir)
 
 
 if __name__ == "__main__":

@@ -8,20 +8,20 @@ import ec2_exp
 def run_cmd(cmd):
     subprocess.check_call(cmd, shell=True)
 
-utilizations = [0.5]
+utilizations = [0.9]
 sample_ratios = [2.0]
 
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 160
-tasks_per_job = 2 #10
+tasks_per_job = 5 #10
 private_ssh_key = "patkey.pem"
 sparrow_branch = "experimental0906"
-num_backends = 4 #90
+num_backends = 20 #90
 num_frontends = 1 #0
 cores_per_backend = 4
 # Run each trial for 5 minutes.
-trial_length = 300
+trial_length = 600
 
 # Warmup information
 warmup_s = 10
@@ -80,7 +80,7 @@ for sample_ratio in sample_ratios:
         run_cmd("gunzip %s/*.gz" % log_dirname)
 
         print "********Parsing logs"
-        run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
-                 "output_dir=../../../deploy/ec2/%s/results start_sec=190 end_sec=310 && cd -") %
-                (log_dirname, log_dirname))
+        #run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
+        #         "output_dir=../../../deploy/ec2/%s/results start_sec=190 end_sec=310 && cd -") %
+        #        (log_dirname, log_dirname))
 
