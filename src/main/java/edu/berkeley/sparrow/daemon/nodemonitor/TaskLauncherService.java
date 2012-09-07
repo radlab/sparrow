@@ -76,8 +76,8 @@ public class TaskLauncherService {
         try {
           LOG.debug("Attempting to get task from node monitor at " +
                     nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
-          AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task",
-                                                   task.requestId, nodeMonitorInternalAddress));
+          AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
+                                                   nodeMonitorInternalAddress.getHost()));
           schedulerClient.getTask(task.requestId, nodeMonitorInternalAddress,
                                   new GetTaskCallback(task));
         } catch (TException e) {
@@ -130,6 +130,7 @@ public class TaskLauncherService {
                 taskLaunchSpec.getTaskId());
       AUDIT_LOG.info(Logging.auditEventString("node_monitor_task_launch",
                                               taskReservation.requestId,
+                                              nodeMonitorInternalAddress.getHost(),
                                               taskLaunchSpec.getTaskId(),
                                               taskReservation.previousRequestId,
                                               taskReservation.previousTaskId));

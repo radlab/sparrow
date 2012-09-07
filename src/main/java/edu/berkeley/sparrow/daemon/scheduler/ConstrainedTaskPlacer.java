@@ -149,15 +149,16 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
 
       if (numEnqueuedNodes < probeRatio) {
         // This case can occur when the probeRatio is greater than the size of preferred nodes.
-        LOG.info("For task " + task.taskId + ", only created enqueueTaskRequests on " +
+        LOG.info("For request " + requestId + ",task " + task.taskId +
+                 ", only created enqueueTaskRequests on " +
                  numEnqueuedNodes + " node monitors, which is fewer than specified by the " +
                  "probe ratio (" + probeRatio + ")");
       }
     }
 
-    LOG.debug("Created enqueue task reservation requests at " + requests.keySet().size() +
-              " node monitors for constrained tasks. " + unconstrainedTasks.size() +
-              " unconstrained tasks");
+    LOG.debug("Request " + requestId + ": created enqueue task reservation requests at " +
+              requests.keySet().size() + " node monitors for constrained tasks. " +
+              unconstrainedTasks.size() + " unconstrained tasks");
 
     if (unconstrainedTasks.size() > 0) {
       addRequestsForUnconstrainedTasks(

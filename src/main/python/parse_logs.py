@@ -50,6 +50,12 @@ class Task:
     def __init__(self, id):
         self.__logger = logging.getLogger("Task")
 
+        # IP address of the node monitor where this task was launched.
+        self.node_monitor_address = ""
+
+        # When the node monitor asked for the task from the scheduler.
+        self.node_monitor_get_task_time = INVALID_TIME
+
         # When the scheduler (resident with the frontend) assigned the task to the slave.
         self.scheduler_launch_time = INVALID_TIME
         # When the node monitor (resident with the backend) launched the task
@@ -97,12 +103,21 @@ class Task:
         """ Returns the service time (time executing on backend)."""
         return (self.completion_time - self.node_monitor_launch_time)
 
+    def adjusted_completion_time(self):
+        """ Returns the adjusted completion time (adjusted to be consistent with the scheduler
+        clock). """
+        expected_scheduler_get_task_time = (self.node_monitor_get_task_time +
+                                            self.node_monitor_launch_time) / 2.0
+        skew = self.scheduler_launch_time - expected_scheduler_get_task_time
+        return self.completion_time + skew
+
     def complete(self):
         """ Returns whether we have complete information on this task. """
         #if self.scheduler_launch_time == INVALID_TIME: print "scheduler launch"
         #if self.node_monitor_launch_time == INVALID_TIME: print "nm launch"
         #if self.completion_time == INVALID_TIME: print "completion"
-        return (self.scheduler_launch_time != INVALID_TIME and
+        return (self.node_monitor_get_task_time != INVALID_TIME and
+                self.scheduler_launch_time != INVALID_TIME and
                 self.node_monitor_launch_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME)
 
@@ -115,7 +130,12 @@ class Request:
         # Address of the scheduler that received the request (and placed it).
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
-        # List of times when reservations were replied to.
+
+        # Mapping of node monitor addresses to when getTask() was called from that node monitor.
+        self.__node_monitor_get_task_times = {}
+
+        # List of times when reservations were replied to (includes reservations that were not
+        # used).
         self.__scheduler_get_task_times = []
         # Mapping of node monitor address to a pair of times, the first of which is the time when
         # the request to enqueue a task reservation was launched, and the second of which is the
@@ -133,15 +153,31 @@ class Request:
         self.__enqueue_reservation_rtts[address][0] = time
 
     def add_enqueue_reservation_completion(self, time, address):
-        if address not in self.__enqueue_reservation_rtts:
-            self.__enqueue_reservation_rtts[address] = [INVALID_TIME, INVALID_TIME]
-        self.__enqueue_reservation_rtts[address][1] = time
+        ip_only = address
+        if address.find("/") != -1:
+            ip_only = address.split("/")[1]
+        if ip_only not in self.__enqueue_reservation_rtts:
+            self.__enqueue_reservation_rtts[ip_only] = [INVALID_TIME, INVALID_TIME]
+        self.__enqueue_reservation_rtts[ip_only][1] = time
+
+    def add_node_monitor_get_task_time(self, time, address):
+        self.__node_monitor_get_task_times[address] = time
+
+    def set_node_monitor_get_task_times_for_tasks(self):
+        for task in self.__tasks.values():
+            if task.node_monitor_address != "":
+                task.node_monitor_get_task_time = self.__node_monitor_get_task_times[
+                    task.node_monitor_address]
 
     def get_enqueue_reservation_rtts(self):
         rtts = []
         for rtt_info in self.__enqueue_reservation_rtts.values():
             if rtt_info[0] != INVALID_TIME and rtt_info[1] != INVALID_TIME:
                 rtts.append(rtt_info[1] - rtt_info[0])
+                print rtts[-1]
+            else:
+                print "not enough info"
+                print rtt_info[0] == INVALID_TIME, rtt_info[1] == INVALID_TIME
         return rtts
 
     def add_scheduler_get_task(self, time):
@@ -155,9 +191,10 @@ class Request:
         task = self.__get_task(task_id)
         task.set_scheduler_launch_time(launch_time)
 
-    def add_node_monitor_task_launch(self, task_id, previous_request_id, previous_task_id,
-                                     launch_time):
+    def add_node_monitor_task_launch(self, node_monitor_address, task_id, previous_request_id,
+                                     previous_task_id, launch_time):
         task = self.__get_task(task_id)
+        task.node_monitor_address = node_monitor_address
         task.set_node_monitor_launch_time(launch_time)
         task.set_previous_task(previous_request_id, previous_task_id)
 
@@ -232,7 +269,7 @@ class Request:
                 self.__logger.debug(("Task %s in request %s missing completion "
                                    "time") % (task_id, self.__id))
                 return INVALID_TIME_DELTA
-            task_completion_time = task.completion_time
+            task_completion_time = task.adjusted_completion_time()
             #if task.scheduler_launch_time > task.node_monitor_launch_time:
                  #self.__logger.warn(("Task %s suggests clock skew: scheduler launch time %d, node "
                  #                    "monitor launch time %d") %
@@ -345,7 +382,8 @@ class LogParser:
             elif audit_event_params[0] == "node_monitor_task_launch":
                 request = self.__get_request(audit_event_params[1])
                 request.add_node_monitor_task_launch(audit_event_params[2], audit_event_params[3],
-                                                     audit_event_params[4], time)
+                                                     audit_event_params[4], audit_event_params[5],
+                                                     time)
             elif audit_event_params[0] == "task_completed":
                 request = self.__get_request(audit_event_params[1])
                 request.add_task_completion(audit_event_params[2], time)
@@ -354,10 +392,13 @@ class LogParser:
                 # a task.
                 pass
             elif audit_event_params[0] == "node_monitor_get_task":
-                #TODO: deal with these? May want to track the RTT for get_task.
-                pass
+                request = self.__get_request(audit_event_params[1])
+                request.add_node_monitor_get_task_time(time, audit_event_params[2])
             else:
                 self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
+
+        for request in self.__requests.values():
+            request.set_node_monitor_get_task_times_for_tasks()
 
     def output_reservation_queue_lengths(self, output_directory):
         gnuplot_file = open("%s/reservation_queue_lengths.gp" % output_directory, "w")

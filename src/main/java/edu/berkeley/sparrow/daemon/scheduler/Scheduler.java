@@ -131,7 +131,8 @@ public class Scheduler {
 
     public void onComplete(enqueueTaskReservations_call response) {
       AUDIT_LOG.debug(Logging.auditEventString(
-          "scheduler_complete_enqueue_task", requestId, nodeMonitorAddress.toString()));
+          "scheduler_complete_enqueue_task", requestId,
+          nodeMonitorAddress.getAddress().getHostAddress()));
       try {
         nodeMonitorClientPool.returnClient(nodeMonitorAddress, (AsyncClient) response.getClient());
       } catch (Exception e) {
@@ -229,11 +230,11 @@ public class Scheduler {
          enqueueTaskReservationsRequests.entrySet())  {
       try {
         InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
-        LOG.debug("Launching enqueueTask for request on node: " + entry.getKey());
+        LOG.debug("Launching enqueueTask for request " + requestId + "on node: " + entry.getKey());
         // Pass in null callback because the RPC doesn't return anything.
         AUDIT_LOG.debug(Logging.auditEventString(
             "scheduler_launch_enqueue_task", entry.getValue().requestId,
-            entry.getKey().toString()));
+            entry.getKey().getAddress().getHostAddress()));
         client.enqueueTaskReservations(
             entry.getValue(), new EnqueueTaskReservationsCallback(requestId, entry.getKey()));
       } catch (Exception e) {
@@ -242,7 +243,8 @@ public class Scheduler {
     }
 
     long end = System.currentTimeMillis();
-    LOG.debug("All tasks enqueued; returning. Total time: " + (end - start) + " milliseconds");
+    LOG.debug("All tasks enqueued for request " + requestId + "; returning. Total time: " +
+              (end - start) + " milliseconds");
   }
 
   public synchronized List<TTaskLaunchSpec> getTask(
@@ -256,11 +258,13 @@ public class Scheduler {
     TaskPlacer taskPlacer = requestTaskPlacers.get(requestId);
     List<TTaskLaunchSpec> taskLaunchSpecs = taskPlacer.assignTask(nodeMonitorAddress);
     if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {
-      LOG.error("Received invalid task placement: " + taskLaunchSpecs.toString());
+      LOG.error("Received invalid task placement for request " + requestId + ": " +
+                taskLaunchSpecs.toString());
       return Lists.newArrayList();
     } else if (taskLaunchSpecs.size() == 1) {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_assigned_task", requestId,
-                                              taskLaunchSpecs.get(0).taskId));
+                                              taskLaunchSpecs.get(0).taskId,
+                                              nodeMonitorAddress.getHost()));
     } else {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId));
     }

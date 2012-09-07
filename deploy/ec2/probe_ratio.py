@@ -8,24 +8,25 @@ import ec2_exp
 def run_cmd(cmd):
     subprocess.check_call(cmd, shell=True)
 
-utilizations = [0.9]
-sample_ratios = [2.0]
+utilizations = [0.8]
+sample_ratios = [1.5]
 
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
-task_duration_ms = 160
-tasks_per_job = 2 #10
+task_duration_ms = 140
+tasks_per_job = 5 #10
 private_ssh_key = "patkey.pem"
 sparrow_branch = "experimental0906"
-num_backends = 6 #90
-num_frontends = 1 #0
+num_backends = 20 #90
+num_frontends = 2 #0
 cores_per_backend = 4
 # Run each trial for 5 minutes.
-trial_length = 600
+trial_length = 400
+num_preferred_nodes = 3
 
 # Warmup information
-warmup_s = 10
-post_warmup_s = 120
+warmup_s = 20
+post_warmup_s = 60
 warmup_arrival_rate_s = (float(num_backends * cores_per_backend * 1000) /
                          (task_duration_ms * tasks_per_job * num_frontends))
 
@@ -47,6 +48,7 @@ for sample_ratio in sample_ratios:
         opts.branch = sparrow_branch
         opts.sample_ratio  = sample_ratio
         opts.tasks_per_job = tasks_per_job
+        opts.num_preferred_nodes = num_preferred_nodes
 
         conn = boto.connect_ec2()
         frontends, backends = ec2_exp.find_existing_cluster(conn, opts)
@@ -66,7 +68,7 @@ for sample_ratio in sample_ratios:
         ec2_exp.start_proto(frontends, backends, opts)
         time.sleep(trial_length)
 
-        log_dirname = "%s_%s" % (utilization, sample_ratio)
+        log_dirname = "new_%s_%s" % (utilization, sample_ratio)
         while os.path.exists(log_dirname):
             log_dirname = "%s_a" % log_dirname
         os.mkdir(log_dirname)
