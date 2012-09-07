@@ -28,6 +28,7 @@ import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
 import edu.berkeley.sparrow.thrift.InternalService;
+import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.enqueueTaskReservations_call;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
@@ -118,7 +119,22 @@ public class Scheduler {
    */
   private class EnqueueTaskReservationsCallback
       implements AsyncMethodCallback<enqueueTaskReservations_call> {
+    String requestId;
+    InetSocketAddress nodeMonitorAddress;
+
+    public EnqueueTaskReservationsCallback(String requestId, InetSocketAddress nodeMonitorAddress) {
+      this.requestId = requestId;
+      this.nodeMonitorAddress = nodeMonitorAddress;
+    }
+
     public void onComplete(enqueueTaskReservations_call response) {
+      AUDIT_LOG.debug(Logging.auditEventString(
+          "scheduler_complete_enqueue_task", requestId, nodeMonitorAddress.toString()));
+      try {
+        nodeMonitorClientPool.returnClient(nodeMonitorAddress, (AsyncClient) response.getClient());
+      } catch (Exception e) {
+        LOG.error(e);
+      }
       return;
     }
 
@@ -216,10 +232,8 @@ public class Scheduler {
         AUDIT_LOG.debug(Logging.auditEventString(
             "scheduler_launch_enqueue_task", entry.getValue().requestId,
             entry.getKey().toString()));
-        client.enqueueTaskReservations(entry.getValue(), new EnqueueTaskReservationsCallback());
-        AUDIT_LOG.debug(Logging.auditEventString(
-            "scheduler_complete_enqueue_task", entry.getValue().requestId,
-            entry.getKey().toString()));
+        client.enqueueTaskReservations(
+            entry.getValue(), new EnqueueTaskReservationsCallback(requestId, entry.getKey()));
       } catch (Exception e) {
         LOG.error(e);
       }

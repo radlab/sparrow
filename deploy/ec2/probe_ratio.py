@@ -14,10 +14,10 @@ sample_ratios = [2.0]
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 160
-tasks_per_job = 5 #10
+tasks_per_job = 2 #10
 private_ssh_key = "patkey.pem"
 sparrow_branch = "experimental0906"
-num_backends = 20 #90
+num_backends = 6 #90
 num_frontends = 1 #0
 cores_per_backend = 4
 # Run each trial for 5 minutes.
@@ -71,16 +71,19 @@ for sample_ratio in sample_ratios:
             log_dirname = "%s_a" % log_dirname
         os.mkdir(log_dirname)
 
+        ec2_exp.execute_command(frontends, backends, opts, "./find_bugs.sh")
+
         print "********Stopping prototypes and Sparrow"
         ec2_exp.stop_proto(frontends, backends, opts)
         ec2_exp.stop_sparrow(frontends, backends, opts)
 
         print "********Collecting logs and placing in %s" % log_dirname
-        run_cmd("./ec2-exp.sh collect-logs -i %s --log-dir=%s/" % (private_ssh_key, log_dirname))
+        opts.log_dir = log_dirname
+        ec2_exp.collect_logs(frontends, backends, opts)
         run_cmd("gunzip %s/*.gz" % log_dirname)
 
         print "********Parsing logs"
-        #run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
-        #         "output_dir=../../../deploy/ec2/%s/results start_sec=190 end_sec=310 && cd -") %
-        #        (log_dirname, log_dirname))
+        run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
+                 "output_dir=../../../deploy/ec2/%s/results start_sec=190 end_sec=310 && cd -") %
+                (log_dirname, log_dirname))
 

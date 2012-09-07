@@ -36,13 +36,13 @@ public interface TaskPlacer {
       getEnqueueTaskReservationsRequests(
           TSchedulingRequest schedulingRequest, String requestId,
           Collection<InetSocketAddress> nodes, THostPort schedulerAddress);
-  
+
   /**
-   * Returns a {@link TTaskLaunchSpec} for a task that should be launched from the give node
-   * monitor.  Always returns either 0 or 1 tasks.
+   * Returns a List of {@link TTaskLaunchSpec}s describing tasks that should be launched from the
+   * give node monitor.  Always returns either 0 or 1 tasks.
    */
   public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress);
-  
+
   /** Returns true if all node monitors where task reservations were enqueued have replied. */
   public boolean allResponsesReceived();
 }
