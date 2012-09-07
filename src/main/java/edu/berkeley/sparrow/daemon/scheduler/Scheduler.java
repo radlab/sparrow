@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -45,7 +47,7 @@ public class Scheduler {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(Scheduler.class);
 
   /** Used to uniquely identify requests arriving at this scheduler. */
-  private int counter = 0;
+  private AtomicInteger counter = new AtomicInteger(0);
 
   private THostPort address;
 
@@ -74,7 +76,7 @@ public class Scheduler {
    * For each request, the task placer that should be used to place the request's tasks. Indexed
    * by the request ID.
    */
-  private Map<String, TaskPlacer> requestTaskPlacers;
+  private ConcurrentMap<String, TaskPlacer> requestTaskPlacers;
 
   private Configuration conf;
 
@@ -284,7 +286,7 @@ public class Scheduler {
     /* The request id is a string that includes the IP address of this scheduler followed
      * by the counter.  We use a counter rather than a hash of the request because there
      * may be multiple requests to run an identical job. */
-    return String.format("%s_%d", Network.getIPAddress(conf), counter++);
+    return String.format("%s_%d", Network.getIPAddress(conf), counter.getAndIncrement());
   }
 
   private class sendFrontendMessageCallback implements
