@@ -8,7 +8,7 @@ import ec2_exp
 def run_cmd(cmd):
     subprocess.check_call(cmd, shell=True)
 
-utilizations = [0.9]
+utilizations = [0.5]
 sample_ratios = [2.0]
 
 # Amount of time it takes each task to run in isolation
@@ -24,8 +24,8 @@ cores_per_backend = 4
 trial_length = 300
 
 # Warmup information
-warmup_s = 30
-post_warmup_s = 60
+warmup_s = 10
+post_warmup_s = 120
 warmup_arrival_rate_s = (float(num_backends * cores_per_backend * 1000) /
                          (task_duration_ms * tasks_per_job * num_frontends))
 
@@ -36,7 +36,7 @@ print "********Launching instances..."
 for sample_ratio in sample_ratios:
     for utilization in utilizations:
         # Number of jobs that should be generated at each frontend per millisecond.
-        arrival_rate_ms = (utilization * num_backends * cores_per_backend /
+        arrival_rate_ms = (float(utilization * num_backends * cores_per_backend) /
                            (task_duration_ms * tasks_per_job * num_frontends))
         arrival_rate_s = arrival_rate_ms * 1000
 
@@ -54,7 +54,8 @@ for sample_ratio in sample_ratios:
         print ("********Launching experiment at utilization %s with sample ratio %s..." %
                (utilization, sample_ratio))
 
-        print "********Deploying with arrival rate %s" % arrival_rate_s
+        print ("********Deploying with arrival rate %s and warmup arrival rate %s"
+               % (arrival_rate_s, warmup_arrival_rate_s))
         ec2_exp.deploy_cluster(frontends, backends, opts, warmup_arrival_rate_s, warmup_s,
                                post_warmup_s)
         ec2_exp.start_sparrow(frontends, backends, opts)
@@ -66,11 +67,9 @@ for sample_ratio in sample_ratios:
         time.sleep(trial_length)
 
         log_dirname = "%s_%s" % (utilization, sample_ratio)
-        if not os.path.exists(log_dirname):
-            os.mkdir(log_dirname)
-        else:
-            print "********Error: log directory (%s) already exists. Exiting." % log_dirname
-            exit(1)
+        while os.path.exists(log_dirname):
+            log_dirname = "%s_a" % log_dirname
+        os.mkdir(log_dirname)
 
         print "********Stopping prototypes and Sparrow"
         ec2_exp.stop_proto(frontends, backends, opts)
@@ -82,6 +81,6 @@ for sample_ratio in sample_ratios:
 
         print "********Parsing logs"
         run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
-                 "output_dir=../../../deploy/ec2/%s/results start_sec=120 end_sec=240 && cd -") %
+                 "output_dir=../../../deploy/ec2/%s/results start_sec=190 end_sec=310 && cd -") %
                 (log_dirname, log_dirname))
 

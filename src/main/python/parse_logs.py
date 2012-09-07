@@ -253,8 +253,8 @@ class Request:
         if (self.__num_tasks == 0 or
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
-            print ("Warning: incomplete request. Expected %d tasks; found %d tasks" %
-                   (self.__num_tasks, len(self.__tasks)))
+            #print ("Warning: incomplete request. Expected %d tasks; found %d tasks" %
+             #      (self.__num_tasks, len(self.__tasks)))
             return False
         for task in self.__tasks.values():
             if not task.complete():
@@ -354,8 +354,7 @@ class LogParser:
     def output_reservation_queue_lengths(self, output_directory):
         gnuplot_file = open("%s/reservation_queue_lengths.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
-        gnuplot_file.write("set output '%s/reservation_queue_length.ps'\n" %
-                           output_directory)
+        gnuplot_file.write("set output 'reservation_queue_length.ps'\n")
         gnuplot_file.write("set xlabel 'Time (ms)'\n")
         gnuplot_file.write("set ylabel 'Queue Length'\n")
         gnuplot_file.write("plot ")
@@ -365,12 +364,12 @@ class LogParser:
             file = open(results_filename, "w")
             file.write("time\tQueue Length\n")
             for time, queue_length in queue_lengths:
-                file.write("%s\t%s\n" % (time, queue_length))
+                file.write("%s\t%s\n" % (time - self.__earliest_time, queue_length))
             file.close()
             if not is_first:
                 gnuplot_file.write(",\\\n")
             is_first = False
-            gnuplot_file.write("'%s' using 1:2 lw 1 with lp" % results_filename)
+            gnuplot_file.write("'%s_queue_lengths' using 1:2 lw 1 with lp" % node_monitor_address)
 
     def output_get_task_times(self, output_directory):
         get_task_times = []

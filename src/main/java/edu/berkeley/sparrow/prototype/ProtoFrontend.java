@@ -203,7 +203,7 @@ public class ProtoFrontend implements FrontendService.Iface {
             benchmarkId, backends, client);
         LOG.debug("Waiting for queues to drain after warmup (waiting " + post_warmup_s +
                  " seconds)");
-        Thread.sleep(post_warmup_s);
+        Thread.sleep(post_warmup_s * 1000);
       }
       LOG.debug("Launching experiment for " + experiment_duration_s + " seconds");
       launchTasks(lambda, experiment_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
