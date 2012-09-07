@@ -14,9 +14,9 @@ sample_ratios = [2.0]
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 160
-tasks_per_job = 10
+tasks_per_job = 2 #10
 private_ssh_key = "patkey.pem"
-sparrow_branch = "experimental0903"
+sparrow_branch = "experimental0906"
 num_backends = 4 #90
 num_frontends = 1 #0
 cores_per_backend = 4
@@ -27,7 +27,7 @@ trial_length = 300
 warmup_s = 30
 post_warmup_s = 60
 warmup_arrival_rate_s = (float(num_backends * cores_per_backend * 1000) /
-                         (task_duraiton_ms * tasks_per_job * num_frontends))
+                         (task_duration_ms * tasks_per_job * num_frontends))
 
 print "********Launching instances..."
 #run_cmd("./ec2-exp.sh launch -f %s -b %s -i %s" % (num_frontends, num_backends, private_ssh_key))
@@ -41,7 +41,7 @@ for sample_ratio in sample_ratios:
         arrival_rate_s = arrival_rate_ms * 1000
 
         # This is a little bit of a hacky way to pass args to the ec2 script.
-        (opts, args) = ec2_exp.parse_args()
+        (opts, args) = ec2_exp.parse_args(False)
         opts.identity_file = private_ssh_key
         opts.arrival_rate = arrival_rate_s
         opts.branch = sparrow_branch
@@ -82,6 +82,6 @@ for sample_ratio in sample_ratios:
 
         print "********Parsing logs"
         run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
-                 "output_dir=../../../deploy/ec2/%s/results start_sec=60 end_sec=180 && cd -") %
+                 "output_dir=../../../deploy/ec2/%s/results start_sec=120 end_sec=240 && cd -") %
                 (log_dirname, log_dirname))
 

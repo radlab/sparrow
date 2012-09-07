@@ -116,7 +116,7 @@ class Request:
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
         # List of times when reservations were replied to.
-        self.__reservation_replies = []
+        self.__scheduler_get_task_times = []
         # Mapping of node monitor address to a pair of times, the first of which is the time when
         # the request to enqueue a task reservation was launched, and the second of which is the
         # time when the request completed.
@@ -144,12 +144,12 @@ class Request:
                 rtts.append(rtt_info[1] - rtt_info[0])
         return rtts
 
-    def add_reservation_reply(self, time):
-        """ Adds a reply to a reservation (when getTask() was called and responded to). """
-        self.__reservation_replies.append(time)
+    def add_scheduler_get_task(self, time):
+        """ Adds the time when getTask() was called (as perceived by the scheduler). """
+        self.__scheduler_get_task_times.append(time)
 
-    def get_reservation_replies(self):
-        return (self.__arrival_time, self.__reservation_replies)
+    def get_scheduler_get_task_times(self):
+        return (self.__arrival_time, self.__scheduler_get_task_times)
 
     def add_scheduler_task_launch(self, task_id, launch_time):
         task = self.__get_task(task_id)
@@ -327,13 +327,13 @@ class LogParser:
                 request.add_enqueue_reservation_completion(time, audit_event_params[2])
             elif audit_event_params[0] == "reservation_enqueued":
                 self.__reservation_enqueued(time, audit_event_params[1], audit_event_params[3])
-            elif audit_event_params[0] == "assigned_task":
+            elif audit_event_params[0] == "scheduler_assigned_task":
                  request = self.__get_request(audit_event_params[1])
                  request.add_scheduler_task_launch(audit_event_params[2], time)
-                 request.add_reservation_reply(time)
-            elif audit_event_params[0] == "node_monitor_get_task_no_task":
+                 request.add_scheduler_get_task(time)
+            elif audit_event_params[0] == "scheduler_get_task_no_task":
                 request = self.__get_request(audit_event_params[1])
-                request.add_reservation_reply(time)
+                request.add_scheduler_get_task(time)
             elif audit_event_params[0] == "node_monitor_task_launch":
                 request = self.__get_request(audit_event_params[1])
                 request.add_node_monitor_task_launch(audit_event_params[2], audit_event_params[3],
@@ -341,8 +341,12 @@ class LogParser:
             elif audit_event_params[0] == "task_completed":
                 request = self.__get_request(audit_event_params[1])
                 request.add_task_completion(audit_event_params[2], time)
+            elif audit_event_params[0] == "node_monitor_get_task_no_task":
+                # TODO: deal with these. May want to track the number of failed attempts to launch
+                # a task.
+                pass
             elif audit_event_params[0] == "node_monitor_get_task":
-                # TODO: deal with these.
+                #TODO: deal with these? May want to track the RTT for get_task.
                 pass
             else:
                 self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
@@ -412,7 +416,7 @@ class LogParser:
         for id, request in self.__requests.items():
             results_filename = "%s/%s_tasks_launched_vs_time" % (output_directory, id)
             file = open(results_filename, "w")
-            arrival_time, reservation_replies = request.get_reservation_replies()
+            arrival_time, reservation_replies = request.get_scheduler_get_task_times()
             reservation_count = 0
             file.write("0\t0\n")
             for reservation in reservation_replies:

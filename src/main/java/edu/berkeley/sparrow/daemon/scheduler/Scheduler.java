@@ -243,10 +243,10 @@ public class Scheduler {
       LOG.error("Received invalid task placement: " + taskLaunchSpecs.toString());
       return Lists.newArrayList();
     } else if (taskLaunchSpecs.size() == 1) {
-      AUDIT_LOG.info(Logging.auditEventString("assigned_task", requestId,
+      AUDIT_LOG.info(Logging.auditEventString("scheduler_assigned_task", requestId,
                                               taskLaunchSpecs.get(0).taskId));
     } else {
-      AUDIT_LOG.info(Logging.auditEventString("get_task_no_task", requestId));
+      AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId));
     }
     if (taskPlacer.allResponsesReceived()) {
       LOG.debug("All responses received for request " + requestId);

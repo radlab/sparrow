@@ -10,7 +10,7 @@ import random
 from optparse import OptionParser
 
 
-def parse_args():
+def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
     "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, command, collect-logs, destroy, login-fe, login-be")
   parser.add_option("-z", "--zone", default="us-east-1b",
@@ -64,7 +64,7 @@ def parse_args():
       help="Level of parallelism for dummy queries.")
 
   (opts, args) = parser.parse_args()
-  if len(args) < 1:
+  if len(args) < 1 and force_action:
     parser.print_help()
     sys.exit(1)
   if os.getenv('AWS_ACCESS_KEY_ID') == None:

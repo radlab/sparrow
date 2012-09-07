@@ -37,7 +37,7 @@ public class ProtoFrontend implements FrontendService.Iface {
   public static final double DEFAULT_WARMUP_JOB_ARRIVAL_RATE_S = 10;
 
   /** Duration of warmup period. */
-  public static final int DEFAULT_WARMUP_S = 30;
+  public static final int DEFAULT_WARMUP_S = 10;
 
   /** Amount of time to wait for queues to drain once warmup period is over. */
   public static final int DEFAULT_POST_WARMUP_S = 60;
@@ -197,10 +197,15 @@ public class ProtoFrontend implements FrontendService.Iface {
       client.initialize(new InetSocketAddress("localhost", schedulerPort), APPLICATION_ID, this);
 
       if (warmup_duration_s > 0) {
+        LOG.debug("Warming up for " + warmup_duration_s + " seconds at arrival rate of " +
+                  warmup_lambda + " jobs per second");
         launchTasks(warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
             benchmarkId, backends, client);
+        LOG.debug("Waiting for queues to drain after warmup (waiting " + post_warmup_s +
+                 " seconds)");
         Thread.sleep(post_warmup_s);
       }
+      LOG.debug("Launching experiment for " + experiment_duration_s + " seconds");
       launchTasks(lambda, experiment_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
           benchmarkId, backends, client);
     }
