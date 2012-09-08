@@ -41,12 +41,16 @@ fi
 cp /tmp/sparrow/target/sparrow-1.0-SNAPSHOT.jar $SPARROW_INSTALL_DIR
 
 cd /tmp/spark
-sbt/sbt compile
-sbt/sbt publish-local
+if [ ! -e "/tmp/spark/core/target/scala-2.9.1" ]; then
+  sbt/sbt compile
+  sbt/sbt publish-local
+fi
 
 cd /tmp/shark
+#if [ ! -e "/tmp/shark/bin/shark" ]; then
 sbt/sbt products
-# This jar could be in sparrow branch instead.
+#fi
+# This jar could be in sparrow spark branch instead.
 cp /tmp/spark/core/lib/sparrow* /tmp/shark/lib
 
 cp -r /tmp/spark/* $SPARK_INSTALL_DIR

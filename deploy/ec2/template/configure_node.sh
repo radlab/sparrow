@@ -31,6 +31,10 @@ cat /etc/hosts | grep -v internal > tmp && mv tmp /etc/hosts
 cp ~/hdfs-site.xml /opt/hadoop/conf/
 cp ~/hive-default.xml /opt/hive/conf/
 
+cd /opt/hive/conf
+bash -c "sed -i 's/HOST_IP/`hostname -i`/g' hive-default.xml"
+cd -
+
 # Create references to per-frontend hive tables
 cd /opt/tpch_hive/
 bash -c "sed -i 's/\/tpch/\/`hostname -i`/g' *.hive"

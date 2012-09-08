@@ -241,7 +241,7 @@
 
 <property>
   <name>hive.metastore.warehouse.dir</name>
-  <value>/user/hive/warehouse</value>
+  <value>/user/hive/HOST_IP/warehouse</value>
   <description>location of default database for the warehouse</description>
 </property>
 
@@ -1006,10 +1006,6 @@
   <value>false</value>
   <description>should rework the mapred work or not.
   This is first introduced by SymlinkTextInputFormat to replace symlink files with real paths at compile time.</description>
-</property>
-<property>
-<name>fs.default.name</name>
-<value>hdfs://ip-10-68-54-47:8020/</value>
 </property>
 
 <property>
