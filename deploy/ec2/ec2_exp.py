@@ -266,16 +266,20 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "warmup_s": "%s" % warmup_s,
     "post_warmup_s": "%s" % post_warmup_s
   }
-  for filename in os.listdir("template"):
-    if filename[0] not in '#.~' and filename[-1] != '~':
-      local_file = os.path.join(tmp_dir, filename)
-      with open(os.path.join("template", filename)) as src:
-        with open(local_file, "w") as dest:
-          text = src.read()
-          for key in template_vars:
-            text = text.replace("{{" + key + "}}", template_vars[key])
-          dest.write(text)
-          dest.close()
+  for dirpath, dirnames, filenames in os.walk("template"):
+    rel_dir_path=dirpath.replace("template", "").replace(os.sep, "")
+    if rel_dir_path != "":
+      os.mkdir(os.path.join(tmp_dir, rel_dir_path))
+    for filename in filenames:
+      if filename[0] not in '#.~' and filename[-1] != '~':
+	local_file = os.path.join(tmp_dir, rel_dir_path, filename)
+        with open(os.path.join(dirpath, filename)) as src:
+          with open(local_file, "w") as dest:
+            text = src.read()
+            for key in template_vars:
+	      text = text.replace("{{" + key + "}}", template_vars[key])
+	    dest.write(text)
+	    dest.close()
 
   driver_machine = frontends[0].public_dns_name
   print "Chose driver machine: %s ..." % driver_machine
