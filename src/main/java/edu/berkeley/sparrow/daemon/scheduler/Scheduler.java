@@ -35,6 +35,7 @@ import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.enqueueTaskReserv
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.THostPort;
+import edu.berkeley.sparrow.thrift.TPlacementPreference;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -58,7 +59,7 @@ public class Scheduler {
   /** Thrift client pool for communicating with node monitors */
   ThriftClientPool<InternalService.AsyncClient> nodeMonitorClientPool =
       new ThriftClientPool<InternalService.AsyncClient>(
-      new ThriftClientPool.InternalServiceMakerFactory());
+          new ThriftClientPool.InternalServiceMakerFactory());
 
   /** Thrift client pool for communicating with front ends. */
   private ThriftClientPool<FrontendService.AsyncClient> frontendClientPool =
@@ -71,6 +72,9 @@ public class Scheduler {
   /** Probe ratios to use if the probe ratio is not explicitly set in the request. */
   private double defaultProbeRatioUnconstrained;
   private double defaultProbeRatioConstrained;
+
+  /** A special case scheduling parameter for Spark RDD layouts. */
+  private int specialTaskSetSize;
 
   /**
    * For each request, the task placer that should be used to place the request's tasks. Indexed
@@ -97,9 +101,11 @@ public class Scheduler {
     state.initialize(conf);
 
     defaultProbeRatioUnconstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO,
-                                                    SparrowConf.DEFAULT_SAMPLE_RATIO);
+        SparrowConf.DEFAULT_SAMPLE_RATIO);
     defaultProbeRatioConstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO_CONSTRAINED,
-                                                  SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
+        SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
+    specialTaskSetSize = conf.getInt(SparrowConf.SPECIAL_TASK_SET_SIZE,
+        SparrowConf.DEFAULT_SPECIAL_TASK_SET_SIZE);
 
     requestTaskPlacers = Maps.newConcurrentMap();
   }
@@ -120,7 +126,7 @@ public class Scheduler {
    * null callbacks).
    */
   private class EnqueueTaskReservationsCallback
-      implements AsyncMethodCallback<enqueueTaskReservations_call> {
+  implements AsyncMethodCallback<enqueueTaskReservations_call> {
     String requestId;
     InetSocketAddress nodeMonitorAddress;
 
@@ -147,7 +153,94 @@ public class Scheduler {
     }
   }
 
+  /** This is a special case where we want to ensure a very specific scheduling allocation for
+   * Spark partitions.*/
+  private boolean isSpecialCase(TSchedulingRequest req) {
+    if (req.getTasks().size() != specialTaskSetSize) {
+      return false;
+    }
+    for (TTaskSpec t: req.getTasks()) {
+      if ((t.getPreference().getNodes() != null)  &&
+          (t.getPreference().getNodes().size() != 0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /** Handles special case. */
+  private void handleSpecialCase(TSchedulingRequest req) throws TException {
+    LOG.info("Handling special case request");
+
+    // No tasks have preferences and we have the magic number of tasks
+    TSchedulingRequest req1 = new TSchedulingRequest();
+    req1.user = req.user;
+    req1.app = req.app;
+    req1.probeRatio = req.probeRatio;
+    TSchedulingRequest req2 = new TSchedulingRequest();
+    req2.user = req.user;
+    req2.app = req.app;
+    req2.probeRatio = req.probeRatio;
+    TSchedulingRequest req3 = new TSchedulingRequest();
+    req3.user = req.user;
+    req3.app = req.app;
+    req3.probeRatio = req.probeRatio;
+
+    List<InetSocketAddress> backends = Lists.newArrayList();
+    for (InetSocketAddress backend : state.getBackends(req.app).keySet()) {
+      backends.add(backend);
+    }
+
+    if (!(backends.size() >= (specialTaskSetSize * 3))) {
+      LOG.error("Special case expects at least three times as many machines as tasks.");
+      return;
+    }
+    LOG.info(backends);
+    for (int i = 0; i < backends.size(); i++) {
+      int taskIndex = i / 3;
+      if (taskIndex > req.getTasksSize() - 1) { break; }
+
+      TTaskSpec task = req.getTasks().get(i / 3);
+      // Create three copies of this task each on a different backend
+      TTaskSpec task1 = new TTaskSpec();
+      task1.estimatedResources = task.estimatedResources;
+      task1.message = task.message;
+      task1.taskId = task.taskId;
+      task1.preference = new TPlacementPreference();
+      LOG.info("Adding: " + i);
+      task1.preference.addToNodes(backends.get(i).getHostName());
+      req1.addToTasks(task1);
+      i++;
+
+      TTaskSpec task2 = new TTaskSpec();
+      task2.estimatedResources = task.estimatedResources;
+      task2.message = task.message;
+      task2.taskId = task.taskId;
+      task2.preference = new TPlacementPreference();
+      LOG.info("Adding: " + i);
+      task2.preference.addToNodes(backends.get(i).getHostName());
+      req2.addToTasks(task2);
+      i++;
+
+      TTaskSpec task3 = new TTaskSpec();
+      task3.estimatedResources = task.estimatedResources;
+      task3.message = task.message;
+      task3.taskId = task.taskId;
+      task3.preference = new TPlacementPreference();
+      LOG.info("Adding: " + i);
+      task3.preference.addToNodes(backends.get(i).getHostName());
+      req3.addToTasks(task3);
+    }
+    LOG.info("Three requests: " + req1 + req1 + req3);
+    submitJob(req1);
+    submitJob(req2);
+    submitJob(req3);
+  }
+
   public void submitJob(TSchedulingRequest request) throws TException {
+    if (isSpecialCase(request)) {
+      handleSpecialCase(request);
+      return;
+    }
     LOG.debug(Logging.functionCall(request));
     long start = System.currentTimeMillis();
 
@@ -159,8 +252,8 @@ public class Scheduler {
     // also be useful when we support multiple daemons running on a single
     // machine.
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
-                                            request.getTasks().size(),
-                                            address.getHost(), address.getPort()));
+        request.getTasks().size(),
+        address.getHost(), address.getPort()));
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
@@ -190,44 +283,12 @@ public class Scheduler {
     requestTaskPlacers.put(requestId, taskPlacer);
 
     Map<InetSocketAddress, TEnqueueTaskReservationsRequest> enqueueTaskReservationsRequests;
-
-    if (request.isSetProbeRatio() && request.getProbeRatio() == 3 &&
-        tasks.get(0).preference.nodes != null &&
-        (tasks.get(0).preference.nodes.size() == 1 || tasks.get(0).preference.nodes.size() == 2)) {
-      // This is a hack to force Spark to cache data on multiple machines. If a Spark job runs
-      // on a machine where the input data is not already cached in memory, Spark will
-      // automatically caches the data on those machines. So, we run a few dummy jobs at the
-      // beginning of each experiment to force the data for each job to be cached in three places.
-      // To do this, we need to explicitly avoid the nodes where data is already cached.
-      List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
-      List<InetSocketAddress> toRemove = Lists.newArrayList();
-      for (TTaskSpec task : tasks) {
-        for (String node : task.preference.nodes) {
-          try {
-            InetAddress addr = InetAddress.getByName(node);
-            for (InetSocketAddress backend : subBackends) {
-              if (backend.getAddress().equals(addr)) {
-                toRemove.add(backend);
-                break;
-              }
-            }
-          } catch (UnknownHostException e) {
-            LOG.error(e);
-          }
-        }
-      }
-     subBackends.removeAll(toRemove);
-
-     enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
-        request, requestId, subBackends, address);
-    } else {
-      enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
-          request, requestId, backends, address);
-    }
+    enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
+        request, requestId, backends, address);
 
     // Request to enqueue a task at each of the selected nodes.
     for (Entry<InetSocketAddress, TEnqueueTaskReservationsRequest> entry :
-         enqueueTaskReservationsRequests.entrySet())  {
+      enqueueTaskReservationsRequests.entrySet())  {
       try {
         InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
         LOG.debug("Launching enqueueTask for request " + requestId + "on node: " + entry.getKey());
@@ -252,7 +313,7 @@ public class Scheduler {
     LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
-                "pending reservations");
+          "pending reservations");
       return Lists.newArrayList();
     }
     TaskPlacer taskPlacer = requestTaskPlacers.get(requestId);
@@ -263,8 +324,8 @@ public class Scheduler {
       return Lists.newArrayList();
     } else if (taskLaunchSpecs.size() == 1) {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_assigned_task", requestId,
-                                              taskLaunchSpecs.get(0).taskId,
-                                              nodeMonitorAddress.getHost()));
+          taskLaunchSpecs.get(0).taskId,
+          nodeMonitorAddress.getHost()));
     } else {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId));
     }
@@ -294,7 +355,7 @@ public class Scheduler {
   }
 
   private class sendFrontendMessageCallback implements
-      AsyncMethodCallback<frontendMessage_call> {
+  AsyncMethodCallback<frontendMessage_call> {
     private InetSocketAddress frontendSocket;
     private FrontendService.AsyncClient client;
     public sendFrontendMessageCallback(InetSocketAddress socket, FrontendService.AsyncClient client) {
