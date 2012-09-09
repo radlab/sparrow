@@ -267,8 +267,10 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "warmup_job_arrival_rate_s": "%s" % warmup_job_arrival_s,
     "warmup_s": "%s" % warmup_s,
     "post_warmup_s": "%s" % post_warmup_s,
-    "num_partitions": "%s" % opts.num_partitions
+    "num_partitions": "%s" % opts.num_partitions,
+    "num_partitions_minus_one": "%s" % (opts.num_partitions - 1),
   }
+
   for dirpath, dirnames, filenames in os.walk("template"):
     rel_dir_path=dirpath.replace("template", "").replace(os.sep, "")
     if rel_dir_path != "":
