@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -189,6 +190,7 @@ public class Scheduler {
     for (InetSocketAddress backend : state.getBackends(req.app).keySet()) {
       backends.add(backend);
     }
+    Collections.shuffle(backends);
 
     if (!(backends.size() >= (specialTaskSetSize * 3))) {
       LOG.error("Special case expects at least three times as many machines as tasks.");
