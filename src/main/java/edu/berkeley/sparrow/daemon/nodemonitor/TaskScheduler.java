@@ -194,7 +194,7 @@ public abstract class TaskScheduler {
    * by subtracting the currently used resources and currently runnable resources from
    * the node's capacity.
    */
-  protected TResourceVector getFreeResources() {
+  protected synchronized TResourceVector getFreeResources() {
     TResourceVector free = TResources.subtract(capacity, inUse);
     TResourceVector reserved = TResources.none();
     for (TaskReservation t: runnableTaskQueue) {

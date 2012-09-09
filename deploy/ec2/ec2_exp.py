@@ -17,7 +17,7 @@ def parse_args(force_action=True):
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-7947f310",
       help="Amazon Machine Image ID to use")
-  parser.add_option("-t", "--instance-type", default="m1.xlarge",
+  parser.add_option("-t", "--instance-type", default="m2.2xlarge",
       help="Type of instance to launch (default: m1.large). " +
            "WARNING: must be 64 bit, thus small instances won't work")
   parser.add_option("-l", "--arrival-rate", type="float", default=1,
@@ -44,7 +44,7 @@ def parse_args(force_action=True):
       help="Number of preferred nodes to use in the prototype frontend (0 means unconstrained)")
   parser.add_option("-c", "--benchmark-id", type="int", default=1,
       help="Which benchmark to run")
-  parser.add_option("-e", "--benchmark-iterations", type="int", default=4,
+  parser.add_option("-e", "--benchmark-iterations", type="int", default=100,
       help="Iterations of benchmark to run")
   parser.add_option("-p", "--sample-ratio", type="float", default=1.05,
       help="Sample ratio for unconstrained tasks")

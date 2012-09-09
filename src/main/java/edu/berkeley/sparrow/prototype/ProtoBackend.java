@@ -123,7 +123,10 @@ public class ProtoBackend implements BackendService.Iface {
       LOG.debug("Aggregate task rate: " + taskRate);
 
       Random r = new Random();
+
+      long benchmarkStart = System.currentTimeMillis();
       runBenchmark(benchmarkId, benchmarkIterations, r);
+      LOG.debug("Benchmark runtime: " + (System.currentTimeMillis() - benchmarkStart));
 
       // Update bookkeeping for task finish
       synchronized(resourceUsage) {
@@ -152,8 +155,10 @@ public class ProtoBackend implements BackendService.Iface {
    */
   public static boolean runBenchmark(int benchmarkId, int iterations, Random r) {
     if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
+      LOG.debug("Running random access benchmark for " + iterations + " iterations.");
       runRandomMemAcessBenchmark(iterations, r);
     } else if (benchmarkId == BENCHMARK_TYPE_FP_CPU) {
+      LOG.debug("Running CPU benchmark for " + iterations + " iterations.");
      runFloatingPointBenchmark(iterations, r);
     } else {
       LOG.error("Received unrecognized benchmark type");
@@ -162,18 +167,24 @@ public class ProtoBackend implements BackendService.Iface {
     return true;
   }
 
-  /** Benchmark which, on each iteration, runs 1 million random floating point
-   *  multiplications.*/
+  /**
+   * Benchmark that runs random floating point multiplications for the specified amount of
+   * "iterations", where each iteration is one millisecond.
+   */
   public static void runFloatingPointBenchmark(int iterations, Random r) {
-    int opsPerIteration = 1000 * 1000;
-    // We keep a running result here and print it out so that the JVM doesn't
-    // optimize all this computation away.
+    int runtimeMillis = iterations;
+    long startTime = System.nanoTime();
+    int opsPerIteration = 1000;
+    /* We keep a running result here and print it out so that the JVM doesn't
+     * optimize all this computation away. */
     float result = r.nextFloat();
-    for (int i = 0; i < iterations * opsPerIteration; i++) {
-      // On each iteration, perform a floating point mulitplication
-      float x = r.nextFloat();
-      float y = r.nextFloat();
-      result += (x * y);
+    while (System.nanoTime() - startTime < runtimeMillis * 1000 * 1000) {
+      for (int j = 0; j < opsPerIteration; j++) {
+        // On each iteration, perform a floating point multiplication
+        float x = r.nextFloat();
+        float y = r.nextFloat();
+        result += (x * y);
+      }
     }
     LOG.debug("Benchmark result " + result);
   }

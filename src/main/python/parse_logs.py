@@ -101,6 +101,7 @@ class Task:
 
     def service_time(self):
         """ Returns the service time (time executing on backend)."""
+        #print self.node_monitor_address, self.completion_time - self.node_monitor_launch_time
         return (self.completion_time - self.node_monitor_launch_time)
 
     def adjusted_completion_time(self):
@@ -111,11 +112,20 @@ class Task:
         skew = self.scheduler_launch_time - expected_scheduler_get_task_time
         return self.completion_time + skew
 
-    def complete(self):
+    def complete(self, verbose=False):
         """ Returns whether we have complete information on this task. """
         #if self.scheduler_launch_time == INVALID_TIME: print "scheduler launch"
         #if self.node_monitor_launch_time == INVALID_TIME: print "nm launch"
         #if self.completion_time == INVALID_TIME: print "completion"
+        if verbose:
+            if self.node_monitor_get_task_time == INVALID_TIME:
+                print "Task %s incomplete: node monitor get_task time missing" % self.id
+            elif self.scheduler_launch_time == INVALID_TIME:
+                print "Task %s incomplete: Scheduler launch time missing" % self.id
+            elif self.node_monitor_launch_time == INVALID_TIME:
+                print "Task %s incomplete: Node monitor launch time missing" % self.id
+            elif self.completion_time == INVALID_TIME:
+                print "Task %s incomplete: Completion time missing" % self.id
         return (self.node_monitor_get_task_time != INVALID_TIME and
                 self.scheduler_launch_time != INVALID_TIME and
                 self.node_monitor_launch_time != INVALID_TIME and
@@ -245,8 +255,19 @@ class Request:
     def get_previous_tasks(self):
         """ Returns a list of tuples: (task_launch_time, previous_request_id, previous_task_id).
         """
-        return [(task.node_monitor_launch_time, task.previous_request_id, task.previous_task_id)
-                for task in self.__tasks.values() if task.complete and task.previous_request_id]
+        previous_task_info = []
+        for task in self.__tasks.values():
+            if task.complete() and task.previous_request_id:
+                previous_task_info.append((task.node_monitor_launch_time, task.previous_request_id,
+                                           task.previous_task_id))
+        return previous_task_info
+
+    def get_service_times(self, per_node_service_times):
+        """ Adds the service time for each node to the mapping of service times. """
+        for task in self.__tasks.values():
+            if task.node_monitor_address not in per_node_service_times:
+                per_node_service_times[task.node_monitor_address] = []
+            per_node_service_times[task.node_monitor_address].append(task.service_time())
 
     def response_time(self):
         """ Returns the time from when the job arrived to when it completed.
@@ -286,7 +307,7 @@ class Request:
 
         return complete_tasks
 
-    def complete(self):
+    def complete(self, verbose=False):
         """ Returns whether we have complete info for the request.
 
         Due to incomplete log files, it's possible that we'll have completion
@@ -294,11 +315,14 @@ class Request:
         if (self.__num_tasks == 0 or
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
-            #print ("Warning: incomplete request. Expected %d tasks; found %d tasks" %
-             #      (self.__num_tasks, len(self.__tasks)))
+            #
+            if verbose:
+                print ("Request %s incomplete. %d expected tasks, %d recorded tasks, "
+                       "arrival time %s") % (self.__id, self.__num_tasks,
+                                             len(self.__tasks), self.__arrival_time)
             return False
         for task in self.__tasks.values():
-            if not task.complete():
+            if not task.complete(verbose):
                 return False
         return True
 
@@ -415,6 +439,20 @@ class LogParser:
                 gnuplot_file.write(",\\\n")
             is_first = False
             gnuplot_file.write("'%s_queue_lengths' using 1:2 lw 1 with lp" % node_monitor_address)
+
+    def output_per_node_service_time(self, output_directory):
+        per_node_service_times = {}
+        for request in self.__requests.values():
+            request.get_service_times(per_node_service_times)
+
+        file = open(os.path.join(output_directory, "per_node_service_times"), "w")
+        file.write("NMAddress\tServicetime(50th/90th/99th)\n")
+        for (node_monitor_address, service_times) in per_node_service_times.items():
+            service_times.sort()
+            file.write("%s\t%s\t%s\t%s\n" %
+                       (node_monitor_address, get_percentile(service_times, 0.5),
+                        get_percentile(service_times, 0.9), get_percentile(service_times, 0.99)))
+        file.close()
 
     def output_get_task_times(self, output_directory):
         get_task_times = []
@@ -541,9 +579,12 @@ class LogParser:
         response_times = []
         # Network/processing delay for each task.
         network_rtts = []
+        get_new_task_times = []
         service_times = []
         # Used to look at the effects of jitting.
         start_and_service_times = []
+        # Used to look at how the response time varies over the course of the experiment
+        start_and_response_times = []
         queue_times = []
         probe_times = []
         start_time = self.__earliest_time + (START_SEC * 1000)
@@ -551,6 +592,11 @@ class LogParser:
 
         test_requests = filter(lambda k: k.complete(), self.__requests.values())
         print "Complete requests: %d" % len(test_requests)
+        if len(test_requests) == 0:
+            print "Incomplete request info:"
+            for request in self.__requests.values():
+                request.complete(True)
+            return
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
                                      k.complete(),
@@ -562,25 +608,36 @@ class LogParser:
             network_rtts.extend(request.get_enqueue_reservation_rtts())
             service_times.extend(request.service_times())
             start_and_service_times.extend(request.start_and_service_times())
+            start_and_response_times.append((request.arrival_time(), request.response_time()))
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
             response_times.append(response_time)
 
+            previous_task_info = request.get_previous_tasks()
+            for (task_launch_time, previous_request_id, previous_task_id) in previous_task_info:
+                if previous_request_id in self.__requests:
+                    previous_task_completion_time = self.__requests[
+                            previous_request_id].get_task_completion(previous_task_id)
+                    if previous_task_completion_time != INVALID_TIME:
+                        get_new_task_times.append(task_launch_time - previous_task_completion_time)
+
         # Output data for response time and network delay CDFs.
         results_filename = "results.data"
         file = open(os.path.join(output_directory, results_filename), "w")
-        file.write("%ile\tResponseTime\tNetworkRTT\tServiceTime\tQueuedTime\n")
+        file.write("%ile\tResponseTime\tNetworkRTT\tGetNewTask\tServiceTime\tQueuedTime\n")
         NUM_DATA_POINTS = 100
         response_times.sort()
         network_rtts.sort()
+        get_new_task_times.sort()
         service_times.sort()
         queue_times.sort()
 
         for i in range(NUM_DATA_POINTS):
             i = float(i) / NUM_DATA_POINTS
-            file.write("%f\t%d\t%d\t%d\t%d\n" % (i,
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
                 get_percentile(network_rtts, i),
+                get_percentile(get_new_task_times, i),
                 get_percentile(service_times, i),
                 get_percentile(queue_times, i)))
         file.close()
@@ -589,7 +646,7 @@ class LogParser:
         gnuplot_file = open("%s/results.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
         gnuplot_file.write("set output 'results.ps'\n")
-        gnuplot_file.write("set xlabel 'Time to get next task (ms)'\n")
+        gnuplot_file.write("set xlabel 'Milliseconds'\n")
         gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
         gnuplot_file.write("set xrange [0:]\n")
         gnuplot_file.write("set yrange [0:1]\n")
@@ -597,39 +654,54 @@ class LogParser:
                            results_filename)
         gnuplot_file.write("'%s' using 3:1 lw 4 with l title 'Network RTT',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'Service Time',\\\n" %
+        gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'Get New Task Time',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Queue Time'\n" %
+        gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Service Time',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 6:1 lw 4 with l title 'Queue Time'\n" %
                            results_filename)
 
         # Output task run time as a function of start time.
         start_and_service_times.sort(key = lambda x: x[0])
+        start_and_response_times.sort(key = lambda x: x[0])
         first_start_time = start_and_service_times[0][0]
         stride = max(1, len(start_and_service_times) / 500)
-        start_and_service_filename = "%s/start_and_service_time.data" % output_directory
-        start_and_service_file = open(start_and_service_filename, "w")
+        start_and_service_filename = "start_and_service_time.data"
+        start_and_service_file = open(os.path.join(output_directory, start_and_service_filename),
+                                      "w")
         for start_time, service_time in start_and_service_times[::stride]:
             start_and_service_file.write("%s\t%s\n" % (start_time - first_start_time,
                                                        service_time))
         start_and_service_file.close();
-        start_and_service_gnuplot_file = open("%s/start_and_service_time.gp" % output_directory,
+
+        start_and_response_filename = "start_and_response_time.data"
+        start_and_response_file = open(os.path.join(output_directory, start_and_response_filename),
+                                       "w")
+        for arrival_time, response_time in start_and_response_times:
+            start_and_response_file.write("%s\t%s\n" % (arrival_time - first_start_time,
+                                                        response_time))
+        start_and_response_file.close()
+
+        start_and_service_gnuplot_file = open("%s/response_and_service_vs_arrival.gp" % output_directory,
                                               "w")
         start_and_service_gnuplot_file.write("set terminal postscript color\n")
-        start_and_service_gnuplot_file.write("set output '%s/start_and_service_time.ps'\n" %
-                                             output_directory)
+        start_and_service_gnuplot_file.write("set output 'response_and_service_vs_arrival.ps'\n")
         start_and_service_gnuplot_file.write("set xlabel 'Time'\n")
         start_and_service_gnuplot_file.write("set yrange [0:]\n")
-        start_and_service_gnuplot_file.write("set ylabel 'Task Duration'\n")
-        start_and_service_gnuplot_file.write("plot '%s' using 1:2 with lp lw 4 notitle\n" %
-                                             start_and_service_filename)
+        start_and_service_gnuplot_file.write("set ylabel 'Milliseconds\n")
+        start_and_service_gnuplot_file.write(("plot '%s' using 1:2 with lp lw 4 title 'Task "
+                                              "Service Time',\\\n") % start_and_service_filename)
+        start_and_service_gnuplot_file.write("'%s' using 1:2 with lp lw 4 title 'Response Time'" %
+                                             start_and_response_filename)
         start_and_service_gnuplot_file.close()
 
         self.plot_response_time_cdf(results_filename, output_directory)
 
         summary_file = open("%s" % aggregate_results_filename, 'a')
-        summary_file.write("%s %s %s\n" % (get_percentile(response_times, .5),
-                                         get_percentile(response_times, .95),
-                                         get_percentile(response_times, .99)))
+        summary_file.write("%s %s %s %s\n" % (get_percentile(response_times, .05),
+                                              get_percentile(response_times, 0.5),
+                                              get_percentile(response_times, .95),
+                                              get_percentile(response_times, .99)))
         summary_file.close()
 
     def plot_response_time_cdf(self, results_filename, output_directory):
@@ -721,6 +793,7 @@ def main(argv):
     log_parser.output_results(output_dir, aggregate_results_filename)
     log_parser.output_complete_incomplete_requests_vs_time(output_dir)
     log_parser.output_tasks_completed_vs_arrival(output_dir)
+    log_parser.output_per_node_service_time(output_dir)
 
 
 if __name__ == "__main__":
