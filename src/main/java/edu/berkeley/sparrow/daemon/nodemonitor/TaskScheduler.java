@@ -148,6 +148,7 @@ public abstract class TaskScheduler {
     }
     resourceInfo.remainingTasks--;
     if (resourceInfo.remainingTasks == 0) {
+      LOG.debug("Deleting resources for request " + requestId);
       resourcesPerRequest.remove(requestId);
     }
     freeResourceInUse(resourceInfo.resources);
@@ -164,11 +165,13 @@ public abstract class TaskScheduler {
     }
   }
 
-  void submitTaskReservations(TEnqueueTaskReservationsRequest request,
-                              InetSocketAddress appBackendAddress) {
+  public synchronized void submitTaskReservations(TEnqueueTaskReservationsRequest request,
+                                                  InetSocketAddress appBackendAddress) {
     ResourceInfo resourceInfo = new ResourceInfo(request.getNumTasks(),
                                                  request.getEstimatedResources());
     resourcesPerRequest.put(request.getRequestId(), resourceInfo);
+    LOG.debug("Added resource info for request " + request.getRequestId() + " with " +
+              resourceInfo.remainingTasks + " tasks.");
     for (int i = 0; i < request.getNumTasks(); ++i) {
       LOG.debug("Creating reservation " + i + " for request " + request.getRequestId());
       TaskReservation reservation = new TaskReservation(request, appBackendAddress);

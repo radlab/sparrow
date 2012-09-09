@@ -174,10 +174,6 @@ class Request:
         for rtt_info in self.__enqueue_reservation_rtts.values():
             if rtt_info[0] != INVALID_TIME and rtt_info[1] != INVALID_TIME:
                 rtts.append(rtt_info[1] - rtt_info[0])
-                print rtts[-1]
-            else:
-                print "not enough info"
-                print rtt_info[0] == INVALID_TIME, rtt_info[1] == INVALID_TIME
         return rtts
 
     def add_scheduler_get_task(self, time):

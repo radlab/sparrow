@@ -74,7 +74,7 @@ public class TaskLauncherService {
           return;
         }
         try {
-          LOG.debug("Attempting to get task from node monitor at " +
+          LOG.debug("Attempting to get task from scheduler at " +
                     nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
           AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
                                                    nodeMonitorInternalAddress.getHost()));
