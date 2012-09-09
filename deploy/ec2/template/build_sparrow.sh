@@ -47,9 +47,9 @@ if [ ! -e "/tmp/spark/core/target/scala-2.9.1" ]; then
 fi
 
 cd /tmp/shark
-#if [ ! -e "/tmp/shark/bin/shark" ]; then
+if [ ! -e "/tmp/shark/target/scala-2.9.1/classes/shark/SharkEnv.class" ]; then
 sbt/sbt products
-#fi
+fi
 # This jar could be in sparrow spark branch instead.
 cp /tmp/spark/core/lib/sparrow* /tmp/shark/lib
 
