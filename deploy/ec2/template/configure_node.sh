@@ -39,3 +39,6 @@ cd -
 cd /opt/tpch_hive/
 bash -c "sed -i 's/\/tpch/\/`hostname -i`/g' *.hive"
 cd -
+
+# Reference correct directory in hive queries
+bash -c "sed -i 's/HOST_IP/`hostname -i`/g' ~/tpch/*"
