@@ -62,6 +62,8 @@ def parse_args(force_action=True):
       help="Which TPC-H query to run.")
   parser.add_option("-r", "--parallelism", type="int", default=8,
       help="Level of parallelism for dummy queries.")
+  parser.add_option("-u", "--num_partitions", type="int", default=2,
+      help="Number of partitions for shark tables.")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1 and force_action:
@@ -264,7 +266,8 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained,
     "warmup_job_arrival_rate_s": "%s" % warmup_job_arrival_s,
     "warmup_s": "%s" % warmup_s,
-    "post_warmup_s": "%s" % post_warmup_s
+    "post_warmup_s": "%s" % post_warmup_s,
+    "num_partitions": "%s" % opts.num_partitions
   }
   for dirpath, dirnames, filenames in os.walk("template"):
     rel_dir_path=dirpath.replace("template", "").replace(os.sep, "")
