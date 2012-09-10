@@ -12,7 +12,7 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-tpch-tables")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-9778cefe",
@@ -428,6 +428,11 @@ def stop_proto(frontends, backends, opts):
   ssh_all([be.public_dns_name for be in backends], opts,
          "/root/stop_proto_backend.sh")
 
+def create_tpch_tables(frontends, backends, opts):
+  print "Creating tpch tables..."
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "/root/create_tpch_tables.sh")
+
 # Collect logs from all machines
 def collect_logs(frontends, backends, opts):
   print "Zipping logs..."
@@ -546,6 +551,8 @@ def main():
     login_frontend(frontends, backends, opts)
   elif action == "login-be":
     login_backend(frontends, backends, opts)
+  elif action == "create-tpch-tables":
+    create_tpch_tables(frontends, backends, opts)
   else:
     print "Unknown action: %s" % action
     sys.exit(1)
