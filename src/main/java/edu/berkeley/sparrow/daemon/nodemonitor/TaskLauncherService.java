@@ -178,7 +178,8 @@ public class TaskLauncherService {
     public void onError(Exception exception) {
       // Do not return error client to pool.
       exception.printStackTrace();
-      LOG.error("Error executing getTask() RPC:" + exception.getStackTrace().toString() + exception.toString());
+      LOG.error("Error executing getTask() RPC:" + exception.getStackTrace().toString() +
+                exception.toString());
     }
   }
 

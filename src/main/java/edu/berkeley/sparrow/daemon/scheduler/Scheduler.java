@@ -136,14 +136,14 @@ public class Scheduler {
       try {
         nodeMonitorClientPool.returnClient(nodeMonitorAddress, (AsyncClient) response.getClient());
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error("Error returning client to node monitor client pool: " + e);
       }
       return;
     }
 
     public void onError(Exception exception) {
       // Do not return error client to pool
-      LOG.error(exception);
+      LOG.error("Error executing enqueueTaskReservation RPC:" + exception);
     }
   }
 
@@ -212,7 +212,7 @@ public class Scheduler {
               }
             }
           } catch (UnknownHostException e) {
-            LOG.error(e);
+            LOG.error("Unknown host exception: " + e);
           }
         }
       }
@@ -238,7 +238,7 @@ public class Scheduler {
         client.enqueueTaskReservations(
             entry.getValue(), new EnqueueTaskReservationsCallback(requestId, entry.getKey()));
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error("Error enqueuing task on node " + entry.getKey().toString() + ":" + e);
       }
     }
 
@@ -309,7 +309,7 @@ public class Scheduler {
 
     public void onError(Exception exception) {
       // Do not return error client to pool
-      LOG.error(exception);
+      LOG.error("Error sending frontend message callback: " + exception);
     }
   }
 
