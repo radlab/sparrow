@@ -5,12 +5,12 @@ ulimit -n 16384
 APPCHK=$(ps aux | grep -v grep |grep -v start| grep java | grep -c spark)
 
 ip=`ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
-log="/disk1/sparrow/sharkk_$ip.log"
+log="/disk1/sparrow/shark_$ip.log"
 
 public_hostname=`ec2metadata  | grep public-hostname  | cut -d " " -f 2`
 fe_num=`cat sparrow.conf  |grep frontend | tr "," "\n" | grep -n $public_hostname | cut -d ":" -f 1`
 
-echo ./shark/bin/shark-withinfo -f tpch/workloads/tpch_workload_$fe_num
+./shark/bin/shark-withinfo -f tpch/tpch_workload_$fe_num > $log 2>&1 &
 
 PID=$!
 echo "Logging to $log"

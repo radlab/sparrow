@@ -272,7 +272,9 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
   }
 
   for dirpath, dirnames, filenames in os.walk("template"):
-    rel_dir_path=dirpath.replace("template", "").replace(os.sep, "")
+    rel_dir_path=dirpath.replace("template", "")
+    if rel_dir_path.startswith(os.sep):
+      rel_dir_path = rel_dir_path[1:]
     if rel_dir_path != "":
       os.mkdir(os.path.join(tmp_dir, rel_dir_path))
     for filename in filenames:
