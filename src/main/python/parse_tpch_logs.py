@@ -2,6 +2,7 @@ import sys
 import re
 import time
 
+NUM_TO_EXCLUDE = 25 # For warmup
 id_counter = 0
 
 def match_or_die(regex, line):
@@ -21,6 +22,7 @@ class Trial:
     self.phases[phase_id] = phase
   def get_phase(self, phase_id):
     return self.phases[phase_id]
+  def get_phases(self): return self.phases.keys()
   def get_response_time(self):
     return sum([p.get_response_time() for p in self.phases.values()])
   def __str__(self):
@@ -97,19 +99,39 @@ for f in sys.argv[1:]:
       job_time = float(match.group(1)) * 1000 # convert to ms
   trials_per_file[f] = trials
 
-for (f, trials) in trials_per_file.items():
-  times_per_query = {}
+def add_to_dict_of_lists(key, value, d):
+  if key not in d.keys():
+    d[key] = []
+  d[key].append(value)
+
+for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
+  times_per_query = {} # key = query_id
+  times_per_phase = {} # key = (query_id, phase_id)
   print "%s:" % f
   for trial in trials.values():
-    if trial.query_id not in times_per_query:
-      times_per_query[trial.query_id] = []
-    times_per_query[trial.query_id].append(trial.get_response_time())
-    print "%s %s %s" % (trial.trial_id, trial.query_id, trial.get_response_time())
+    add_to_dict_of_lists(
+      trial.query_id, trial.get_response_time(), times_per_query)
+    for phase_id in trial.get_phases():
+      phase_key = (trial.query_id, phase_id)
+      add_to_dict_of_lists(phase_key, 
+        trial.get_phase(phase_id).get_response_time(), times_per_phase)
 
-  print "q_num\tavg_ms\tmin_ms\tmax_ms\tn"
+  print "q_num\tmed_ms\tmin_ms\tmax_ms\tn"
   for (query, values) in times_per_query.items():
-    print values
+    values = values[NUM_TO_EXCLUDE:] # PRUNE WARMP-UP
+    values.sort()
     print "%s\t%s\t%s\t%s\t%s" % (
-     query, float(sum(values))/len(values), 
+     query, values[len(values)/2], 
      min(values), max(values), len(values)) 
-   
+    phases = filter(lambda k: k[0][0] == query, times_per_phase.items())
+    phases.sort(key = lambda k: k[0][1])
+
+    for (phase_id, values) in phases:
+      values = values[NUM_TO_EXCLUDE:]
+      values.sort()
+      print "%s.%s\t%s\t%s\t%s\t%s" % (phase_id[0], phase_id[1], 
+      values[len(values)/2],
+      min(values), max(values), len(values))
+ 
+  print "Total time: %s s" % (
+    sum([x.get_response_time() for x in trials.values()]) / 1000)
