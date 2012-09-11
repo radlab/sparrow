@@ -27,4 +27,4 @@ There are a variety of deployment related files in `sparrow/deploy/ec2`. These m
 
 Research
 -------------------------
-Sparrow is a research project within the [U.C. Berkeley AMPLab](http://amplab.cs.berkeley.edu/). The Sparrow team, listed roughly order of height, consists of Kay Ousterhout, Patrick Wendell, Matei Zaharia, and Ion Stoica. See our [position paper on Sparrow](http://www.eecs.berkeley.edu/~pwendell/sparrow/sparrow_current.pdf) (currently under submission) for more information.
+Sparrow is a research project within the [U.C. Berkeley AMPLab](http://amplab.cs.berkeley.edu/). The Sparrow team, listed roughly order of height, consists of Kay Ousterhout, Patrick Wendell, Matei Zaharia, and Ion Stoica. Plese contact us for more information.
