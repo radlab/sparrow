@@ -16,6 +16,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -41,15 +50,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -66,6 +66,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -91,15 +100,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -116,6 +116,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -141,15 +150,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -166,6 +166,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -191,15 +200,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -216,6 +216,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -241,15 +250,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -266,6 +266,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -291,15 +300,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -316,6 +316,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -341,15 +350,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -366,6 +366,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -391,15 +400,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -416,6 +416,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -441,15 +450,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -466,6 +466,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -491,15 +500,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -516,6 +516,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -541,15 +550,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -566,6 +566,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -591,15 +600,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -616,6 +616,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -641,15 +650,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -666,6 +666,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -691,15 +700,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -716,6 +716,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -741,15 +750,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -766,6 +766,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -791,15 +800,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -816,6 +816,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -841,15 +850,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -866,6 +866,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -891,15 +900,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -916,6 +916,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -941,15 +950,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -966,6 +966,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -991,15 +1000,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1016,6 +1016,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1041,15 +1050,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1066,6 +1066,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1091,15 +1100,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1116,6 +1116,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1141,15 +1150,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1166,6 +1166,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1191,15 +1200,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1216,6 +1216,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1241,15 +1250,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1266,6 +1266,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1291,15 +1300,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1316,6 +1316,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1341,15 +1350,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1366,6 +1366,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1391,15 +1400,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1416,6 +1416,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1441,15 +1450,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1466,6 +1466,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1491,15 +1500,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1516,6 +1516,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1541,15 +1550,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1566,6 +1566,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1591,15 +1600,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1616,6 +1616,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1641,15 +1650,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1666,6 +1666,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1691,15 +1700,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1716,6 +1716,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1741,15 +1750,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1766,6 +1766,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1791,15 +1800,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1816,6 +1816,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1841,15 +1850,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1866,6 +1866,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1891,15 +1900,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1916,6 +1916,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1941,15 +1950,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1966,6 +1966,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -1991,15 +2000,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2016,6 +2016,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2041,15 +2050,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2066,6 +2066,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2091,15 +2100,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2116,6 +2116,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2141,15 +2150,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2166,6 +2166,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2191,15 +2200,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2216,6 +2216,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2241,15 +2250,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2266,6 +2266,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2291,15 +2300,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2316,6 +2316,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2341,15 +2350,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2366,6 +2366,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2391,15 +2400,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2416,6 +2416,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2441,15 +2450,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2466,6 +2466,15 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --12--
   l_shipmode,
   sum(case
@@ -2491,15 +2500,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
