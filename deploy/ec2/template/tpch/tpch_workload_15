@@ -24,7 +24,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -81,7 +81,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -149,7 +149,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -190,7 +190,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -224,516 +224,7 @@ end
 end
   ) as low_line_count
 
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -783,7 +274,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -791,413 +282,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --3-- 
   l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
@@ -1249,7 +333,73 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1281,7 +431,50 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1314,6 +507,56 @@ select --4--
     o_orderdate < '1993-10-01' and
     l_commitdate < l_receiptdate) a
   group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --6--
 sum(l_extendedprice*l_discount) as revenue
 from 
@@ -1340,7 +583,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1357,6 +600,113 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
 select --3-- 
   l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
@@ -1383,7 +733,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1407,6 +757,465 @@ select --4--
     o_orderdate < '1993-10-01' and
     l_commitdate < l_receiptdate) a
   group by o_orderpriority;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1440,7 +1249,39 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1499,7 +1340,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1507,15 +1348,15 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
   denorm_cached
 where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
 select --3-- 
   l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
@@ -1542,248 +1383,7 @@ end
 end
   ) as low_line_count
 
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1807,49 +1407,6 @@ select --4--
     o_orderdate < '1993-10-01' and
     l_commitdate < l_receiptdate) a
   group by o_orderpriority;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -1857,56 +1414,6 @@ select --4--
     o_orderdate < '1993-10-01' and
     l_commitdate < l_receiptdate) a
   group by o_orderpriority;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --3-- 
   l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
@@ -1933,7 +1440,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -1941,13 +1448,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
 select --6--
 sum(l_extendedprice*l_discount) as revenue
 from 
@@ -1999,7 +1499,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -2007,13 +1507,6 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
 select --6--
 sum(l_extendedprice*l_discount) as revenue
 from 
@@ -2023,47 +1516,6 @@ where
   and l_shipdate < '1995-01-01'
   and l_discount >= 0.05 and l_discount <= 0.07
   and l_quantity < 24;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
 select --3-- 
   l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
@@ -2090,91 +1542,7 @@ end
 end
   ) as low_line_count
 
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -2189,74 +1557,6 @@ select --4--
     o_orderdate < '1993-10-01' and
     l_commitdate < l_receiptdate) a
   group by o_orderpriority;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
-select --3-- 
-  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
-from 
-  denorm_cached
-where 
-  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
-group by l_orderkey, o_orderdate, o_shippriority 
-order by revenue desc, o_orderdate 
-limit 10;
-select --6--
-sum(l_extendedprice*l_discount) as revenue
-from 
-  denorm_cached
-where 
-  l_shipdate >= '1994-01-01'
-  and l_shipdate < '1995-01-01'
-  and l_discount >= 0.05 and l_discount <= 0.07
-  and l_quantity < 24;
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where
@@ -2299,7 +1599,32 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -2316,6 +1641,13 @@ where
 group by l_orderkey, o_orderdate, o_shippriority 
 order by revenue desc, o_orderdate 
 limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
 select --6--
 sum(l_extendedprice*l_discount) as revenue
 from 
@@ -2325,13 +1657,6 @@ where
   and l_shipdate < '1995-01-01'
   and l_discount >= 0.05 and l_discount <= 0.07
   and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
 select --12--
   l_shipmode,
   sum(case
@@ -2349,7 +1674,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -2357,6 +1682,13 @@ where
   l_commitdate < l_receiptdate
 group by l_shipmode
 order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
 select --6--
 sum(l_extendedprice*l_discount) as revenue
 from 
@@ -2366,38 +1698,6 @@ where
   and l_shipdate < '1995-01-01'
   and l_discount >= 0.05 and l_discount <= 0.07
   and l_quantity < 24;
-select --4--
-  count(1), o_orderpriority from 
-  (select distinct l_orderkey, o_orderpriority from denorm_cached where
-    o_orderdate >= '1993-07-01' and 
-    o_orderdate < '1993-10-01' and
-    l_commitdate < l_receiptdate) a
-  group by o_orderpriority;
-select --12--
-  l_shipmode,
-  sum(case
-    when o_orderpriority ='1-URGENT'
-         or o_orderpriority ='2-HIGH'
-    then 1
-    else 0
-end
-  ) as high_line_count,
-  sum(case
-    when o_orderpriority <> '1-URGENT'
-         and o_orderpriority <> '2-HIGH'
-    then 1
-    else 0
-end
-  ) as low_line_count
-
-from denorm
-where 
-  l_receiptdate < '1995-01-01' and
-  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
-  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
-  l_commitdate < l_receiptdate
-group by l_shipmode
-order by l_shipmode;
 select --3-- 
   l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
 from 
@@ -2449,7 +1749,707 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
+where 
+  l_receiptdate < '1995-01-01' and
+  (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
+  l_shipdate < l_commitdate and l_receiptdate >= '1994-01-01' and
+  l_commitdate < l_receiptdate
+group by l_shipmode
+order by l_shipmode;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --3-- 
+  l_orderkey, sum(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority 
+from 
+  denorm_cached
+where 
+  o_orderdate < '1995-03-15' and l_shipdate > '1995-03-15' and c_mktsegment = 'BUILDING'
+group by l_orderkey, o_orderdate, o_shippriority 
+order by revenue desc, o_orderdate 
+limit 10;
+select --6--
+sum(l_extendedprice*l_discount) as revenue
+from 
+  denorm_cached
+where 
+  l_shipdate >= '1994-01-01'
+  and l_shipdate < '1995-01-01'
+  and l_discount >= 0.05 and l_discount <= 0.07
+  and l_quantity < 24;
+select --4--
+  count(1), o_orderpriority from 
+  (select distinct l_orderkey, o_orderpriority from denorm_cached where
+    o_orderdate >= '1993-07-01' and 
+    o_orderdate < '1993-10-01' and
+    l_commitdate < l_receiptdate) a
+  group by o_orderpriority;
+select --12--
+  l_shipmode,
+  sum(case
+    when o_orderpriority ='1-URGENT'
+         or o_orderpriority ='2-HIGH'
+    then 1
+    else 0
+end
+  ) as high_line_count,
+  sum(case
+    when o_orderpriority <> '1-URGENT'
+         and o_orderpriority <> '2-HIGH'
+    then 1
+    else 0
+end
+  ) as low_line_count
+
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
@@ -2481,7 +2481,7 @@ end
 end
   ) as low_line_count
 
-from denorm
+from denorm_cached
 where 
   l_receiptdate < '1995-01-01' and
   (l_shipmode = 'MAIL' or l_shipmode = 'SHIP') and
