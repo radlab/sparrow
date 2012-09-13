@@ -51,6 +51,9 @@ public class Scheduler {
   /** Used to uniquely identify requests arriving at this scheduler. */
   private AtomicInteger counter = new AtomicInteger(0);
 
+  /** How many times the special case has been triggered. */
+  private AtomicInteger specialCaseCounter = new AtomicInteger(0);
+
   private THostPort address;
 
   /** Socket addresses for each frontend. */
@@ -171,71 +174,48 @@ public class Scheduler {
   /** Handles special case. */
   private void handleSpecialCase(TSchedulingRequest req) throws TException {
     LOG.info("Handling special case request");
+    int specialCaseIndex = specialCaseCounter.incrementAndGet();
+    if (specialCaseIndex < 1 || specialCaseIndex > 3) {
+      LOG.error("Invalid special case index: " + specialCaseIndex);
+    }
 
     // No tasks have preferences and we have the magic number of tasks
-    TSchedulingRequest req1 = new TSchedulingRequest();
-    req1.user = req.user;
-    req1.app = req.app;
-    req1.probeRatio = req.probeRatio;
-    TSchedulingRequest req2 = new TSchedulingRequest();
-    req2.user = req.user;
-    req2.app = req.app;
-    req2.probeRatio = req.probeRatio;
-    TSchedulingRequest req3 = new TSchedulingRequest();
-    req3.user = req.user;
-    req3.app = req.app;
-    req3.probeRatio = req.probeRatio;
+    TSchedulingRequest newReq = new TSchedulingRequest();
+    newReq.user = req.user;
+    newReq.app = req.app;
+    newReq.probeRatio = req.probeRatio;
 
+    List<InetSocketAddress> allBackends = Lists.newArrayList();
     List<InetSocketAddress> backends = Lists.newArrayList();
+    // We assume the below always returns the same order (invalid assumption?)
     for (InetSocketAddress backend : state.getBackends(req.app).keySet()) {
-      backends.add(backend);
+      allBackends.add(backend);
+    }
+
+    // Each time this is called, we restrict to 1/3 of the nodes in the cluster
+    for (int i = 0; i < allBackends.size(); i++) {
+      if (i % 3 == specialCaseIndex - 1) {
+        backends.add(allBackends.get(i));
+      }
     }
     Collections.shuffle(backends);
 
-    if (!(backends.size() >= (specialTaskSetSize * 3))) {
+    if (!(allBackends.size() >= (specialTaskSetSize * 3))) {
       LOG.error("Special case expects at least three times as many machines as tasks.");
       return;
     }
     LOG.info(backends);
-    for (int i = 0; i < backends.size(); i++) {
-      int taskIndex = i / 3;
-      if (taskIndex > req.getTasksSize() - 1) { break; }
-
-      TTaskSpec task = req.getTasks().get(i / 3);
-      // Create three copies of this task each on a different backend
-      TTaskSpec task1 = new TTaskSpec();
-      task1.estimatedResources = task.estimatedResources;
-      task1.message = task.message;
-      task1.taskId = task.taskId;
-      task1.preference = new TPlacementPreference();
-      LOG.info("Adding: " + i);
-      task1.preference.addToNodes(backends.get(i).getHostName());
-      req1.addToTasks(task1);
-      i++;
-
-      TTaskSpec task2 = new TTaskSpec();
-      task2.estimatedResources = task.estimatedResources;
-      task2.message = task.message;
-      task2.taskId = task.taskId;
-      task2.preference = new TPlacementPreference();
-      LOG.info("Adding: " + i);
-      task2.preference.addToNodes(backends.get(i).getHostName());
-      req2.addToTasks(task2);
-      i++;
-
-      TTaskSpec task3 = new TTaskSpec();
-      task3.estimatedResources = task.estimatedResources;
-      task3.message = task.message;
-      task3.taskId = task.taskId;
-      task3.preference = new TPlacementPreference();
-      LOG.info("Adding: " + i);
-      task3.preference.addToNodes(backends.get(i).getHostName());
-      req3.addToTasks(task3);
+    for (int i = 0; i < req.getTasksSize(); i++) {
+      TTaskSpec task = req.getTasks().get(i);
+      TTaskSpec newTask = new TTaskSpec();
+      newTask.estimatedResources = task.estimatedResources;
+      newTask.message = task.message;
+      newTask.taskId = task.taskId;
+      newTask.preference = new TPlacementPreference();
+      newTask.preference.addToNodes(allBackends.get(i).getHostName());
+      newReq.addToTasks(newTask);
     }
-    LOG.info("Three requests: " + req1 + req1 + req3);
-    submitJob(req1);
-    submitJob(req2);
-    submitJob(req3);
+    LOG.info("New request: " + newReq);
   }
 
   public void submitJob(TSchedulingRequest request) throws TException {
