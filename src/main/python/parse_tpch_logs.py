@@ -2,7 +2,7 @@ import sys
 import re
 import time
 
-NUM_TO_EXCLUDE = 25 # For warmup
+NUM_TO_EXCLUDE = 4 * 25
 id_counter = 0
 
 def match_or_die(regex, line):
@@ -38,6 +38,7 @@ class Phase:
     self.tasks = []
   def add_task(self, task):
     self.tasks.append(task)
+  def get_tasks(self): return self.tasks
   def get_response_time(self):
     return max([t.get_response_time() for t in self.tasks])
   def __str__(self):
@@ -53,10 +54,10 @@ class Task:
   def get_response_time(self):
     return self.wait_time + self.service_time
   def __repr__(self):
-    return "Task: wait %s, service %s" % (self.wait_time, self.service_time)
+    return "Task: response time  %s (%s/%s)" % (
+      self.get_response_time(), self.wait_time, self.service_time)
 
 trials_per_file = {}
-
 for f in sys.argv[1:]:
   curr_q = None
   curr_phase = 0 
@@ -75,7 +76,6 @@ for f in sys.argv[1:]:
       id_counter = id_counter + 1
       curr_trial = id_counter
       trials[curr_trial] = Trial(curr_trial, qnum)
-
 
     if curr_trial == "":
       continue
@@ -99,10 +99,28 @@ for f in sys.argv[1:]:
       job_time = float(match.group(1)) * 1000 # convert to ms
   trials_per_file[f] = trials
 
+
+### Output query summaries per frontend
 def add_to_dict_of_lists(key, value, d):
   if key not in d.keys():
     d[key] = []
   d[key].append(value)
+
+### PRUNE
+pruned_trials_per_file = {}
+for (f, trials) in trials_per_file.items():
+  pruned_trials_per_file[f] = {}
+  print "Excluding first %s of %s" % (NUM_TO_EXCLUDE, len(trials_per_file[f]))
+  keys = sorted(trials_per_file[f].keys())
+  keys = keys[NUM_TO_EXCLUDE:]
+  for k in keys:
+    pruned_trials_per_file[f][k] = trials_per_file[f][k]
+  
+trials_per_file = pruned_trials_per_file
+
+all_trials = []
+for (f, trials) in trials_per_file.items():
+  all_trials = all_trials + trials.values()
 
 for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
   times_per_query = {} # key = query_id
@@ -118,7 +136,6 @@ for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
 
   print "q_num\tmed_ms\tmin_ms\tmax_ms\tn"
   for (query, values) in times_per_query.items():
-    values = values[NUM_TO_EXCLUDE:] # PRUNE WARMP-UP
     values.sort()
     print "%s\t%s\t%s\t%s\t%s" % (
      query, values[len(values)/2], 
@@ -127,7 +144,6 @@ for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
     phases.sort(key = lambda k: k[0][1])
 
     for (phase_id, values) in phases:
-      values = values[NUM_TO_EXCLUDE:]
       values.sort()
       print "%s.%s\t%s\t%s\t%s\t%s" % (phase_id[0], phase_id[1], 
       values[len(values)/2],
@@ -135,3 +151,57 @@ for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
  
   print "Total time: %s s" % (
     sum([x.get_response_time() for x in trials.values()]) / 1000)
+
+
+### Print out statistics per task
+trials_per_query = {}
+for trial in all_trials:
+  add_to_dict_of_lists(trial.query_id, trial, trials_per_query)
+for (query, trials) in trials_per_query.items():
+  resp_times = [x.get_response_time() for x in trials]
+  resp_times.sort()
+  index_95 = int(.95 * len(resp_times))
+  index_50 = int(.5 * len(resp_times))
+  index_5 = int(.05 * len(resp_times))
+  print "%s\t%s\t%s\t%s" % (query, resp_times[index_50], 
+                        resp_times[index_5], 
+                        resp_times[index_95])
+
+### Create CDF's across all fe's/trials
+all_wait_times = []
+all_service_times = []
+all_response_times = []
+
+for trials in trials_per_file.values():
+  for trial in trials.values():
+#    if trial.query_id == '3' and trial.get_response_time() < 450 and trial.get_response_time() > 440:
+#      print trial
+    for phase in trial.get_phases():
+      for task in trial.get_phase(phase).get_tasks():
+        all_wait_times.append(task.wait_time)
+        all_service_times.append(task.service_time)
+        all_response_times.append(task.get_response_time())
+all_wait_times.sort()
+all_service_times.sort()
+all_response_times.sort()
+
+wait_file = open("tpch_wait_times.txt", 'w')
+for x in range(99):
+  fl = float(x) / 100
+  index = int(fl * len(all_wait_times))
+  wait_file.write("%s\t%s\n" % (fl, all_wait_times[index]))
+wait_file.close()
+
+service_file = open("tpch_service_times.txt", 'w')
+for x in range(99):
+  fl = float(x) / 100
+  index = int(fl * len(all_service_times))
+  service_file.write("%s\t%s\n" % (fl, all_service_times[index]))
+service_file.close()
+
+service_file = open("tpch_response_times.txt", 'w')
+for x in range(99):
+  fl = float(x) / 100
+  index = int(fl * len(all_response_times))
+  service_file.write("%s\t%s\n" % (fl, all_response_times[index]))
+service_file.close()

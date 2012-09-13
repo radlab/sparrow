@@ -212,10 +212,11 @@ public class Scheduler {
       newTask.message = task.message;
       newTask.taskId = task.taskId;
       newTask.preference = new TPlacementPreference();
-      newTask.preference.addToNodes(allBackends.get(i).getHostName());
+      newTask.preference.addToNodes(backends.get(i).getHostName());
       newReq.addToTasks(newTask);
     }
     LOG.info("New request: " + newReq);
+    submitJob(newReq);
   }
 
   public void submitJob(TSchedulingRequest request) throws TException {
