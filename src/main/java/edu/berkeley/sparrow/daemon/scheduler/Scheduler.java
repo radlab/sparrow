@@ -165,14 +165,14 @@ public class Scheduler {
     }
     for (TTaskSpec t: req.getTasks()) {
       if ((t.getPreference().getNodes() != null)  &&
-          (t.getPreference().getNodes().size() != 0)) {
+          (t.getPreference().getNodes().size() == 3)) {
         return false;
       }
     }
     return true;
   }
   /** Handles special case. */
-  private void handleSpecialCase(TSchedulingRequest req) throws TException {
+  private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
     LOG.info("Handling special case request");
     int specialCaseIndex = specialCaseCounter.incrementAndGet();
     if (specialCaseIndex < 1 || specialCaseIndex > 3) {
@@ -202,7 +202,7 @@ public class Scheduler {
 
     if (!(allBackends.size() >= (specialTaskSetSize * 3))) {
       LOG.error("Special case expects at least three times as many machines as tasks.");
-      return;
+      return null;
     }
     LOG.info(backends);
     for (int i = 0; i < req.getTasksSize(); i++) {
@@ -216,15 +216,20 @@ public class Scheduler {
       newReq.addToTasks(newTask);
     }
     LOG.info("New request: " + newReq);
-    submitJob(newReq);
+    return newReq;
   }
 
   public void submitJob(TSchedulingRequest request) throws TException {
     if (isSpecialCase(request)) {
-      handleSpecialCase(request);
-      return;
+      submitJobWithoutCheck(handleSpecialCase(request));
+    } else {
+      submitJobWithoutCheck(request);
     }
+  }
+
+  public void submitJobWithoutCheck(TSchedulingRequest request) throws TException {
     LOG.debug(Logging.functionCall(request));
+
     long start = System.currentTimeMillis();
 
     String requestId = getRequestId();
