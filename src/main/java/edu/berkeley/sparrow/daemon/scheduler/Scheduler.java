@@ -173,7 +173,7 @@ public class Scheduler {
   }
   /** Handles special case. */
   private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
-    LOG.info("Handling special case request");
+    LOG.info("Handling special case request: " + req);
     int specialCaseIndex = specialCaseCounter.incrementAndGet();
     if (specialCaseIndex < 1 || specialCaseIndex > 3) {
       LOG.error("Invalid special case index: " + specialCaseIndex);
