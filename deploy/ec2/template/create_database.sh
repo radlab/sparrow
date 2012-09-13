@@ -18,12 +18,14 @@ fi
 mkdir /disk1/tpch
 cp /opt/tpch/dbgen/* /disk1/tpch
 
+echo "Generating database"
+cd /disk1/tpch
+./dbgen -f -s $SCALE
+
+
 for fe in $FRONTENDS; do
-  echo "Generating database for $fe"
-  cd /disk1/tpch
-  ./dbgen -f -s $SCALE
+  echo "Copying database for $fe"
   fe=`dig +short $fe`
-  cp *.tbl $fe
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -rmr "hdfs://{{name_node}}:8020/$fe/*"
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -rmr "hdfs://{{name_node}}:8020/$fe/"
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -mkdir "hdfs://{{name_node}}:8020/$fe/"
