@@ -452,10 +452,11 @@ def collect_logs(frontends, backends, opts):
     "*.log.gz", opts.log_dir, len(frontends))
   rsync_from_all([be.public_dns_name for be in backends], opts,
     "*.log.gz", opts.log_dir, len(backends))
-  f = open(os.path.join(opts.log_dir, "params.txt"), 'w')
-  for (k, v) in opts.__dict__.items():
-    f.write("%s\t%s\n" % (k, v))
-  f.close()
+#  f = open(os.path.join(opts.log_dir, "params.txt"), 'w')
+#  for (k, v) in opts.__dict__.items():
+#    f.write("%s\t%s\n" % (k, v))
+#  f.close()
+
   ssh_all([fe.public_dns_name for fe in frontends], opts,
           "rm -f /tmp/*audit*.log.gz; mv /root/*log.gz /tmp;")
   ssh_all([be.public_dns_name for be in backends], opts,

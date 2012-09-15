@@ -16,7 +16,7 @@ INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 
 START_SEC = 200
-END_SEC = 300
+END_SEC = 250
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
@@ -425,7 +425,11 @@ class LogParser:
                     previous_task_completion_time = self.__requests[
                             previous_request_id].get_task_completion(previous_task_id)
                     if previous_task_completion_time != INVALID_TIME:
-                        get_task_times.append(task_launch_time - previous_task_completion_time)
+                        wait_delay = task_launch_time - previous_task_completion_time
+                        get_task_times.append(wait_delay)
+                        if (wait_delay) > 300:
+                            print previous_task_id
+                            print previous_request_id
         get_task_times.sort()
 
         # Output data file.
