@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.enqueueTaskReserv
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.THostPort;
+import edu.berkeley.sparrow.thrift.TPlacementPreference;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -49,6 +51,9 @@ public class Scheduler {
   /** Used to uniquely identify requests arriving at this scheduler. */
   private AtomicInteger counter = new AtomicInteger(0);
 
+  /** How many times the special case has been triggered. */
+  private AtomicInteger specialCaseCounter = new AtomicInteger(0);
+
   private THostPort address;
 
   /** Socket addresses for each frontend. */
@@ -58,7 +63,7 @@ public class Scheduler {
   /** Thrift client pool for communicating with node monitors */
   ThriftClientPool<InternalService.AsyncClient> nodeMonitorClientPool =
       new ThriftClientPool<InternalService.AsyncClient>(
-      new ThriftClientPool.InternalServiceMakerFactory());
+          new ThriftClientPool.InternalServiceMakerFactory());
 
   /** Thrift client pool for communicating with front ends. */
   private ThriftClientPool<FrontendService.AsyncClient> frontendClientPool =
@@ -71,6 +76,9 @@ public class Scheduler {
   /** Probe ratios to use if the probe ratio is not explicitly set in the request. */
   private double defaultProbeRatioUnconstrained;
   private double defaultProbeRatioConstrained;
+
+  /** A special case scheduling parameter for Spark RDD layouts. */
+  private int specialTaskSetSize;
 
   /**
    * For each request, the task placer that should be used to place the request's tasks. Indexed
@@ -97,9 +105,11 @@ public class Scheduler {
     state.initialize(conf);
 
     defaultProbeRatioUnconstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO,
-                                                    SparrowConf.DEFAULT_SAMPLE_RATIO);
+        SparrowConf.DEFAULT_SAMPLE_RATIO);
     defaultProbeRatioConstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO_CONSTRAINED,
-                                                  SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
+        SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
+    specialTaskSetSize = conf.getInt(SparrowConf.SPECIAL_TASK_SET_SIZE,
+        SparrowConf.DEFAULT_SPECIAL_TASK_SET_SIZE);
 
     requestTaskPlacers = Maps.newConcurrentMap();
   }
@@ -120,7 +130,7 @@ public class Scheduler {
    * null callbacks).
    */
   private class EnqueueTaskReservationsCallback
-      implements AsyncMethodCallback<enqueueTaskReservations_call> {
+  implements AsyncMethodCallback<enqueueTaskReservations_call> {
     String requestId;
     InetSocketAddress nodeMonitorAddress;
 
@@ -147,8 +157,79 @@ public class Scheduler {
     }
   }
 
+  /** This is a special case where we want to ensure a very specific scheduling allocation for
+   * Spark partitions.*/
+  private boolean isSpecialCase(TSchedulingRequest req) {
+    if (req.getTasks().size() != specialTaskSetSize) {
+      return false;
+    }
+    for (TTaskSpec t: req.getTasks()) {
+      if ((t.getPreference().getNodes() != null)  &&
+          (t.getPreference().getNodes().size() == 3)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /** Handles special case. */
+  private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
+    LOG.info("Handling special case request: " + req);
+    int specialCaseIndex = specialCaseCounter.incrementAndGet();
+    if (specialCaseIndex < 1 || specialCaseIndex > 3) {
+      LOG.error("Invalid special case index: " + specialCaseIndex);
+    }
+
+    // No tasks have preferences and we have the magic number of tasks
+    TSchedulingRequest newReq = new TSchedulingRequest();
+    newReq.user = req.user;
+    newReq.app = req.app;
+    newReq.probeRatio = req.probeRatio;
+
+    List<InetSocketAddress> allBackends = Lists.newArrayList();
+    List<InetSocketAddress> backends = Lists.newArrayList();
+    // We assume the below always returns the same order (invalid assumption?)
+    for (InetSocketAddress backend : state.getBackends(req.app).keySet()) {
+      allBackends.add(backend);
+    }
+
+    // Each time this is called, we restrict to 1/3 of the nodes in the cluster
+    for (int i = 0; i < allBackends.size(); i++) {
+      if (i % 3 == specialCaseIndex - 1) {
+        backends.add(allBackends.get(i));
+      }
+    }
+    Collections.shuffle(backends);
+
+    if (!(allBackends.size() >= (specialTaskSetSize * 3))) {
+      LOG.error("Special case expects at least three times as many machines as tasks.");
+      return null;
+    }
+    LOG.info(backends);
+    for (int i = 0; i < req.getTasksSize(); i++) {
+      TTaskSpec task = req.getTasks().get(i);
+      TTaskSpec newTask = new TTaskSpec();
+      newTask.estimatedResources = task.estimatedResources;
+      newTask.message = task.message;
+      newTask.taskId = task.taskId;
+      newTask.preference = new TPlacementPreference();
+      newTask.preference.addToNodes(backends.get(i).getHostName());
+      newReq.addToTasks(newTask);
+    }
+    LOG.info("New request: " + newReq);
+    return newReq;
+  }
+
   public void submitJob(TSchedulingRequest request) throws TException {
+    if (isSpecialCase(request)) {
+      submitJobWithoutCheck(handleSpecialCase(request));
+    } else {
+      submitJobWithoutCheck(request);
+    }
+  }
+
+  public void submitJobWithoutCheck(TSchedulingRequest request) throws TException {
     LOG.debug(Logging.functionCall(request));
+
     long start = System.currentTimeMillis();
 
     String requestId = getRequestId();
@@ -159,8 +240,8 @@ public class Scheduler {
     // also be useful when we support multiple daemons running on a single
     // machine.
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
-                                            request.getTasks().size(),
-                                            address.getHost(), address.getPort()));
+        request.getTasks().size(),
+        address.getHost(), address.getPort()));
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
@@ -190,44 +271,12 @@ public class Scheduler {
     requestTaskPlacers.put(requestId, taskPlacer);
 
     Map<InetSocketAddress, TEnqueueTaskReservationsRequest> enqueueTaskReservationsRequests;
-
-    if (request.isSetProbeRatio() && request.getProbeRatio() == 3 &&
-        tasks.get(0).preference.nodes != null &&
-        (tasks.get(0).preference.nodes.size() == 1 || tasks.get(0).preference.nodes.size() == 2)) {
-      // This is a hack to force Spark to cache data on multiple machines. If a Spark job runs
-      // on a machine where the input data is not already cached in memory, Spark will
-      // automatically caches the data on those machines. So, we run a few dummy jobs at the
-      // beginning of each experiment to force the data for each job to be cached in three places.
-      // To do this, we need to explicitly avoid the nodes where data is already cached.
-      List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
-      List<InetSocketAddress> toRemove = Lists.newArrayList();
-      for (TTaskSpec task : tasks) {
-        for (String node : task.preference.nodes) {
-          try {
-            InetAddress addr = InetAddress.getByName(node);
-            for (InetSocketAddress backend : subBackends) {
-              if (backend.getAddress().equals(addr)) {
-                toRemove.add(backend);
-                break;
-              }
-            }
-          } catch (UnknownHostException e) {
-            LOG.error("Unknown host exception: " + e);
-          }
-        }
-      }
-     subBackends.removeAll(toRemove);
-
-     enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
-        request, requestId, subBackends, address);
-    } else {
-      enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
-          request, requestId, backends, address);
-    }
+    enqueueTaskReservationsRequests = taskPlacer.getEnqueueTaskReservationsRequests(
+        request, requestId, backends, address);
 
     // Request to enqueue a task at each of the selected nodes.
     for (Entry<InetSocketAddress, TEnqueueTaskReservationsRequest> entry :
-         enqueueTaskReservationsRequests.entrySet())  {
+      enqueueTaskReservationsRequests.entrySet())  {
       try {
         InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
         LOG.debug("Launching enqueueTask for request " + requestId + "on node: " + entry.getKey());
@@ -252,7 +301,7 @@ public class Scheduler {
     LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
-                "pending reservations");
+          "pending reservations");
       return Lists.newArrayList();
     }
     TaskPlacer taskPlacer = requestTaskPlacers.get(requestId);
@@ -263,8 +312,8 @@ public class Scheduler {
       return Lists.newArrayList();
     } else if (taskLaunchSpecs.size() == 1) {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_assigned_task", requestId,
-                                              taskLaunchSpecs.get(0).taskId,
-                                              nodeMonitorAddress.getHost()));
+          taskLaunchSpecs.get(0).taskId,
+          nodeMonitorAddress.getHost()));
     } else {
       AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId));
     }
@@ -294,7 +343,7 @@ public class Scheduler {
   }
 
   private class sendFrontendMessageCallback implements
-      AsyncMethodCallback<frontendMessage_call> {
+  AsyncMethodCallback<frontendMessage_call> {
     private InetSocketAddress frontendSocket;
     private FrontendService.AsyncClient client;
     public sendFrontendMessageCallback(InetSocketAddress socket, FrontendService.AsyncClient client) {

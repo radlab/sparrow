@@ -262,6 +262,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
 
   @Override
   public synchronized List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
+    numOutstandingReservations--;
     if (!unlaunchedConstrainedTasks.containsKey(nodeMonitorAddress)) {
       List<TTaskLaunchSpec> unconstrainedTasks = getUnconstrainedTasks(nodeMonitorAddress);
 
@@ -300,7 +301,6 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       this.launchedConstrainedTasks.add(taskSpec);
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
           ": Assigning task.");
-      numOutstandingReservations--;
       return Lists.newArrayList(taskSpec);
     } else {
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
