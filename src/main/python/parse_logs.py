@@ -16,7 +16,7 @@ INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 
 START_SEC = 200
-END_SEC = 300
+END_SEC = 250
 
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
