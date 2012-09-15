@@ -15,36 +15,23 @@ def main(argv):
 
   events = []
   events_per_node = {}
-  RUNNABLE = "runnable"
+  RUNNING = "node_monitor_task_launch"
   START_INT = 1
-  SUBMITTED = "task_submit"
   COMPLETED = "task_completed"
   END_INT = -1
 
   task_to_node = {}
 
   for filename in log_files:
+    print filename
     for line in open(filename):
-      items = line[:-1].split("\t")
+      items = line.strip().split("\t")
       if len(items) < 2:
         continue
       time = int(items[1]) 
-
-      if SUBMITTED in items[2]:
-        parts = items[2].split(":")
-        node = parts[1]
-        task = parts[2]
-        task_to_node[task] = node
-        arr = events_per_node.get(node, [])
-        arr.append((time, START_INT))
-        events_per_node[node] = arr
-
-      if RUNNABLE in items[2]:
+      
+      if RUNNING in items[2]:
         events.append((time, START_INT))
-        task = items[2].split(":")[2]
-        node = task_to_node[task]
-        events_per_node[node].append((time, END_INT))
-
         
       if COMPLETED in items[2]:
         events.append((time, END_INT))
@@ -75,29 +62,13 @@ def main(argv):
     out_file.write("%s\t%s\n" % (time_s, count))
   out_file.close()
 
-
-  for (node, events) in events_per_node.items():
-    out_file = open("utilization_vs_time_%s.txt" % node, 'w')
-    count = 0
-    init_time = events[0][0]
-    for event in events:
-      count = count + event[1]
-      #if count > 90:
-       # print "Super long queue: " + node
-      out_file.write("%s\t%s\n" % (float(event[0] - init_time) / 1000, count))
-    out_file.close()
-
   graph_file = open("utilization_vs_time.gp", 'w')
   graph_file.write("set terminal postscript\n")
   graph_file.write("set output 'utilization_vs_time.ps'\n")
   graph_file.write("set ylabel 'Utilization'\n")
   graph_file.write("set xlabel 'Time (s)'\n")
   graph_file.write("plot 'utilization_vs_time.txt' using 1:2 with lines lw 3 lc 1 notitle")
-  for node in events_per_node.keys():
-    graph_file.write(",\\\n'utilization_vs_time_%s.txt' using 1:2 with lines lw 1 notitle" % (node))
-  graph_file.close()
-  subprocess.check_call("gnuplot utilization_vs_time.gp", shell=True, stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE)
+
   print "Average utilization: %s" % (total_utilization / total_time)
   print "Tasks per second: %s" % (total_starts / (total_time / 1000))
   print "Init time: %s" % init_time
