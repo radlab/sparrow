@@ -167,6 +167,7 @@ class Request:
     def add_subsequent_task_launch(self, task_id):
         task = self.__get_task(task_id)
         task.subsequent_launches += 1
+        assert not task.subsequent_task_launched
         task.subsequent_task_launched = True
 
     def get_subsequent_task_launches(self):
@@ -302,6 +303,9 @@ class Request:
                 per_node_service_times[task.node_monitor_address] = []
             per_node_service_times[task.node_monitor_address].append(task.service_time())
 
+    def optimal_response_time(self):
+        return max([t.service_time() for t in self.__tasks.values()])
+
     def response_time(self):
         """ Returns the time from when the job arrived to when it completed.
 
@@ -434,8 +438,9 @@ class LogParser:
                 request.add_node_monitor_task_launch(audit_event_params[2], audit_event_params[3],
                                                      audit_event_params[4], audit_event_params[5],
                                                      time)
-                previous_request = self.__get_request(audit_event_params[4])
-                previous_request.add_subsequent_task_launch(audit_event_params[5])
+                if audit_event_params[4]:
+                  previous_request = self.__get_request(audit_event_params[4])
+                  previous_request.add_subsequent_task_launch(audit_event_params[5])
             elif audit_event_params[0] == "task_completed":
                 request = self.__get_request(audit_event_params[1])
                 request.add_task_completion(audit_event_params[2], time)
@@ -576,6 +581,8 @@ class LogParser:
                            data_filename)
 
     def output_results(self, output_directory, aggregate_results_filename):
+        # Overhead vs best possible response time of a req, given its service times
+        overheads = []
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
         response_times = []
@@ -621,6 +628,7 @@ class LogParser:
             start_and_response_times.append((request.arrival_time(), request.response_time()))
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
+            overheads.append(response_time - request.optimal_response_time())
             response_times.append(response_time)
             get_task_task_counts.extend(request.get_subsequent_task_launches())
 
@@ -639,7 +647,8 @@ class LogParser:
         results_filename = "results.data"
         file = open(os.path.join(output_directory, results_filename), "w")
         file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRtt(getTask)\t"
-                   "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\tGetTaskTaskCount\n")
+                   "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\t"
+                   "GetTaskTaskCount\tOverhead\n")
         network_rtts = []
         network_rtts.extend(enqueue_reservation_rtts)
         network_rtts.extend(get_task_rtts)
@@ -651,11 +660,12 @@ class LogParser:
         service_times.sort()
         queue_times.sort()
         get_task_task_counts.sort()
+        overheads.sort()
 
         NUM_DATA_POINTS = 100
         for i in range(NUM_DATA_POINTS):
             i = float(i) / NUM_DATA_POINTS
-            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
                 get_percentile(enqueue_reservation_rtts, i),
                 get_percentile(get_task_rtts, i),
@@ -663,7 +673,8 @@ class LogParser:
                 get_percentile(get_new_task_times, i),
                 get_percentile(service_times, i),
                 get_percentile(queue_times, i),
-                get_percentile(get_task_task_counts, i)))
+                get_percentile(get_task_task_counts, i),
+                get_percentile(overheads, i)))
         file.close()
 
         # Output summary CDFs.
@@ -681,6 +692,8 @@ class LogParser:
         gnuplot_file.write("'%s' using 6:1 lw 4 with l title 'Get New Task Time',\\\n" %
                            results_filename)
         gnuplot_file.write("'%s' using 7:1 lw 4 with l title 'Service Time',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 10:1 lw 4 with l title 'Overhead vs Optimal',\\\n" %
                            results_filename)
         gnuplot_file.write("'%s' using 8:1 lw 4 with l title 'Queue Time'\n" %
                            results_filename)
