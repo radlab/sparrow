@@ -50,6 +50,12 @@ class Task:
     def __init__(self, id):
         self.__logger = logging.getLogger("Task")
 
+        # The number of tasks that the node monitor attempted to launch right after this one.
+        self.subsequent_launches = 0
+
+        # Whether a task was launched from the queue right after this one completed.
+        self.subsequent_task_launched = False
+
         # IP address of the node monitor where this task was launched.
         self.node_monitor_address = ""
 
@@ -137,11 +143,13 @@ class Request:
         self.__num_tasks = 0
         self.__arrival_time = INVALID_TIME
         self.__tasks = {}
+
         # Address of the scheduler that received the request (and placed it).
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
 
         # Mapping of node monitor addresses to when getTask() was called from that node monitor.
+        # TODO: this won't work correctly when multiple reservations are sent to one node monitor.
         self.__node_monitor_get_task_times = {}
 
         # List of times when reservations were replied to (includes reservations that were not
@@ -151,6 +159,23 @@ class Request:
         # the request to enqueue a task reservation was launched, and the second of which is the
         # time when the request completed.
         self.__enqueue_reservation_rtts = {}
+
+    def add_subsequent_task_launch_failure(self, task_id):
+        task = self.__get_task(task_id)
+        task.subsequent_launches += 1
+
+    def add_subsequent_task_launch(self, task_id):
+        task = self.__get_task(task_id)
+        task.subsequent_launches += 1
+        task.subsequent_task_launched = True
+
+    def get_subsequent_task_launches(self):
+        subsequent_tasks_launched = []
+        for task in self.__tasks.values():
+            if task.subsequent_task_launched:
+                subsequent_tasks_launched.append(task.subsequent_launches)
+            # TODO: otherwise, add 0.
+        return subsequent_tasks_launched
 
     def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
@@ -184,6 +209,14 @@ class Request:
         for rtt_info in self.__enqueue_reservation_rtts.values():
             if rtt_info[0] != INVALID_TIME and rtt_info[1] != INVALID_TIME:
                 rtts.append(rtt_info[1] - rtt_info[0])
+        return rtts
+
+    def get_get_task_rtts(self):
+        rtts = []
+        for task in self.__tasks.values():
+            if (task.node_monitor_get_task_time != INVALID_TIME and
+                task.node_monitor_launch_time != INVALID_TIME):
+                rtts.append(task.node_monitor_launch_time - task.node_monitor_get_task_time)
         return rtts
 
     def add_scheduler_get_task(self, time):
@@ -294,9 +327,6 @@ class Request:
                                     #(task_id, task.scheduler_launch_time,
                                     # task.node_monitor_launch_time))
             completion_time = max(completion_time, task_completion_time)
-
-        if (completion_time - self.__arrival_time) > 2000:
-          pass
         return completion_time - self.__arrival_time
 
     def complete_tasks(self):
@@ -404,12 +434,14 @@ class LogParser:
                 request.add_node_monitor_task_launch(audit_event_params[2], audit_event_params[3],
                                                      audit_event_params[4], audit_event_params[5],
                                                      time)
+                previous_request = self.__get_request(audit_event_params[4])
+                previous_request.add_subsequent_task_launch(audit_event_params[5])
             elif audit_event_params[0] == "task_completed":
                 request = self.__get_request(audit_event_params[1])
                 request.add_task_completion(audit_event_params[2], time)
             elif audit_event_params[0] == "node_monitor_get_task_no_task":
-                # TODO: deal with these. May want to track the number of failed attempts to launch
-                # a task.
+                previous_request = self.__get_request(audit_event_params[2])
+                previous_request.add_subsequent_task_launch_failure(audit_event_params[3])
                 pass
             elif audit_event_params[0] == "node_monitor_get_task":
                 request = self.__get_request(audit_event_params[1])
@@ -453,36 +485,6 @@ class LogParser:
                        (node_monitor_address, get_percentile(service_times, 0.5),
                         get_percentile(service_times, 0.9), get_percentile(service_times, 0.99)))
         file.close()
-
-    def output_get_task_times(self, output_directory):
-        get_task_times = []
-        for request in self.__requests.values():
-            previous_task_info = request.get_previous_tasks()
-            for (task_launch_time, previous_request_id, previous_task_id) in previous_task_info:
-                if previous_request_id in self.__requests:
-                    previous_task_completion_time = self.__requests[
-                            previous_request_id].get_task_completion(previous_task_id)
-                    if previous_task_completion_time != INVALID_TIME:
-                        get_task_times.append(task_launch_time - previous_task_completion_time)
-        get_task_times.sort()
-
-        # Output data file.
-        data_filename = "get_task_times.data"
-        file = open("%s/%s" % (output_directory, data_filename), "w")
-        NUM_DATA_POINTS = 100
-        for i in range(NUM_DATA_POINTS):
-            i = float(i) / NUM_DATA_POINTS
-            file.write("%f\t%d\n" % (i, get_percentile(get_task_times, i)))
-        file.close()
-
-        gnuplot_file = open("%s/get_task_times.gp" % output_directory, "w")
-        gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
-        gnuplot_file.write("set output '%s/get_task_times.ps'\n" % output_directory)
-        gnuplot_file.write("set xlabel 'Time to get next task (ms)'\n")
-        gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
-        gnuplot_file.write("set xrange [0:]\n")
-        gnuplot_file.write("set yrange [0:1]\n")
-        gnuplot_file.write("plot '%s' using 2:1 lw 4 with l" % data_filename)
 
     def output_tasks_launched_versus_time(self, output_directory):
         """ Creates a gnuplot file to plot tasks launched versus time for 10 requests in the
@@ -577,8 +579,12 @@ class LogParser:
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
         response_times = []
-        # Network/processing delay for each task.
-        network_rtts = []
+        # Network RTT for the enqueue reservation call.
+        enqueue_reservation_rtts = []
+        # Network RTT for get task call
+        get_task_rtts = []
+        # Time from when a task completed to when a new task was launched.
+        # TODO: add zeros here for all of the tasks that completed immediately.
         get_new_task_times = []
         service_times = []
         # Used to look at the effects of jitting.
@@ -587,6 +593,9 @@ class LogParser:
         start_and_response_times = []
         queue_times = []
         probe_times = []
+
+        get_task_task_counts = []
+
         start_time = self.__earliest_time + (START_SEC * 1000)
         end_time = self.__earliest_time + (END_SEC * 1000)
 
@@ -605,13 +614,15 @@ class LogParser:
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
-            network_rtts.extend(request.get_enqueue_reservation_rtts())
+            enqueue_reservation_rtts.extend(request.get_enqueue_reservation_rtts())
+            get_task_rtts.extend(request.get_get_task_rtts())
             service_times.extend(request.service_times())
             start_and_service_times.extend(request.start_and_service_times())
             start_and_response_times.append((request.arrival_time(), request.response_time()))
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
             response_times.append(response_time)
+            get_task_task_counts.extend(request.get_subsequent_task_launches())
 
             previous_task_info = request.get_previous_tasks()
             for (task_launch_time, previous_request_id, previous_task_id) in previous_task_info:
@@ -620,26 +631,39 @@ class LogParser:
                             previous_request_id].get_task_completion(previous_task_id)
                     if previous_task_completion_time != INVALID_TIME:
                         get_new_task_times.append(task_launch_time - previous_task_completion_time)
+                    else:
+                        # TODO: something smarter here.
+                        get_new_task_times.append(0)
 
         # Output data for response time and network delay CDFs.
         results_filename = "results.data"
         file = open(os.path.join(output_directory, results_filename), "w")
-        file.write("%ile\tResponseTime\tNetworkRTT\tGetNewTask\tServiceTime\tQueuedTime\n")
-        NUM_DATA_POINTS = 100
-        response_times.sort()
+        file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRtt(getTask)\t"
+                   "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\tGetTaskTaskCount\n")
+        network_rtts = []
+        network_rtts.extend(enqueue_reservation_rtts)
+        network_rtts.extend(get_task_rtts)
         network_rtts.sort()
+        response_times.sort()
+        enqueue_reservation_rtts.sort()
+        get_task_rtts.sort()
         get_new_task_times.sort()
         service_times.sort()
         queue_times.sort()
+        get_task_task_counts.sort()
 
+        NUM_DATA_POINTS = 100
         for i in range(NUM_DATA_POINTS):
             i = float(i) / NUM_DATA_POINTS
-            file.write("%f\t%d\t%d\t%d\t%d\t%d\n" % (i,
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
+                get_percentile(enqueue_reservation_rtts, i),
+                get_percentile(get_task_rtts, i),
                 get_percentile(network_rtts, i),
                 get_percentile(get_new_task_times, i),
                 get_percentile(service_times, i),
-                get_percentile(queue_times, i)))
+                get_percentile(queue_times, i),
+                get_percentile(get_task_task_counts, i)))
         file.close()
 
         # Output summary CDFs.
@@ -652,14 +676,42 @@ class LogParser:
         gnuplot_file.write("set yrange [0:1]\n")
         gnuplot_file.write("plot '%s' using 2:1 lw 4 with l title 'ResponseTime',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 3:1 lw 4 with l title 'Network RTT',\\\n" %
+        gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Network RTT',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'Get New Task Time',\\\n" %
+        gnuplot_file.write("'%s' using 6:1 lw 4 with l title 'Get New Task Time',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Service Time',\\\n" %
+        gnuplot_file.write("'%s' using 7:1 lw 4 with l title 'Service Time',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 6:1 lw 4 with l title 'Queue Time'\n" %
+        gnuplot_file.write("'%s' using 8:1 lw 4 with l title 'Queue Time'\n" %
                            results_filename)
+
+        # Output network RTTs.
+        rtt_gnuplot_file = open("%s/network_rtts.gp" % output_directory, "w")
+        rtt_gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        rtt_gnuplot_file.write("set output 'network_rtts.ps'\n")
+        rtt_gnuplot_file.write("set xlabel 'Milliseconds'\n")
+        rtt_gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
+        rtt_gnuplot_file.write("set xrange [0:]\n")
+        rtt_gnuplot_file.write("set yrange [0:1]\n")
+        rtt_gnuplot_file.write("plot '%s' using 3:1 lw 4 with l title 'Network RTT (all)',\\\n" %
+                               results_filename)
+        rtt_gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'EnqueueReservations() RTT',\\\n" %
+                               results_filename)
+        rtt_gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'GetTask() RTT'" %
+                               results_filename)
+        rtt_gnuplot_file.close()
+
+        # Output get task task counts.
+        get_task_gnuplot_file = open("%s/get_task_counts.gp" % output_directory, "w")
+        get_task_gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        get_task_gnuplot_file.write("set output 'get_task_counts.ps'\n")
+        get_task_gnuplot_file.write("set xlabel 'Task count'\n")
+        get_task_gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
+        get_task_gnuplot_file.write("set xrange [0:]\n")
+        get_task_gnuplot_file.write("set yrange [0:1]\n")
+        get_task_gnuplot_file.write("plot '%s' using 9:1 lw 4 with l title 'Get task task count'" %
+                                    results_filename)
+        get_task_gnuplot_file.close()
 
         # Output task run time as a function of start time.
         start_and_service_times.sort(key = lambda x: x[0])
@@ -785,9 +837,6 @@ def main(argv):
 
     print "Outputting tasks launched versus time"
     log_parser.output_tasks_launched_versus_time(output_dir)
-
-    print "Outputting get task times"
-    log_parser.output_get_task_times(output_dir)
 
     print "Outputting general results"
     log_parser.output_results(output_dir, aggregate_results_filename)
