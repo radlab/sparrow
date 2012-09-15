@@ -5,19 +5,24 @@
 
 <configuration>
   <property>
-  <name>dfs.name.dir</name>
-  <value>/disk1/hdfs/name</value>
+    <name>dfs.permissions</name>
+    <value>false</value>
   </property>
 
   <property>
-  <name>dfs.data.dir</name>
-  <value>/disk1/hdfs/data</value>
+    <name>dfs.name.dir</name>
+    <value>/disk1/hdfs/name</value>
   </property>
 
   <property>
-	<name>fs.default.name</name>
-	<value>hdfs://{{name_node}}:8020/</value>
-	</property>
+    <name>dfs.data.dir</name>
+    <value>/disk1/hdfs/data</value>
+  </property>
+
+  <property>
+    <name>fs.default.name</name>
+    <value>hdfs://{{name_node}}:8020/</value>
+  </property>
 
   <property>
   <name>dfs.blocksize</name>

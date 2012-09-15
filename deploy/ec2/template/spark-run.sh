@@ -1,11 +1,13 @@
 #!/bin/bash
-# A Sparrow deployment version of spark's run script
+# A Sparrow deployment version of spark/shark's run script
 SCALA_VERSION=2.9.1
 
 FWDIR="spark"
 
 # Export this as SPARK_HOME
 export SPARK_HOME="$FWDIR"
+export SHARK_HOME="shark"
+export HIVE_HOME="/opt/hive"
 
 # Load environment variables from conf/spark-env.sh, if it exists
 if [ -e spark-env.sh ] ; then
@@ -17,13 +19,13 @@ MESOS_CLASSPATH="$MESOS_HOME/lib/java/mesos.jar"
 MESOS_LIBRARY_PATH="$MESOS_HOME/lib/java"
 
 if [ "x$SPARK_MEM" == "x" ] ; then
-  SPARK_MEM="1300m"
+  SPARK_MEM="2500m"
 fi
 export SPARK_MEM  # So that the process sees it and can report it to Mesos
 
 # Set JAVA_OPTS to be able to load native libraries and to set heap size
 JAVA_OPTS="$SPARK_JAVA_OPTS"
-JAVA_OPTS+="-XX:+UseConcMarkSweepGC -Djava.library.path=$SPARK_LIBRARY_PATH:$FWDIR/lib:$FWDIR/src/main/native:$MESOS_LIBRARY_PATH"
+JAVA_OPTS+="-Dspark.local.dir=/disk1/sparrow/tmp/ -XX:+UseConcMarkSweepGC -Dspark.kryoserializer.buffer.mb=10 -Djava.library.path=$SPARK_LIBRARY_PATH:$FWDIR/lib:$FWDIR/src/main/native:$MESOS_LIBRARY_PATH"
 JAVA_OPTS+=" -Xms$SPARK_MEM -Xmx$SPARK_MEM"
 # Load extra JAVA_OPTS from conf/java-opts, if it exists
 if [ -e $FWDIR/conf/java-opts ] ; then
@@ -56,6 +58,27 @@ for jar in `find $REPL_DIR/lib -name '*jar'`; do
   CLASSPATH+=:$jar
 done
 CLASSPATH+=:$BAGEL_DIR/target/scala-$SCALA_VERSION/classes
+
+# Add Shark jars.
+CLASSPATH+=:$SHARK_HOME/target/scala-$SCALA_VERSION/classes
+for jar in `find $SHARK_HOME/lib -name '*jar'`; do
+  CLASSPATH+=:$jar
+done
+for jar in `find $SHARK_HOME/lib_managed/jars -name '*jar'`; do
+  CLASSPATH+=:$jar
+done
+for jar in `find $SHARK_HOME/lib_managed/bundles -name '*jar'`; do
+  CLASSPATH+=:$jar
+done
+
+# Add Hive jars.
+for jar in `find $HIVE_HOME/lib -name '*jar'`; do
+  # Ignore the logging library since it has already been included with the Spark jar.
+  if [[ "$jar" != *slf4j* ]]; then
+    CLASSPATH+=:$jar
+  fi
+done
+
 export CLASSPATH # Needed for spark-shell
 
 if [ -n "$SCALA_HOME" ]; then
@@ -63,5 +86,5 @@ if [ -n "$SCALA_HOME" ]; then
 else
   SCALA=scala
 fi
-
+echo $CLASSPATH
 exec $SCALA $SPARK_JAVA_OPTS -cp $CLASSPATH "$@"

@@ -20,7 +20,7 @@ for fe in $FRONTENDS; do
   HOSTNAME=`ec2metadata  | grep local-hostname  | cut -d " " -f 2`
   export SPARK_HOSTNAME=$HOSTNAME
 
-  ./spark-run.sh -Dspark.serializer=spark.JavaSerializer -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=$HOSTNAME -Dspark.master.host=$ip -Dsparrow.app.name=$id -Dsparrow.app.port=$port spark.executor.SparrowExecutorBackend > $log 2>&1 &
+  ./spark-run.sh -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=$HOSTNAME -Dspark.master.host=$ip -Dsparrow.app.name=$id -Dsparrow.app.port=$port spark.executor.SparrowExecutorBackend > $log 2>&1 &
   ((port++))
   PID=$!
   echo "Logging to $log"
