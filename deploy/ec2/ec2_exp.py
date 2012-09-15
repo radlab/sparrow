@@ -12,10 +12,10 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, command, collect-logs, destroy, login-fe, login-be")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-tpch-tables, start-shark-tpch")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
-  parser.add_option("-a", "--ami", default="ami-7947f310",
+  parser.add_option("-a", "--ami", default="ami-9778cefe",
       help="Amazon Machine Image ID to use")
   parser.add_option("-t", "--instance-type", default="m2.2xlarge",
       help="Type of instance to launch (default: m1.large). " +
@@ -62,6 +62,8 @@ def parse_args(force_action=True):
       help="Which TPC-H query to run.")
   parser.add_option("-r", "--parallelism", type="int", default=8,
       help="Level of parallelism for dummy queries.")
+  parser.add_option("-u", "--num_partitions", type="int", default=2,
+      help="Number of partitions for shark tables.")
 
   (opts, args) = parser.parse_args()
   if len(args) < 1 and force_action:
@@ -264,18 +266,27 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "sample_ratio_constrained": "%s" % opts.sample_ratio_constrained,
     "warmup_job_arrival_rate_s": "%s" % warmup_job_arrival_s,
     "warmup_s": "%s" % warmup_s,
-    "post_warmup_s": "%s" % post_warmup_s
+    "post_warmup_s": "%s" % post_warmup_s,
+    "num_partitions": "%s" % opts.num_partitions,
+    "num_partitions_minus_one": "%s" % (opts.num_partitions - 1),
   }
-  for filename in os.listdir("template"):
-    if filename[0] not in '#.~' and filename[-1] != '~':
-      local_file = os.path.join(tmp_dir, filename)
-      with open(os.path.join("template", filename)) as src:
-        with open(local_file, "w") as dest:
-          text = src.read()
-          for key in template_vars:
-            text = text.replace("{{" + key + "}}", template_vars[key])
-          dest.write(text)
-          dest.close()
+
+  for dirpath, dirnames, filenames in os.walk("template"):
+    rel_dir_path=dirpath.replace("template", "")
+    if rel_dir_path.startswith(os.sep):
+      rel_dir_path = rel_dir_path[1:]
+    if rel_dir_path != "":
+      os.mkdir(os.path.join(tmp_dir, rel_dir_path))
+    for filename in filenames:
+      if filename[0] not in '#.~' and filename[-1] != '~':
+	local_file = os.path.join(tmp_dir, rel_dir_path, filename)
+        with open(os.path.join(dirpath, filename)) as src:
+          with open(local_file, "w") as dest:
+            text = src.read()
+            for key in template_vars:
+	      text = text.replace("{{" + key + "}}", template_vars[key])
+	    dest.write(text)
+	    dest.close()
 
   driver_machine = frontends[0].public_dns_name
   print "Chose driver machine: %s ..." % driver_machine
@@ -332,7 +343,18 @@ def stop_mesos(frontends, backends, opts):
   ssh(frontends[0].public_dns_name, opts, "/root/stop_mesos_master.sh")
 
 
-def start_spark(frontends, backends, opts):
+""" Starts spark backends only to allow shark shell to launch. """
+def start_spark_shark(frontends, backends, opts):
+  if opts.scheduler != "sparrow":
+    print "ERROR: shark only supported w/ sparrow scheduler"
+    return
+  print "Starting Spark backends..."
+  ssh_all([be.public_dns_name for be in backends], opts,
+          "/root/start_spark_backend.sh")
+
+
+""" Starts spark TPCH runner w/ sparrow or mesos. """
+def start_spark_tpch(frontends, backends, opts):
   if opts.scheduler == "sparrow":
     print "Starting Spark backends..."
     ssh_all([be.public_dns_name for be in backends], opts,
@@ -340,7 +362,6 @@ def start_spark(frontends, backends, opts):
     time.sleep(30)
   print "Starting Spark frontends..."
   print opts.max_queries
-
 
   # Adjustment to schedule all mesos work on one node
   if opts.scheduler == "mesos":
@@ -409,6 +430,16 @@ def stop_proto(frontends, backends, opts):
   ssh_all([be.public_dns_name for be in backends], opts,
          "/root/stop_proto_backend.sh")
 
+def create_tpch_tables(frontends, backends, opts):
+  print "Creating tpch tables..."
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "/root/create_tpch_tables.sh")
+
+def start_shark_tpch(frontends, backends, opts):
+  print "Starting Shark/TPCH workloads"
+  ssh_all([fe.public_dns_name for fe in frontends], opts,
+          "/root/start_shark_tpch.sh")
+
 # Collect logs from all machines
 def collect_logs(frontends, backends, opts):
   print "Zipping logs..."
@@ -421,10 +452,11 @@ def collect_logs(frontends, backends, opts):
     "*.log.gz", opts.log_dir, len(frontends))
   rsync_from_all([be.public_dns_name for be in backends], opts,
     "*.log.gz", opts.log_dir, len(backends))
-  f = open(os.path.join(opts.log_dir, "params.txt"), 'w')
-  for (k, v) in opts.__dict__.items():
-    f.write("%s\t%s\n" % (k, v))
-  f.close()
+#  f = open(os.path.join(opts.log_dir, "params.txt"), 'w')
+#  for (k, v) in opts.__dict__.items():
+#    f.write("%s\t%s\n" % (k, v))
+#  f.close()
+
   ssh_all([fe.public_dns_name for fe in frontends], opts,
           "rm -f /tmp/*audit*.log.gz; mv /root/*log.gz /tmp;")
   ssh_all([be.public_dns_name for be in backends], opts,
@@ -500,10 +532,17 @@ def main():
     start_mesos(frontends, backends, opts)
   elif action == "stop-mesos":
     stop_mesos(frontends, backends, opts)
-  elif action == "start-spark":
-    start_spark(frontends, backends, opts)
+  elif action == "start-spark-tpch":
+    start_spark_tpch(frontends, backends, opts)
+  elif action == "start-spark-shark":
+    start_spark_shark(frontends, backends, opts)
   elif action == "stop-spark":
     stop_spark(frontends, backends, opts)
+  elif action == "restart-spark-shark":
+    stop_spark(frontends, backends, opts)
+    stop_sparrow(frontends, backends, opts)
+    start_sparrow(frontends, backends, opts)
+    start_spark_shark(frontends, backends, opts)
   elif action == "start-proto":
     start_proto(frontends, backends, opts)
   elif action == "stop-proto":
@@ -520,6 +559,10 @@ def main():
     login_frontend(frontends, backends, opts)
   elif action == "login-be":
     login_backend(frontends, backends, opts)
+  elif action == "create-tpch-tables":
+    create_tpch_tables(frontends, backends, opts)
+  elif action == "start-shark-tpch":
+    start_shark_tpch(frontends, backends, opts)
   else:
     print "Unknown action: %s" % action
     sys.exit(1)
