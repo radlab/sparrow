@@ -3,8 +3,8 @@ import re
 import time
 import datetime
 
-START_SEC = 1
-END_SEC = 500
+START_SEC = 200
+END_SEC = 300
 id_counter = 0
 min_date_seen = datetime.datetime(2030, 1, 1)
 
@@ -180,13 +180,10 @@ all_trials = []
 for (f, trials) in trials_per_file.items():
   all_trials = all_trials + trials.values()
 
-for trial in all_trials:
-  if trial.get_response_time() > 6000:
-    print trial
-
 print "Including %s of %s trials" % (len(all_trials), 
   len(all_trials) + skipped_trials)
 
+"""
 for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
   times_per_query = {} # key = query_id
   times_per_phase = {} # key = (query_id, phase_id)
@@ -218,7 +215,7 @@ for (f, trials) in sorted(trials_per_file.items(), key=lambda k: k[0]):
  
   print "Total time: %s s" % (
     sum([x.get_response_time() for x in trials.values()]) / 1000)
-
+"""
 
 ### Print out statistics per task
 trials_per_query = {}

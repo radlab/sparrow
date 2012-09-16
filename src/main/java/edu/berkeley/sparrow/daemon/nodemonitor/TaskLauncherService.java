@@ -97,6 +97,7 @@ public class TaskLauncherService {
 
     @Override
     public void onComplete(getTask_call response) {
+      Long t0 = System.currentTimeMillis();
       LOG.debug(Logging.functionCall(response));
       try {
         schedulerClientPool.returnClient(taskReservation.schedulerAddress,
@@ -172,6 +173,7 @@ public class TaskLauncherService {
 
       LOG.debug("Launched task " + taskId.taskId + " for request " + taskReservation.requestId +
                 " on application backend at system time " + System.currentTimeMillis());
+      System.out.println("Took: " + (System.currentTimeMillis() - t0));
     }
 
     @Override
