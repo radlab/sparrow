@@ -43,7 +43,9 @@ public class TaskLauncherService {
    * out of connections.*/
   public final static int CLIENT_POOL_SIZE = 10;
 
-  private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool;
+  private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
+      new ThriftClientPool<SchedulerService.AsyncClient>(
+          new ThriftClientPool.SchedulerServiceMakerFactory());
 
   private THostPort nodeMonitorInternalAddress;
 
@@ -186,10 +188,8 @@ public class TaskLauncherService {
   }
 
   public void initialize(Configuration conf, TaskScheduler scheduler,
-                         ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool,
                          int nodeMonitorPort) {
     this.scheduler = scheduler;
-    this.schedulerClientPool = schedulerClientPool;
     nodeMonitorInternalAddress = new THostPort(Network.getHostName(conf), nodeMonitorPort);
     ExecutorService service = Executors.newFixedThreadPool(CLIENT_POOL_SIZE);
     for (int i = 0; i < CLIENT_POOL_SIZE; i++) {

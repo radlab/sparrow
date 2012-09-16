@@ -84,7 +84,7 @@ public class NodeMonitor {
     scheduler.setMaxActiveTasks(cores);
     scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
-    taskLauncherService.initialize(conf, scheduler, schedulerClientPool, nodeMonitorInternalPort);
+    taskLauncherService.initialize(conf, scheduler, nodeMonitorInternalPort);
   }
 
   /**
