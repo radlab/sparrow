@@ -298,7 +298,7 @@ public class Scheduler {
 
   public synchronized List<TTaskLaunchSpec> getTask(
       String requestId, THostPort nodeMonitorAddress) {
-    Long t0 = System.currentTimeMillis();
+    Long t0 = System.nanoTime();
     LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
     if (!requestTaskPlacers.containsKey(requestId)) {
       LOG.error("Received getTask() request for request " + requestId + " which had no more " +
@@ -324,7 +324,7 @@ public class Scheduler {
       // requestTaskPlacers doesn't grow to be unbounded.
       requestTaskPlacers.remove(requestId);
     }
-    System.out.println("Took: " + (System.currentTimeMillis() - t0) + " milliseconds");
+    System.out.println("Took: " + (System.nanoTime() - t0) + " ns");
     return taskLaunchSpecs;
   }
 
