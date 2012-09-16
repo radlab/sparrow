@@ -706,11 +706,11 @@ class LogParser:
         rtt_gnuplot_file.write("set ylabel 'Cumulative Probability'\n")
         rtt_gnuplot_file.write("set xrange [0:]\n")
         rtt_gnuplot_file.write("set yrange [0:1]\n")
-        rtt_gnuplot_file.write("plot '%s' using 3:1 lw 4 with l title 'Network RTT (all)',\\\n" %
+        rtt_gnuplot_file.write("plot '%s' using 5:1 lw 4 with l title 'Network RTT (all)',\\\n" %
                                results_filename)
-        rtt_gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'EnqueueReservations() RTT',\\\n" %
+        rtt_gnuplot_file.write("'%s' using 3:1 lw 4 with l title 'EnqueueReservations() RTT',\\\n" %
                                results_filename)
-        rtt_gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'GetTask() RTT'" %
+        rtt_gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'GetTask() RTT'" %
                                results_filename)
         rtt_gnuplot_file.close()
 
