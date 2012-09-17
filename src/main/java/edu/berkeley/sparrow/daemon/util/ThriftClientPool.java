@@ -19,6 +19,7 @@ import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.GetTaskService;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.PongService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 
 /** A pool of nonblocking thrift async connections. */
@@ -92,12 +93,21 @@ public class ThriftClientPool<T extends TAsyncClient> {
 
   public static class GetTaskServiceMakerFactory
   implements MakerFactory<GetTaskService.AsyncClient> {
-  @Override
-  public GetTaskService.AsyncClient create(TNonblockingTransport tr,
-      TAsyncClientManager mgr, TProtocolFactory factory) {
-    return new GetTaskService.AsyncClient(factory, mgr, tr);
+    @Override
+    public GetTaskService.AsyncClient create(TNonblockingTransport tr,
+        TAsyncClientManager mgr, TProtocolFactory factory) {
+      return new GetTaskService.AsyncClient(factory, mgr, tr);
+    }
   }
-}
+
+  public static class PongServiceMakerFactory
+  implements MakerFactory<PongService.AsyncClient> {
+    @Override
+    public PongService.AsyncClient create(TNonblockingTransport tr,
+        TAsyncClientManager mgr, TProtocolFactory factory) {
+      return new PongService.AsyncClient(factory, mgr, tr);
+    }
+  }
 
   private class PoolFactory implements KeyedPoolableObjectFactory<InetSocketAddress, T> {
     // Thrift clients to not expose their underlying transports, so we track them
