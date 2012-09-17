@@ -10,7 +10,8 @@ log="/disk1/sparrow/shark_$ip.log"
 public_hostname=`ec2metadata  | grep public-hostname  | cut -d " " -f 2`
 fe_num=`cat sparrow.conf  |grep frontend | tr "," "\n" | grep -n $public_hostname | cut -d ":" -f 1`
 
-./shark/bin/shark-withinfo -f tpch/tpch_workload_$fe_num > $log 2>&1 &
+cd /disk1/sparrow/
+/root/shark/run shark.sparrow.SparrowTPCHRunner /root/tpch/tpch_workload_$fe_num {{inter_query_delay}} > $log 2>&1 &
 
 PID=$!
 echo "Logging to $log"

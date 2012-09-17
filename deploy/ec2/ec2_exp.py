@@ -52,14 +52,18 @@ def parse_args(force_action=True):
       help="Sample ratio for constrained tasks")
   parser.add_option("-y", "--kill-delay", type="int", default=1,
       help="Time to wait between killing backends and frontends")
+  parser.add_option("-v", "--inter-query-delay", type="int", default=100,
+      help="How many ms to wait between shark queries")
   parser.add_option("-m", "--scheduler", type="string", default="mesos",
       help="Which scheduler to use for running spark (mesos/sparrow)")
+  """ Options used with older TPCH thing
   parser.add_option("-j", "--max-queries", type="int", default=60,
       help="How many spark queries to run before shutting down")
   parser.add_option("-v", "--query-rate", type="float", default=1.0,
       help="What rate to run spark queries at (queries per second)")
   parser.add_option("-o", "--tpch-query", type="int", default=1,
       help="Which TPC-H query to run.")
+  """
   parser.add_option("-r", "--parallelism", type="int", default=8,
       help="Level of parallelism for dummy queries.")
   parser.add_option("-u", "--num_partitions", type="int", default=2,
@@ -269,6 +273,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "post_warmup_s": "%s" % post_warmup_s,
     "num_partitions": "%s" % opts.num_partitions,
     "num_partitions_minus_one": "%s" % (opts.num_partitions - 1),
+    "inter_query_delay": "%s" % opts.inter_query_delay,
   }
 
   for dirpath, dirnames, filenames in os.walk("template"):

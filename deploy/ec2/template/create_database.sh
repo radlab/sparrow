@@ -36,7 +36,6 @@ for fe in $FRONTENDS; do
     sudo -u hdfs /opt/hadoop/bin/hadoop dfs -Ddfs.block.size=33554432 -copyFromLocal $t hdfs://{{name_node}}:8020/$fe/$name/
   done
   sudo -u hdfs /opt/hadoop/bin/hadoop dfs -chmod -R 777 "hdfs://{{name_node}}:8020/$fe/"
-  cd -
 done
 
 echo "Making Hive User Directory"

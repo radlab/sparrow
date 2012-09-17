@@ -1,3 +1,3 @@
 #!/bin/bash
-cat /disk1/sparrow/spark_* |grep waitT > /root/spark_`hostname -i`_waits.log
+cp /disk1/sparrow/shark_* /root/
 touch foo.log && gzip -f *.log
