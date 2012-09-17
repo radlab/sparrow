@@ -72,4 +72,6 @@ public class SparrowConf {
   public final static String STATIC_CPU_PER_NM = "static.cpu.per.backend";
   public final static String STATIC_APP_NAME = "static.app.name";
   public final static String STATIC_SCHEDULERS = "static.frontends";
+
+  public static final String GET_TASK_PORT = "get_task.port";
 }

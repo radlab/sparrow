@@ -296,8 +296,9 @@ public class Scheduler {
               (end - start) + " milliseconds");
   }
 
-  public synchronized List<TTaskLaunchSpec> getTask(
+  public List<TTaskLaunchSpec> getTask(
       String requestId, THostPort nodeMonitorAddress) {
+    /* We know this will only be called in a dedicated thread. */
     Long t0 = System.nanoTime();
     LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
     if (!requestTaskPlacers.containsKey(requestId)) {

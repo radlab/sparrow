@@ -16,6 +16,7 @@ import org.apache.thrift.transport.TNonblockingSocket;
 import org.apache.thrift.transport.TNonblockingTransport;
 
 import edu.berkeley.sparrow.thrift.FrontendService;
+import edu.berkeley.sparrow.thrift.GetTaskService;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
@@ -31,9 +32,9 @@ public class ThriftClientPool<T extends TAsyncClient> {
   public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = 10000;
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int MAX_ACTIVE_CLIENTS_PER_ADDR = -1;
-  
+
   private static final Logger LOG = Logger.getLogger(ThriftClientPool.class);
-  
+
   /** Get the configuration parameters used on the underlying client pool. */
   protected static Config getPoolConfig() {
     Config conf = new Config();
@@ -44,63 +45,72 @@ public class ThriftClientPool<T extends TAsyncClient> {
     conf.whenExhaustedAction = GenericKeyedObjectPool.WHEN_EXHAUSTED_GROW;
     return conf;
   }
-  
+
   /** Clients need to provide an instance of this factory which is capable of creating
    * the a thrift client of type <T>. */
   public interface MakerFactory<T> {
-    public T create(TNonblockingTransport tr, TAsyncClientManager mgr, 
+    public T create(TNonblockingTransport tr, TAsyncClientManager mgr,
         TProtocolFactory factory);
   }
-  
+
   // MakerFactory implementations for Sparrow interfaces...
-  public static class InternalServiceMakerFactory 
+  public static class InternalServiceMakerFactory
     implements MakerFactory<InternalService.AsyncClient> {
     @Override
-    public InternalService.AsyncClient create(TNonblockingTransport tr, 
+    public InternalService.AsyncClient create(TNonblockingTransport tr,
         TAsyncClientManager mgr, TProtocolFactory factory) {
       return new InternalService.AsyncClient(factory, mgr, tr);
     }
   }
-  
-  public static class NodeMonitorServiceMakerFactory 
+
+  public static class NodeMonitorServiceMakerFactory
     implements MakerFactory<NodeMonitorService.AsyncClient> {
     @Override
-    public NodeMonitorService.AsyncClient create(TNonblockingTransport tr, 
+    public NodeMonitorService.AsyncClient create(TNonblockingTransport tr,
         TAsyncClientManager mgr, TProtocolFactory factory) {
       return new NodeMonitorService.AsyncClient(factory, mgr, tr);
     }
   }
-  
+
   public static class SchedulerServiceMakerFactory
     implements MakerFactory<SchedulerService.AsyncClient> {
     @Override
-    public SchedulerService.AsyncClient create(TNonblockingTransport tr, 
+    public SchedulerService.AsyncClient create(TNonblockingTransport tr,
         TAsyncClientManager mgr, TProtocolFactory factory) {
       return new SchedulerService.AsyncClient(factory, mgr, tr);
     }
   }
-  
+
   public static class FrontendServiceMakerFactory
     implements MakerFactory<FrontendService.AsyncClient> {
     @Override
-    public FrontendService.AsyncClient create(TNonblockingTransport tr, 
+    public FrontendService.AsyncClient create(TNonblockingTransport tr,
         TAsyncClientManager mgr, TProtocolFactory factory) {
       return new FrontendService.AsyncClient(factory, mgr, tr);
     }
   }
-  
+
+  public static class GetTaskServiceMakerFactory
+  implements MakerFactory<GetTaskService.AsyncClient> {
+  @Override
+  public GetTaskService.AsyncClient create(TNonblockingTransport tr,
+      TAsyncClientManager mgr, TProtocolFactory factory) {
+    return new GetTaskService.AsyncClient(factory, mgr, tr);
+  }
+}
+
   private class PoolFactory implements KeyedPoolableObjectFactory<InetSocketAddress, T> {
     // Thrift clients to not expose their underlying transports, so we track them
-    // separately here to let us call close() on the transport associated with a 
+    // separately here to let us call close() on the transport associated with a
     // particular client.
     private HashMap<T, TNonblockingTransport> transports =
-        new HashMap<T, TNonblockingTransport>(); 
+        new HashMap<T, TNonblockingTransport>();
     private MakerFactory<T> maker;
-    
+
     public PoolFactory(MakerFactory<T> maker) {
       this.maker = maker;
     }
-    
+
     @Override
     public void destroyObject(InetSocketAddress socket, T client) throws Exception {
       transports.get(client).close();
@@ -116,7 +126,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
       transports.put(client, nbTr);
       return client;
     }
-    
+
     @Override
     public boolean validateObject(InetSocketAddress socket, T client) {
       return transports.get(client).isOpen();
@@ -126,22 +136,22 @@ public class ThriftClientPool<T extends TAsyncClient> {
     public void activateObject(InetSocketAddress socket, T client) throws Exception {
       // Nothing to do here
     }
-    
+
     @Override
     public void passivateObject(InetSocketAddress socket, T client)
         throws Exception {
       // Nothing to do here
     }
-  }  
-   
+  }
+
   /** Pointer to shared selector thread. */
   TAsyncClientManager clientManager;
 
   /** Underlying object pool. */
   private GenericKeyedObjectPool<InetSocketAddress, T> pool;
-  
+
   public ThriftClientPool(MakerFactory<T> maker) {
-    pool = new GenericKeyedObjectPool<InetSocketAddress, T>(new PoolFactory(maker), 
+    pool = new GenericKeyedObjectPool<InetSocketAddress, T>(new PoolFactory(maker),
         getPoolConfig());
     try {
       clientManager = new TAsyncClientManager();
@@ -149,29 +159,29 @@ public class ThriftClientPool<T extends TAsyncClient> {
       LOG.fatal(e);
     }
   }
-  
+
   /** Constructor (for unit tests) which overrides default configuration. */
   protected ThriftClientPool(MakerFactory<T> maker, Config conf) {
     this(maker);
     pool.setConfig(conf);
   }
-    
+
   /** Borrows a client from the pool. */
-  public T borrowClient(InetSocketAddress socket) 
+  public T borrowClient(InetSocketAddress socket)
       throws Exception {
     return pool.borrowObject(socket);
   }
-  
+
   /** Returns a client to the pool. */
-  public void returnClient(InetSocketAddress socket, T client) 
+  public void returnClient(InetSocketAddress socket, T client)
       throws Exception {
     pool.returnObject(socket, client);
   }
-  
+
   protected int getNumActive(InetSocketAddress socket) {
     return pool.getNumActive(socket);
   }
-  
+
   protected int getNumIdle(InetSocketAddress socket) {
     return pool.getNumIdle(socket);
   }

@@ -17,7 +17,9 @@ service SchedulerService {
   # the scheduler to send task completion messages to frontends.
   void sendFrontendMessage(1: string app, 2: types.TFullTaskId taskId, 
                            3: i32 status, 4: binary message);
-  
+}
+
+service GetTaskService {
   # Called by a node monitor when it has available responses to run a task. Always called in
   # response to an enqueueTask() request from this scheduler, requestId specifies the ID given
   # in that enqueueTask() request. Currently, we only support returning 0 or 1 task

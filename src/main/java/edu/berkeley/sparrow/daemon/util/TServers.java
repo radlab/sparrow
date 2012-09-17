@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.THsHaServer.Args;
+import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
@@ -16,6 +17,26 @@ import org.apache.thrift.transport.TTransportException;
  */
 public class TServers {
   private final static Logger LOG = Logger.getLogger(TServers.class);
+
+  /**
+   * Launch a single threaded nonblocking IO server. All requests to this server will be
+   * handled in a single thread, so its requests should not contain blocking functions.
+   */
+  public static void launchSingleThreadThriftServer(int port, TProcessor processor)
+      throws IOException {
+    LOG.info("Staring async thrift server of type: " + processor.getClass().toString()
+        + " on port " + port);
+    TNonblockingServerTransport serverTransport;
+    try {
+      serverTransport = new TNonblockingServerSocket(port);
+    } catch (TTransportException e) {
+      throw new IOException(e);
+    }
+    TNonblockingServer.Args serverArgs = new TNonblockingServer.Args(serverTransport);
+    serverArgs.processor(processor);
+    TServer server = new TNonblockingServer(serverArgs);
+    new Thread(new TServerRunnable(server)).start();
+  }
 
   /**
    * Launch a multi-threaded Thrift server with the given {@code processor}. Note that

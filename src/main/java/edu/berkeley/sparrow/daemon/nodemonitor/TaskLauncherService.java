@@ -15,14 +15,15 @@ import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskReservation;
+import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.BackendService;
-import edu.berkeley.sparrow.thrift.SchedulerService;
-import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
-import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.getTask_call;
+import edu.berkeley.sparrow.thrift.GetTaskService;
+import edu.berkeley.sparrow.thrift.GetTaskService.AsyncClient;
+import edu.berkeley.sparrow.thrift.GetTaskService.AsyncClient.getTask_call;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
@@ -43,9 +44,9 @@ public class TaskLauncherService {
    * out of connections.*/
   public final static int CLIENT_POOL_SIZE = 10;
 
-  private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
-      new ThriftClientPool<SchedulerService.AsyncClient>(
-          new ThriftClientPool.SchedulerServiceMakerFactory());
+  private ThriftClientPool<GetTaskService.AsyncClient> getTaskClientPool =
+      new ThriftClientPool<GetTaskService.AsyncClient>(
+          new ThriftClientPool.GetTaskServiceMakerFactory());
 
   private THostPort nodeMonitorInternalAddress;
 
@@ -66,13 +67,15 @@ public class TaskLauncherService {
                   ", request " + task.requestId);
 
         // Request the task specification from the scheduler.
-        SchedulerService.AsyncClient schedulerClient;
+        GetTaskService.AsyncClient getTaskClient;
+        InetSocketAddress newAddress = new InetSocketAddress(
+            task.schedulerAddress.getHostName(), SchedulerThrift.DEFAULT_GET_TASK_PORT);
         try {
-          schedulerClient = schedulerClientPool.borrowClient(
-              task.schedulerAddress);
+          getTaskClient = getTaskClientPool.borrowClient(
+              newAddress);
         } catch (Exception e) {
           LOG.fatal("Unable to create client to contact scheduler at " +
-                    task.schedulerAddress.toString() + ":" + e);
+              newAddress.toString() + ":" + e);
           return;
         }
         try {
@@ -80,11 +83,11 @@ public class TaskLauncherService {
                     nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
           AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
                                                    nodeMonitorInternalAddress.getHost()));
-          schedulerClient.getTask(task.requestId, nodeMonitorInternalAddress,
-                                  new GetTaskCallback(task));
+          getTaskClient.getTask(task.requestId, nodeMonitorInternalAddress,
+                                  new GetTaskCallback(task, newAddress));
         } catch (TException e) {
           LOG.error("Unable to getTask() from scheduler at " +
-                    task.schedulerAddress.toString() + ":" + e);
+              newAddress.toString() + ":" + e);
         }
       }
     }
@@ -92,9 +95,11 @@ public class TaskLauncherService {
 
   private class GetTaskCallback implements AsyncMethodCallback<getTask_call> {
     private TaskReservation taskReservation;
+    private InetSocketAddress getTaskAddress;
 
-    public GetTaskCallback(TaskReservation taskReservation) {
+    public GetTaskCallback(TaskReservation taskReservation, InetSocketAddress getTaskAddress) {
       this.taskReservation = taskReservation;
+      this.getTaskAddress = getTaskAddress;
     }
 
     @Override
@@ -102,8 +107,7 @@ public class TaskLauncherService {
       Long t0 = System.currentTimeMillis();
       LOG.debug(Logging.functionCall(response));
       try {
-        schedulerClientPool.returnClient(taskReservation.schedulerAddress,
-                                         (AsyncClient) response.getClient());
+        getTaskClientPool.returnClient(getTaskAddress, (AsyncClient) response.getClient());
       } catch (Exception e) {
         LOG.error("Error getting client from scheduler client pool: " + e.getMessage());
         return;
