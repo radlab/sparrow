@@ -238,8 +238,9 @@ public class Scheduler {
     // also be useful when we support multiple daemons running on a single
     // machine.
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
-        request.getTasks().size(),
-        address.getHost(), address.getPort()));
+                                            request.getTasks().size(),
+                                            address.getHost(), address.getPort(),
+                                            request.getUser().getUser()));
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();

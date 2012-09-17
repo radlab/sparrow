@@ -20,7 +20,7 @@ public class FifoTaskScheduler extends TaskScheduler {
   public LinkedBlockingQueue<TaskSpec> taskReservations =
       new LinkedBlockingQueue<TaskSpec>();
 
-  public void setMaxActiveTasks(int max) {
+  public FifoTaskScheduler(int max) {
     this.maxActiveTasks = max;
   }
 
@@ -40,9 +40,8 @@ public class FifoTaskScheduler extends TaskScheduler {
       LOG.debug("Making task for request " + taskReservation.requestId + " runnable (" +
                 activeTasks + " of " + maxActiveTasks + " task slots currently filled)");
       return 0;
-    } else {
-      LOG.debug("All " + maxActiveTasks + " task slots filled.");
     }
+    LOG.debug("All " + maxActiveTasks + " task slots filled.");
     int queuedReservations = taskReservations.size();
     try {
       LOG.debug("Enqueueing task reservation with request id " + taskReservation.requestId +

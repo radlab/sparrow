@@ -51,7 +51,7 @@ public class NodeMonitor {
           new ThriftClientPool.SchedulerServiceMakerFactory());
 
   private TResourceVector capacity;
-  private FifoTaskScheduler scheduler;
+  private TaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
 
   public void initialize(Configuration conf, int nodeMonitorInternalPort)
@@ -80,8 +80,14 @@ public class NodeMonitor {
     capacity.setCores(cores);
     LOG.info("Using core allocation: " + cores);
 
-    scheduler = new FifoTaskScheduler();
-    scheduler.setMaxActiveTasks(cores);
+    String task_scheduler_type = conf.getString(SparrowConf.NM_TASK_SCHEDULER_TYPE, "fifo");
+    if (task_scheduler_type.equals("round_robin")) {
+      scheduler = new RoundRobinTaskScheduler(cores);
+    } else if (task_scheduler_type.equals("fifo")) {
+      scheduler = new FifoTaskScheduler(cores);
+    } else {
+      throw new RuntimeException("Unsupported task scheduler type: " + mode);
+    }
     scheduler.initialize(capacity, conf, nodeMonitorInternalPort);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler, nodeMonitorInternalPort);
