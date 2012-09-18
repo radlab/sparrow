@@ -160,6 +160,11 @@ class Request:
         # time when the request completed.
         self.__enqueue_reservation_rtts = {}
 
+        self.__user = ""
+
+    def user(self):
+        return self.__user
+
     def add_subsequent_task_launch_failure(self, task_id):
         task = self.__get_task(task_id)
         task.subsequent_launches += 1
@@ -178,10 +183,11 @@ class Request:
             # TODO: otherwise, add 0.
         return subsequent_tasks_launched
 
-    def add_arrival(self, time, num_tasks, address):
+    def add_arrival(self, time, num_tasks, address, user):
         self.__arrival_time = time
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
+        self.__user = user
 
     def add_enqueue_reservation_launch(self, time, address):
         if address not in self.__enqueue_reservation_rtts:
@@ -271,6 +277,12 @@ class Request:
                   print task.address
                   print
         return network_delays
+
+    def start_and_end_times(self):
+        """ Returns a list of (launch time, finish time) tupes for complete __tasks. Ignores
+            clock skew. """
+        return [(x.node_monitor_launch_time, x.completion_time) for x in self.__tasks.values()
+                if x.complete()]
 
     def start_and_service_times(self):
         """ Returns a list of (start time, service time) tuples for complete __tasks. """
@@ -397,6 +409,7 @@ class LogParser:
         # Mapping of node monitor IP addresses to a list of (queue length, time) pairs observed at
         # that IP address.
         self.__node_monitor_queue_lengths = {}
+        self.__users = set()
 
     def parse_file(self, filename):
         file = open(filename, "r")
@@ -417,7 +430,9 @@ class LogParser:
             if audit_event_params[0] == "arrived":
                 request = self.__get_request(audit_event_params[1])
                 request.add_arrival(time, audit_event_params[2],
-                                    audit_event_params[3])
+                                    audit_event_params[3], audit_event_params[5])
+                if audit_event_params[5]:
+                  self.__users.add(audit_event_params[5])
             elif audit_event_params[0] == "scheduler_launch_enqueue_task":
                 request = self.__get_request(audit_event_params[1])
                 request.add_enqueue_reservation_launch(time, audit_event_params[2])
@@ -580,9 +595,51 @@ class LogParser:
         gnuplot_file.write("plot '%s' using 1:2 lw 4 with p notitle\n" %
                            data_filename)
 
-    def output_results(self, output_directory, aggregate_results_filename):
+    def output_results(self, output_directory):
+        self.output_aggregate_stats(self.__requests, output_directory)
+
+        for user in self.__users:
+            print "Outputting stats for user " + user
+            user_output_directory = os.path.join(output_directory, user)
+            os.mkdir(user_output_directory)
+            user_requests = dict((request_id,request) for (request_id, request) in
+                                 self.__requests.items() if request.user() == user)
+            self.output_aggregate_stats(user_requests, user_output_directory)
+            self.output_running_tasks(user_requests, user_output_directory)
+
+    def output_running_tasks(self, requests, output_directory):
+        TASK_START = 1
+        TASK_END = -1
+        events = []
+        for request in requests.values():
+            for (start_time, end_time) in request.start_and_end_times():
+                events.append((start_time, TASK_START))
+                events.append((end_time, TASK_END))
+        events.sort(key = lambda x: x[0])
+
+        running_tasks_filename = "running_tasks"
+        running_tasks_file = open(os.path.join(output_directory, running_tasks_filename), "w")
+        running_tasks_file.write("Time\tNumTasksRunning\n")
+        task_count = 0
+        for event in events:
+            running_tasks_file.write("%s\t%s\n" % (event[0], task_count))
+            task_count += event[1]
+            running_tasks_file.write("%s\t%s\n" % (event[0], task_count))
+        running_tasks_file.close()
+
+        gnuplot_file = open(os.path.join(output_directory, "running_tasks.gp"), "w")
+        gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
+        gnuplot_file.write("set output 'running_tasks.ps'\n")
+        gnuplot_file.write("set xlabel 'Time (ms)'\n")
+        gnuplot_file.write("set ylabel 'Running Tasks'\n")
+        gnuplot_file.write("set yrange [0:]\n")
+        gnuplot_file.write("plot '%s' using 1:2 lw 4 with lp notitle\n" %
+                           running_tasks_filename)
+
+    def output_aggregate_stats(self, requests, output_directory):
         # Overhead vs best possible response time of a req, given its service times
         overheads = []
+
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
         response_times = []
@@ -606,19 +663,18 @@ class LogParser:
         start_time = self.__earliest_time + (START_SEC * 1000)
         end_time = self.__earliest_time + (END_SEC * 1000)
 
-        test_requests = filter(lambda k: k.complete(), self.__requests.values())
-        print "Complete requests: %d" % len(test_requests)
-        if len(test_requests) == 0:
+        complete_requests = filter(lambda k: k.complete(), requests.values())
+        print "Complete requests: %d" % len(complete_requests)
+        if len(complete_requests) == 0:
             print "Incomplete request info:"
-            for request in self.__requests.values():
+            for request in requests.values():
                 request.complete(True)
             return
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
-                                     k.complete(),
-                                     self.__requests.values())
+                                     k.complete(), requests.values())
         print "Included %s requests" % len(considered_requests)
-        print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
+        print "Excluded %s requests" % (len(requests.values()) - len(considered_requests))
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
             enqueue_reservation_rtts.extend(request.get_enqueue_reservation_rtts())
@@ -634,8 +690,8 @@ class LogParser:
 
             previous_task_info = request.get_previous_tasks()
             for (task_launch_time, previous_request_id, previous_task_id) in previous_task_info:
-                if previous_request_id in self.__requests:
-                    previous_task_completion_time = self.__requests[
+                if previous_request_id in requests:
+                    previous_task_completion_time = requests[
                             previous_request_id].get_task_completion(previous_task_id)
                     if previous_task_completion_time != INVALID_TIME:
                         get_new_task_times.append(task_launch_time - previous_task_completion_time)
@@ -762,7 +818,7 @@ class LogParser:
 
         self.plot_response_time_cdf(results_filename, output_directory)
 
-        summary_file = open("%s" % aggregate_results_filename, 'a')
+        summary_file = open(os.path.join(output_directory, "response_time_summary"), "w")
         summary_file.write("%s %s %s %s\n" % (get_percentile(response_times, .05),
                                               get_percentile(response_times, 0.5),
                                               get_percentile(response_times, .95),
@@ -798,7 +854,7 @@ class LogParser:
         return self.__requests[request_id]
 
 def main(argv):
-    PARAMS = ["log_dir", "output_dir", "start_sec", "end_sec", "aggregate_results_filename"]
+    PARAMS = ["log_dir", "output_dir", "start_sec", "end_sec"]
     if "help" in argv[0]:
         print ("Usage: python parse_logs.py " +
                " ".join(["[%s=v]" % k for k in PARAMS]))
@@ -808,7 +864,6 @@ def main(argv):
 
     log_files = []
     output_dir = "experiment"
-    aggregate_results_filename = ""
     for arg in argv:
         kv = arg.split("=")
         if kv[0] == PARAMS[0]:
@@ -825,17 +880,12 @@ def main(argv):
         elif kv[0] == PARAMS[3]:
             global END_SEC
             END_SEC = int(kv[1])
-        elif kv[0] == PARAMS[4]:
-            aggregate_results_filename = kv[1]
         else:
             print "Warning: ignoring parameter %s" % kv[0]
 
     if len(log_files) == 0:
         print "No valid log files found!"
         return
-
-    if aggregate_results_filename == "":
-        aggregate_results_filename = os.path.join(output_dir, "response_time_summary")
 
     logging.basicConfig(level=logging.DEBUG)
 
@@ -852,7 +902,7 @@ def main(argv):
     log_parser.output_tasks_launched_versus_time(output_dir)
 
     print "Outputting general results"
-    log_parser.output_results(output_dir, aggregate_results_filename)
+    log_parser.output_results(output_dir)
     log_parser.output_complete_incomplete_requests_vs_time(output_dir)
     log_parser.output_tasks_completed_vs_arrival(output_dir)
     log_parser.output_per_node_service_time(output_dir)
