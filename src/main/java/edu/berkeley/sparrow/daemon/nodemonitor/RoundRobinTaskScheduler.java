@@ -21,14 +21,14 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 public class RoundRobinTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(RoundRobinTaskScheduler.class);
 
-  private HashMap<String, Queue<TaskReservation>> appQueues = Maps.newHashMap();
+  private HashMap<String, Queue<TaskSpec>> appQueues = Maps.newHashMap();
 
   private ArrayList<String> apps = new ArrayList<String>();
   private int currentIndex = 0; // Round robin index, always used (mod n) where n is
                                 // the number of apps.
 
   @Override
-  synchronized int handleSubmitTaskReservation(TaskReservation taskReservation) {
+  synchronized int handleSubmitTaskReservation(TaskSpec taskReservation) {
      /* Because of the need to check the free resources and then, depending on the result, start a
       * new task, this method must be synchronized.
       */
@@ -43,17 +43,17 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
     return 0;
   }
 
-  void addTaskToAppQueue(String app, TaskReservation taskReservation) {
+  void addTaskToAppQueue(String app, TaskSpec taskReservation) {
     synchronized(appQueues) {
       if (!appQueues.containsKey(app)) {
-        appQueues.put(app, new LinkedList<TaskReservation>());
+        appQueues.put(app, new LinkedList<TaskSpec>());
         apps.add(app);
       }
       appQueues.get(app).add(taskReservation);
     }
   }
 
-  void removeTaskFromAppQueue(String app, TaskReservation taskReservation) {
+  void removeTaskFromAppQueue(String app, TaskSpec taskReservation) {
     synchronized(appQueues) {
       appQueues.get(app).remove(taskReservation);
       if (appQueues.get(app).size() == 0) {
@@ -77,8 +77,8 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
        * but will not be the case if tasks take different amounts of resources. */
       for (int i = 0; i < apps.size(); i++) {
         String app = apps.get((currentIndex + i) % apps.size());
-        Queue<TaskReservation> considering = appQueues.get(app);
-        TaskReservation nextTask = considering.poll();
+        Queue<TaskSpec> considering = appQueues.get(app);
+        TaskSpec nextTask = considering.poll();
         if (nextTask != null) {
           LOG.info("Task for request: " + nextTask.requestId + " now runnable");
           nextTask.previousRequestId = lastExecutedTaskRequestId;

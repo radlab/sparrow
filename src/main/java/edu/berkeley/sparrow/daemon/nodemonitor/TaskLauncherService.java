@@ -3,7 +3,6 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,21 +11,14 @@ import java.util.concurrent.LinkedBlockingDeque;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
-import org.apache.thrift.async.AsyncMethodCallback;
 
-import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskReservation;
-import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
+import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskSpec;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.TClients;
-import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.BackendService;
-import edu.berkeley.sparrow.thrift.GetTaskService;
-import edu.berkeley.sparrow.thrift.GetTaskService.AsyncClient;
-import edu.berkeley.sparrow.thrift.GetTaskService.AsyncClient.getTask_call;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.THostPort;
-import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 
 /**
  * TaskLauncher service consumes TaskReservations produced by {@link TaskScheduler.getNextTask}.
@@ -44,10 +36,6 @@ public class TaskLauncherService {
    * out of connections.*/
   public final static int CLIENT_POOL_SIZE = 10;
 
-  private ThriftClientPool<GetTaskService.AsyncClient> getTaskClientPool =
-      new ThriftClientPool<GetTaskService.AsyncClient>(
-          new ThriftClientPool.GetTaskServiceMakerFactory());
-
   private THostPort nodeMonitorInternalAddress;
 
   private TaskScheduler scheduler;
@@ -62,137 +50,60 @@ public class TaskLauncherService {
     @Override
     public void run() {
       while (true) {
-        TaskReservation task = scheduler.getNextTask(); // blocks until task is ready
-        LOG.debug("Tring to get scheduler client to make getTask() request for app " + task.appId +
-                  ", request " + task.requestId);
+        TaskSpec task = scheduler.getNextTask(); // blocks until task is ready
+        LOG.debug("Tring to launch task for request " + task.requestId);
 
-        // Request the task specification from the scheduler.
-        GetTaskService.AsyncClient getTaskClient;
-        InetSocketAddress newAddress = new InetSocketAddress(
-            task.schedulerAddress.getHostName(), SchedulerThrift.DEFAULT_GET_TASK_PORT);
-        try {
-          getTaskClient = getTaskClientPool.borrowClient(
-              newAddress);
-        } catch (Exception e) {
-          LOG.fatal("Unable to create client to contact scheduler at " +
-              newAddress.toString() + ":" + e);
-          return;
+        AUDIT_LOG.info(Logging.auditEventString("node_monitor_task_launch",
+            task.requestId,
+            nodeMonitorInternalAddress.getHost(),
+            task.taskSpec.getTaskId(),
+            task.previousRequestId,
+            task.previousTaskId));
+
+        // Launch the task on the backend.
+        BackendService.Client client = null;
+        if (!backendClients.containsKey(task.appBackendAddress)) {
+          createThriftClients(task.appBackendAddress);
         }
+
         try {
-          LOG.debug("Attempting to get task from scheduler at " +
-                    nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
-          AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
-                                                   nodeMonitorInternalAddress.getHost()));
-          getTaskClient.getTask(task.requestId, nodeMonitorInternalAddress,
-                                  new GetTaskCallback(task, newAddress));
+          // Blocks until a client becomes available.
+          client = backendClients.get(task.appBackendAddress).take();
+        } catch (InterruptedException e) {
+          LOG.fatal("Error when trying to get a client for " + task.appId
+              + "backend at " + task.appBackendAddress.toString() + ":" +
+              e);
+        }
+
+        THostPort schedulerHostPort = Network.socketAddressToThrift(
+            task.schedulerAddress);
+        TFullTaskId taskId = new TFullTaskId(task.taskSpec.getTaskId(), task.requestId,
+            task.appId, schedulerHostPort);
+        try {
+          client.launchTask(task.taskSpec.bufferForMessage(), taskId, task.user,
+              task.estimatedResources);
         } catch (TException e) {
-          LOG.error("Unable to getTask() from scheduler at " +
-              newAddress.toString() + ":" + e);
+          LOG.fatal("Unable to launch task on backend " + task.appBackendAddress + ":" +
+              e);
         }
-      }
-    }
-  }
 
-  private class GetTaskCallback implements AsyncMethodCallback<getTask_call> {
-    private TaskReservation taskReservation;
-    private InetSocketAddress getTaskAddress;
+        try {
+          backendClients.get(task.appBackendAddress).put(client);
+        } catch (InterruptedException e) {
+          LOG.fatal("Error while attempting to return client for " +
+              task.appBackendAddress.toString() +
+              " to the set of backend clients: " + e);
+        }
 
-    public GetTaskCallback(TaskReservation taskReservation, InetSocketAddress getTaskAddress) {
-      this.taskReservation = taskReservation;
-      this.getTaskAddress = getTaskAddress;
-    }
-
-    @Override
-    public void onComplete(getTask_call response) {
-      Long t0 = System.currentTimeMillis();
-      LOG.debug(Logging.functionCall(response));
-      try {
-        getTaskClientPool.returnClient(getTaskAddress, (AsyncClient) response.getClient());
-      } catch (Exception e) {
-        LOG.error("Error getting client from scheduler client pool: " + e.getMessage());
-        return;
-      }
-      List<TTaskLaunchSpec> taskLaunchSpecs;
-      try {
-        taskLaunchSpecs = response.getResult();
-      } catch (TException e) {
-        LOG.error("Unable to read result of calling getTask() on scheduler " +
-                  taskReservation.schedulerAddress.toString() + ": " + e);
-        scheduler.noTaskForRequest(taskReservation);
-        return;
+        LOG.debug("Launched task " + taskId.taskId + " for request " + task.requestId +
+            " on application backend at system time " + System.currentTimeMillis());
       }
 
-      if (taskLaunchSpecs.isEmpty()) {
-        LOG.debug("Didn't receive a task for request " + taskReservation.requestId);
-        scheduler.noTaskForRequest(taskReservation);
-        return;
-      }
-
-      if (taskLaunchSpecs.size() > 1) {
-        LOG.warn("Received " + taskLaunchSpecs +
-                 " task launch specifications; ignoring all but the first one.");
-      }
-      TTaskLaunchSpec taskLaunchSpec = taskLaunchSpecs.get(0);
-      LOG.debug("Received task for request " + taskReservation.requestId + ", task " +
-                taskLaunchSpec.getTaskId());
-      AUDIT_LOG.info(Logging.auditEventString("node_monitor_task_launch",
-                                              taskReservation.requestId,
-                                              nodeMonitorInternalAddress.getHost(),
-                                              taskLaunchSpec.getTaskId(),
-                                              taskReservation.previousRequestId,
-                                              taskReservation.previousTaskId));
-
-      // Launch the task on the backend.
-      BackendService.Client client = null;
-      if (!backendClients.containsKey(taskReservation.appBackendAddress)) {
-        createThriftClients(taskReservation.appBackendAddress);
-      }
-
-      try {
-        // Blocks until a client becomes available.
-        client = backendClients.get(taskReservation.appBackendAddress).take();
-      } catch (InterruptedException e) {
-        LOG.fatal("Error when trying to get a client for " + taskReservation.appId
-                  + "backend at " + taskReservation.appBackendAddress.toString() + ":" +
-                  e);
-      }
-
-      THostPort schedulerHostPort = Network.socketAddressToThrift(
-          taskReservation.schedulerAddress);
-      TFullTaskId taskId = new TFullTaskId(taskLaunchSpec.getTaskId(), taskReservation.requestId,
-                                           taskReservation.appId, schedulerHostPort);
-      try {
-        client.launchTask(taskLaunchSpec.bufferForMessage(), taskId, taskReservation.user,
-                          taskReservation.estimatedResources);
-      } catch (TException e) {
-        LOG.fatal("Unable to launch task on backend " + taskReservation.appBackendAddress + ":" +
-                  e);
-      }
-
-      try {
-        backendClients.get(taskReservation.appBackendAddress).put(client);
-      } catch (InterruptedException e) {
-        LOG.fatal("Error while attempting to return client for " +
-                  taskReservation.appBackendAddress.toString() +
-                  " to the set of backend clients: " + e);
-      }
-
-      LOG.debug("Launched task " + taskId.taskId + " for request " + taskReservation.requestId +
-                " on application backend at system time " + System.currentTimeMillis());
-      System.out.println("Took: " + (System.currentTimeMillis() - t0));
-    }
-
-    @Override
-    public void onError(Exception exception) {
-      // Do not return error client to pool.
-      exception.printStackTrace();
-      LOG.error("Error executing getTask() RPC:" + exception.getStackTrace().toString() +
-                exception.toString());
     }
   }
 
   public void initialize(Configuration conf, TaskScheduler scheduler,
-                         int nodeMonitorPort) {
+      int nodeMonitorPort) {
     this.scheduler = scheduler;
     nodeMonitorInternalAddress = new THostPort(Network.getHostName(conf), nodeMonitorPort);
     ExecutorService service = Executors.newFixedThreadPool(CLIENT_POOL_SIZE);

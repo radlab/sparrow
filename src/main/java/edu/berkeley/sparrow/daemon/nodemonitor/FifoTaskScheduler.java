@@ -17,15 +17,15 @@ public class FifoTaskScheduler extends TaskScheduler {
 
   public int maxActiveTasks = 4;
   public Integer activeTasks = 0;
-  public LinkedBlockingQueue<TaskReservation> taskReservations =
-      new LinkedBlockingQueue<TaskReservation>();
+  public LinkedBlockingQueue<TaskSpec> taskReservations =
+      new LinkedBlockingQueue<TaskSpec>();
 
   public void setMaxActiveTasks(int max) {
     this.maxActiveTasks = max;
   }
 
   @Override
-  synchronized int handleSubmitTaskReservation(TaskReservation taskReservation) {
+  synchronized int handleSubmitTaskReservation(TaskSpec taskReservation) {
     // This method and handleTaskCompleted() are synchronized to avoid race conditions between
     // updating activeTasks and taskReservations.
     if (activeTasks < maxActiveTasks) {
@@ -58,7 +58,7 @@ public class FifoTaskScheduler extends TaskScheduler {
   @Override
   synchronized protected void handleTaskCompleted(
       String requestId, String lastExecutedTaskRequestId, String lastExecutedTaskId) {
-    TaskReservation reservation = taskReservations.poll();
+    TaskSpec reservation = taskReservations.poll();
     if (reservation != null) {
       reservation.previousRequestId = lastExecutedTaskRequestId;
       reservation.previousTaskId = lastExecutedTaskId;

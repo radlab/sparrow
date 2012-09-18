@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
-import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskReservation;
+import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskSpec;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
@@ -52,7 +52,7 @@ public class TestTaskScheduler {
     scheduler.submitTaskReservations(createTaskReservationRequest(1, 1, scheduler, testApp),
                                      backendAddress);
     assertEquals(1, scheduler.runnableTasks());
-    TaskReservation task = scheduler.getNextTask();
+    TaskSpec task = scheduler.getNextTask();
     assertEquals("1", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
@@ -158,7 +158,7 @@ public class TestTaskScheduler {
 
     scheduler.tasksFinished(completedTasks);
     assertEquals(1, scheduler.runnableTasks());
-    TaskReservation task = scheduler.getNextTask();
+    TaskSpec task = scheduler.getNextTask();
     assertEquals("5", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 

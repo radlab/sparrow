@@ -82,7 +82,7 @@ public class NodeMonitor {
 
     scheduler = new FifoTaskScheduler();
     scheduler.setMaxActiveTasks(cores);
-    scheduler.initialize(capacity, conf);
+    scheduler.initialize(capacity, conf, nodeMonitorInternalPort);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler, nodeMonitorInternalPort);
   }

@@ -14,7 +14,7 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 public class NoQueueTaskScheduler extends TaskScheduler {
 
   @Override
-  int handleSubmitTaskReservation(TaskReservation taskReservation) {
+  int handleSubmitTaskReservation(TaskSpec taskReservation) {
     // Make this task instantly runnable
     makeTaskRunnable(taskReservation);
     return 0;
