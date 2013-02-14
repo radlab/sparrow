@@ -17,8 +17,9 @@ import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 /**
- * A TaskScheduler is a buffer that holds task reservations on a
- * {@link NodeMonitor} until there is a free slot to launch the associated task.
+ * A TaskScheduler is a buffer that holds task reservations until an application backend is
+ * available to run the task. When a backend is ready, the TaskScheduler requests the task
+ * from the {@link Scheduler} that submitted the reservation.
  *
  * Each scheduler will implement a different policy determining when to launch tasks.
  *
