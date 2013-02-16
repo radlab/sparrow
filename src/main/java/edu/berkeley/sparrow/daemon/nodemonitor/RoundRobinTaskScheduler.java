@@ -13,7 +13,12 @@ import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
- * A {@link TaskScheduler} which round-robins requests over backlogged per-app queues.
+ * A {@link TaskScheduler} which round-robins requests over per-user queues.
+ *
+ * When a user is allocated a "slot", this scheduler attempts to fetch a task for the next
+ * queued reservation.  If a task for the given reservation is not available, the user looses
+ * that "slot."
+ * TODO: The above functionality is probably not what we actually want. Fix this.
  *
  * NOTE: This currently round-robins over users, rather than applications. Not sure
  * what we want here going forward.
@@ -57,7 +62,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       }
       makeTaskRunnable(taskReservation);
       // Set current Index to immediately after this user, to reflect the fact that a task for this
-      // user was the most recent one to run.
+      // user was the most recent one to be given a chance to run.
       currentIndex = (users.indexOf(taskReservation.user.getUser()) + 1) % users.size();
       ++activeTasks;
       LOG.debug("Making task for request " + taskReservation.requestId + " runnable (" +
