@@ -235,9 +235,6 @@ public class ProtoBackend implements BackendService.Iface {
     // Note we ignore user here
     executor.submit(new TaskRunnable(
         taskId.requestId, taskId, message, estimatedResources));
-    synchronized (client) {
-      client.sendFrontendMessage(APP_ID, taskId, 1, ByteBuffer.wrap("Started".getBytes()));
-    }
   }
 
   public static void main(String[] args) throws IOException, TException {

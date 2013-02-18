@@ -2,10 +2,10 @@ package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -14,42 +14,39 @@ import org.apache.thrift.TException;
 import com.google.common.base.Optional;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
-import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TClients;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.SchedulerStateStoreService;
 import edu.berkeley.sparrow.thrift.StateStoreService;
 import edu.berkeley.sparrow.thrift.TNodeState;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
- * {@link SchedulerState} implementation which relies on asynchronous updates from a 
+ * {@link SchedulerState} implementation which relies on asynchronous updates from a
  * central state store.
  */
-public class StateStoreSchedulerState implements SchedulerState, 
+public class StateStoreSchedulerState implements SchedulerState,
                                                  SchedulerStateStoreService.Iface {
   public static int DEFAULT_SCHEDULER_STATE_THRIFT_PORT = 20504;
   public static int DEFAULT_SCHEDULER_STATE_THRIFT_THREADS = 2;
-  
+
   private final static Logger LOG = Logger.getLogger(StateStoreSchedulerState.class);
-  private ConcurrentMap<InetSocketAddress, TResourceVector> nodeMonitors = 
-      new ConcurrentHashMap<InetSocketAddress, TResourceVector>();
-  
+  private Set<InetSocketAddress> nodeMonitors = new HashSet<InetSocketAddress>();
+
   @Override
   public void initialize(Configuration conf) throws IOException {
-    String stateStoreHost = conf.getString(SparrowConf.STATE_STORE_HOST, 
+    String stateStoreHost = conf.getString(SparrowConf.STATE_STORE_HOST,
         SparrowConf.DEFAULT_STATE_STORE_HOST);
     int stateStorePort = conf.getInt(SparrowConf.STATE_STORE_PORT,
         SparrowConf.DEFAULT_STATE_STORE_PORT);
     StateStoreService.Client client = TClients.createBlockingStateStoreClient(
         stateStoreHost, stateStorePort);
-    int port = conf.getInt(SparrowConf.SCHEDULER_STATE_THRIFT_PORT, 
+    int port = conf.getInt(SparrowConf.SCHEDULER_STATE_THRIFT_PORT,
         DEFAULT_SCHEDULER_STATE_THRIFT_PORT);
     /* TODO: It's not clear whether this will always give us the right hostname.
-     *       We might want to add a configuration option to set the hostname to use.*/ 
+     *       We might want to add a configuration option to set the hostname to use.*/
     String hostname = Network.getHostName(conf);
     try {
       client.registerScheduler(hostname + ":" + port);
@@ -58,9 +55,9 @@ public class StateStoreSchedulerState implements SchedulerState,
       throw new IOException(e);
     }
     LOG.info("Registered with state store at " + stateStoreHost + ":" + stateStorePort);
-    SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface> processor = 
+    SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface> processor =
         new SchedulerStateStoreService.Processor<SchedulerStateStoreService.Iface>(this);
-    int threads = conf.getInt(SparrowConf.SCHEDULER_STATE_THRIFT_THREADS, 
+    int threads = conf.getInt(SparrowConf.SCHEDULER_STATE_THRIFT_THREADS,
         DEFAULT_SCHEDULER_STATE_THRIFT_THREADS);
 
     TServers.launchThreadedThriftServer(port, threads, processor);
@@ -73,7 +70,7 @@ public class StateStoreSchedulerState implements SchedulerState,
   }
 
   @Override
-  public ConcurrentMap<InetSocketAddress, TResourceVector> getBackends(
+  public Set<InetSocketAddress> getBackends(
       String appId) {
     return nodeMonitors;
   }
@@ -88,11 +85,9 @@ public class StateStoreSchedulerState implements SchedulerState,
         LOG.warn("State store gave bad node monitor descriptor: " + entry.getKey());
         continue;
       }
-      
-      // For now, simply combine Sparrow and external resource usage
-      TResourceVector total = TResources.add(entry.getValue().getExternalUsage(), 
-          entry.getValue().getSparrowUsage());
-      nodeMonitors.put(address.get(), total);
+
+      // Currently, resource usage given in the snapshot is ignored.
+      nodeMonitors.add(address.get());
     }
   }
 

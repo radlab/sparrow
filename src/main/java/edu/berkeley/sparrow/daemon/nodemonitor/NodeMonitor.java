@@ -19,6 +19,7 @@ import com.google.common.collect.Maps;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.Logging;
+import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.SchedulerService;
@@ -37,6 +38,7 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
  */
 public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
+  private final static Logger AUDIT_LOG = Logging.getAuditLogger(TaskScheduler.class);
 
   private static NodeMonitorState state;
   private HashMap<String, InetSocketAddress> appSockets =
@@ -53,6 +55,7 @@ public class NodeMonitor {
   private TResourceVector capacity;
   private TaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
+  private String ipAddress;
 
   public void initialize(Configuration conf, int nodeMonitorInternalPort)
       throws UnknownHostException {
@@ -75,6 +78,8 @@ public class NodeMonitor {
     int mem = Resources.getSystemMemoryMb(conf);
     capacity.setMemory(mem);
     LOG.info("Using memory allocation: " + mem);
+
+    ipAddress = Network.getIPAddress(conf);
 
     int cores = Resources.getSystemCPUCount(conf);
     capacity.setCores(cores);
@@ -137,6 +142,10 @@ public class NodeMonitor {
 
   public boolean enqueueTaskReservations(TEnqueueTaskReservationsRequest request) {
     LOG.debug(Logging.functionCall(request));
+    AUDIT_LOG.info(Logging.auditEventString("node_monitor_enqueue_task_reservation",
+                                            ipAddress, request.requestId));
+    LOG.info("Received enqueue task reservation request from " + ipAddress + " for request " +
+             request.requestId);
 
     InetSocketAddress schedulerAddress = new InetSocketAddress(
         request.getSchedulerAddress().getHost(), request.getSchedulerAddress().getPort());

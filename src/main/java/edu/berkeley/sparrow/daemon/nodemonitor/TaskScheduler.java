@@ -259,15 +259,23 @@ public abstract class TaskScheduler {
   private class GetTaskCallback implements AsyncMethodCallback<getTask_call> {
     private TaskSpec task;
     private InetSocketAddress getTaskAddress;
+    private long startTimeMillis;
+    private long startGCCount;
 
     public GetTaskCallback(TaskSpec taskReservation, InetSocketAddress getTaskAddress) {
       this.task = taskReservation;
       this.getTaskAddress = getTaskAddress;
+      startTimeMillis = System.currentTimeMillis();
+      startGCCount = Logging.getGCCount();
     }
 
     @Override
     public void onComplete(getTask_call response) {
       LOG.debug(Logging.functionCall(response));
+      long rpcTime = System.currentTimeMillis() - startTimeMillis;
+      long numGarbageCollections = Logging.getGCCount() - startGCCount;
+      LOG.debug("GetTask() RPC completed in " +  rpcTime + "ms (" + numGarbageCollections +
+                "GCs occured during RPC)");
       try {
         getTaskClientPool.returnClient(getTaskAddress, (AsyncClient) response.getClient());
       } catch (Exception e) {

@@ -131,16 +131,21 @@ public class Scheduler {
   implements AsyncMethodCallback<enqueueTaskReservations_call> {
     String requestId;
     InetSocketAddress nodeMonitorAddress;
+    long startTimeMillis;
 
     public EnqueueTaskReservationsCallback(String requestId, InetSocketAddress nodeMonitorAddress) {
       this.requestId = requestId;
       this.nodeMonitorAddress = nodeMonitorAddress;
+      this.startTimeMillis = System.currentTimeMillis();
     }
 
     public void onComplete(enqueueTaskReservations_call response) {
       AUDIT_LOG.debug(Logging.auditEventString(
           "scheduler_complete_enqueue_task", requestId,
           nodeMonitorAddress.getAddress().getHostAddress()));
+      long totalTime = System.currentTimeMillis() - startTimeMillis;
+      LOG.debug("Enqueue Task RPC to " + nodeMonitorAddress.getAddress().getHostAddress() +
+                " for request " + requestId + " completed in " + totalTime + "ms");
       try {
         nodeMonitorClientPool.returnClient(nodeMonitorAddress, (AsyncClient) response.getClient());
       } catch (Exception e) {
@@ -162,13 +167,14 @@ public class Scheduler {
       return false;
     }
     for (TTaskSpec t: req.getTasks()) {
-      if ((t.getPreference().getNodes() != null)  &&
+      if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
           (t.getPreference().getNodes().size() == 3)) {
         return false;
       }
     }
     return true;
   }
+
   /** Handles special case. */
   private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
     LOG.info("Handling special case request: " + req);
@@ -186,7 +192,7 @@ public class Scheduler {
     List<InetSocketAddress> allBackends = Lists.newArrayList();
     List<InetSocketAddress> backends = Lists.newArrayList();
     // We assume the below always returns the same order (invalid assumption?)
-    for (InetSocketAddress backend : state.getBackends(req.app).keySet()) {
+    for (InetSocketAddress backend : state.getBackends(req.app)) {
       allBackends.add(backend);
     }
 
@@ -244,7 +250,7 @@ public class Scheduler {
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
-    Set<InetSocketAddress> backends = state.getBackends(app).keySet();
+    Set<InetSocketAddress> backends = state.getBackends(app);
     boolean constrained = false;
     for (TTaskSpec task : tasks) {
       constrained = constrained || (
@@ -316,7 +322,8 @@ public class Scheduler {
           taskLaunchSpecs.get(0).taskId,
           nodeMonitorAddress.getHost()));
     } else {
-      AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId));
+      AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId,
+                                              nodeMonitorAddress.getHost()));
     }
     if (taskPlacer.allResponsesReceived()) {
       LOG.debug("All responses received for request " + requestId);

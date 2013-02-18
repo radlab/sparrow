@@ -15,13 +15,14 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 public class FifoTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(FifoTaskScheduler.class);
 
-  public int maxActiveTasks = 4;
-  public Integer activeTasks = 0;
+  public int maxActiveTasks;
+  public Integer activeTasks;
   public LinkedBlockingQueue<TaskSpec> taskReservations =
       new LinkedBlockingQueue<TaskSpec>();
 
   public FifoTaskScheduler(int max) {
-    this.maxActiveTasks = max;
+    maxActiveTasks = max;
+    activeTasks = 0;
   }
 
   @Override

@@ -1,15 +1,14 @@
 package edu.berkeley.sparrow.daemon.scheduler;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
 import org.apache.commons.configuration.Configuration;
 
 import edu.berkeley.sparrow.daemon.StandaloneStateStore;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
- * Implementation of state storage for use in a standalone deployment of 
+ * Implementation of state storage for use in a standalone deployment of
  * Sparrow.
  */
 public class StandaloneSchedulerState implements SchedulerState {
@@ -17,14 +16,14 @@ public class StandaloneSchedulerState implements SchedulerState {
   @Override
   public void initialize(Configuration conf) {
   }
- 
+
   @Override
   public boolean watchApplication(String appId) {
     return true;
   }
-  
+
   @Override
-  public ConcurrentMap<InetSocketAddress, TResourceVector> getBackends(String appId) {
+  public Set<InetSocketAddress> getBackends(String appId) {
     return state.getBackends(appId);
   }
 }

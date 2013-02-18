@@ -102,8 +102,9 @@ class Task:
         self.previous_task_id = previous_task_id
 
     def queued_time(self):
-        """ Returns the time spent waiting to launch on the backend. """
-        return (self.node_monitor_launch_time - self.node_monitor_submit_time)
+        """ Returns the time spent from when the task was submitted until the NM requested it
+            from the scheduler. """
+        return (self.node_monitor_get_task_time - self.node_monitor_submit_time)
 
     def service_time(self):
         """ Returns the service time (time executing on backend)."""
@@ -152,9 +153,9 @@ class Request:
         # TODO: this won't work correctly when multiple reservations are sent to one node monitor.
         self.__node_monitor_get_task_times = {}
 
-        # List of times when reservations were replied to (includes reservations that were not
-        # used).
-        self.__scheduler_get_task_times = []
+        # Mapping of node monitor addresses to when a getTask() was received at the scheduler from
+        # that node monitor (includes reservations that weren't responded to).
+        self.__scheduler_get_task_times = {}
         # Mapping of node monitor address to a pair of times, the first of which is the time when
         # the request to enqueue a task reservation was launched, and the second of which is the
         # time when the request completed.
@@ -226,12 +227,12 @@ class Request:
                 rtts.append(task.node_monitor_launch_time - task.node_monitor_get_task_time)
         return rtts
 
-    def add_scheduler_get_task(self, time):
+    def add_scheduler_get_task(self, time, node_monitor_address):
         """ Adds the time when getTask() was called (as perceived by the scheduler). """
-        self.__scheduler_get_task_times.append(time)
+        self.__scheduler_get_task_times[node_monitor_address] = time
 
     def get_scheduler_get_task_times(self):
-        return (self.__arrival_time, self.__scheduler_get_task_times)
+        return (self.__arrival_time, self.__scheduler_get_task_times.values())
 
     def add_scheduler_task_launch(self, task_id, launch_time):
         task = self.__get_task(task_id)
@@ -439,15 +440,19 @@ class LogParser:
             elif audit_event_params[0] == "scheduler_complete_enqueue_task":
                 request = self.__get_request(audit_event_params[1])
                 request.add_enqueue_reservation_completion(time, audit_event_params[2])
+            elif audit_event_params[0] == "node_monitor_enqueue_task_reservation":
+                # TODO: actually implement this! is this useful?
+                request = self.__get_request(audit_event_params[1])
+                #request.add_node_monitor_enqueue_reservation(time, audit_event_params[2])
             elif audit_event_params[0] == "reservation_enqueued":
                 self.__reservation_enqueued(time, audit_event_params[1], audit_event_params[3])
             elif audit_event_params[0] == "scheduler_assigned_task":
                  request = self.__get_request(audit_event_params[1])
                  request.add_scheduler_task_launch(audit_event_params[2], time)
-                 request.add_scheduler_get_task(time)
+                 request.add_scheduler_get_task(time, audit_event_params[3])
             elif audit_event_params[0] == "scheduler_get_task_no_task":
                 request = self.__get_request(audit_event_params[1])
-                request.add_scheduler_get_task(time)
+                request.add_scheduler_get_task(time, audit_event_params[2])
             elif audit_event_params[0] == "node_monitor_task_launch":
                 request = self.__get_request(audit_event_params[1])
                 request.add_node_monitor_task_launch(audit_event_params[2], audit_event_params[3],
@@ -462,7 +467,6 @@ class LogParser:
             elif audit_event_params[0] == "node_monitor_get_task_no_task":
                 previous_request = self.__get_request(audit_event_params[2])
                 previous_request.add_subsequent_task_launch_failure(audit_event_params[3])
-                pass
             elif audit_event_params[0] == "node_monitor_get_task":
                 request = self.__get_request(audit_event_params[1])
                 request.add_node_monitor_get_task_time(time, audit_event_params[2])
@@ -473,6 +477,7 @@ class LogParser:
             request.set_node_monitor_get_task_times_for_tasks()
 
     def output_reservation_queue_lengths(self, output_directory):
+        """ Outputs the reservation queue length as a function of time, at each node monitor. """
         gnuplot_file = open("%s/reservation_queue_lengths.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
         gnuplot_file.write("set output 'reservation_queue_length.ps'\n")
@@ -608,6 +613,7 @@ class LogParser:
             self.output_running_tasks(user_requests, user_output_directory)
 
     def output_running_tasks(self, requests, output_directory):
+        """ Outputs the number of running tasks as a function of time, for the given requests. """
         TASK_START = 1
         TASK_END = -1
         events = []
@@ -637,7 +643,7 @@ class LogParser:
                            running_tasks_filename)
 
     def output_aggregate_stats(self, requests, output_directory):
-        # Overhead vs best possible response time of a req, given its service times
+        # Overhead versus best possible response time of a request, given its service times
         overheads = []
 
         # Response time is the time from when the job arrived at a scheduler
@@ -645,6 +651,7 @@ class LogParser:
         response_times = []
         # Network RTT for the enqueue reservation call.
         enqueue_reservation_rtts = []
+
         # Network RTT for get task call
         get_task_rtts = []
         # Time from when a task completed to when a new task was launched.
@@ -675,6 +682,7 @@ class LogParser:
                                      k.complete(), requests.values())
         print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(requests.values()) - len(considered_requests))
+
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
             enqueue_reservation_rtts.extend(request.get_enqueue_reservation_rtts())
@@ -702,7 +710,7 @@ class LogParser:
         # Output data for response time and network delay CDFs.
         results_filename = "results.data"
         file = open(os.path.join(output_directory, results_filename), "w")
-        file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRtt(getTask)\t"
+        file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRTT(getTask)\t"
                    "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\t"
                    "GetTaskTaskCount\tOverhead\n")
         network_rtts = []
@@ -742,6 +750,10 @@ class LogParser:
         gnuplot_file.write("set xrange [0:]\n")
         gnuplot_file.write("set yrange [0:1]\n")
         gnuplot_file.write("plot '%s' using 2:1 lw 4 with l title 'ResponseTime',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'GetTask RTT',\\\n" %
+                           results_filename)
+        gnuplot_file.write("'%s' using 3:1 lw 4 with l title 'Enqueue Reservation RTT',\\\n" %
                            results_filename)
         gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Network RTT',\\\n" %
                            results_filename)

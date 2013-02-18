@@ -18,10 +18,10 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
 
   private Set<InetSocketAddress> nodeMonitors;
   private String staticAppId;
-  
+
   @Override
   public void initialize(Configuration conf) {
-    nodeMonitors = ConfigUtil.parseBackends(conf).keySet();
+    nodeMonitors = ConfigUtil.parseBackends(conf);
     staticAppId = conf.getString(SparrowConf.STATIC_APP_NAME);
   }
 
@@ -36,11 +36,11 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
       for (InetSocketAddress nodeMonitorAddress : nodeMonitors) {
         errorMessage.append(nodeMonitorAddress.toString());
       }
-      throw new RuntimeException("Address " + nodeMonitor.toString() + 
+      throw new RuntimeException("Address " + nodeMonitor.toString() +
           " not found among statically configured addreses for app " + appId + " (statically " +
           "configured addresses include: " + errorMessage.toString());
     }
-    
+
     return true;
   }
 }

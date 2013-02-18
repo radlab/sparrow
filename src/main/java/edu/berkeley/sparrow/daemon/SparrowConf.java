@@ -70,8 +70,6 @@ public class SparrowConf {
   // Expects a comma-separated list of host:port pairs describing the address of the
   // internal interface of the node monitors.
   public final static String STATIC_NODE_MONITORS = "static.node_monitors";
-  public final static String STATIC_MEM_PER_NM = "static.mem.per.backend";
-  public final static String STATIC_CPU_PER_NM = "static.cpu.per.backend";
   public final static String STATIC_APP_NAME = "static.app.name";
   public final static String STATIC_SCHEDULERS = "static.frontends";
 
