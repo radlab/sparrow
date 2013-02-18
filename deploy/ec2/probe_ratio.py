@@ -8,23 +8,24 @@ import ec2_exp
 def run_cmd(cmd):
     subprocess.check_call(cmd, shell=True)
 
-utilizations = [1.5]
+utilizations = [0.5]
 sample_ratios = [2.0]
 sample_ratio_constrained = 2
 
+instances_already_launched = True
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 100
-tasks_per_job = 10
-private_ssh_key = "/root/patkey.pem"
+tasks_per_job = 2
+private_ssh_key = "patkey.pem"
 sparrow_branch = "kay_nsdi"
-num_backends = 100
-num_frontends = 10
+num_backends = 8
+num_frontends = 1
 cores_per_backend = 4
 # Run each trial for 5 minutes.
 trial_length = 400
 num_preferred_nodes = 0
-num_users = 3
+num_users = 1
 
 # Warmup information
 warmup_s = 20
@@ -32,9 +33,11 @@ post_warmup_s = 60
 warmup_arrival_rate_s = 0.1* (float(num_backends * cores_per_backend * 1000) /
                          (task_duration_ms * tasks_per_job * num_frontends))
 
-print "********Launching instances..."
-#run_cmd("./ec2-exp.sh launch -f %s -b %s -i %s" % (num_frontends, num_backends, private_ssh_key))
-#time.sleep(10)
+if not instances_already_launched:
+    print "********Launching instances..."
+    run_cmd("./ec2-exp.sh launch -f %s -b %s -i %s" %
+            (num_frontends, num_backends, private_ssh_key))
+    time.sleep(10)
 
 for sample_ratio in sample_ratios:
     for utilization in utilizations:
@@ -71,7 +74,7 @@ for sample_ratio in sample_ratios:
         ec2_exp.start_proto(frontends, backends, opts)
         time.sleep(trial_length)
 
-        log_dirname = "/disk1/sparrow/fairness_%s_%s" % (utilization, sample_ratio)
+        log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/021713_%s_%s" % (utilization, sample_ratio)
         while os.path.exists(log_dirname):
             log_dirname = "%s_a" % log_dirname
         os.mkdir(log_dirname)

@@ -162,7 +162,7 @@ public class Scheduler {
       return false;
     }
     for (TTaskSpec t: req.getTasks()) {
-      if ((t.getPreference().getNodes() != null)  &&
+      if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
           (t.getPreference().getNodes().size() == 3)) {
         return false;
       }

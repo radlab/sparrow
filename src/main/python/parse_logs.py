@@ -473,6 +473,7 @@ class LogParser:
             request.set_node_monitor_get_task_times_for_tasks()
 
     def output_reservation_queue_lengths(self, output_directory):
+        """ Outputs the reservation queue length as a function of time, at each node monitor. """
         gnuplot_file = open("%s/reservation_queue_lengths.gp" % output_directory, "w")
         gnuplot_file.write("set terminal postscript color 'Helvetica' 12\n")
         gnuplot_file.write("set output 'reservation_queue_length.ps'\n")
@@ -608,6 +609,7 @@ class LogParser:
             self.output_running_tasks(user_requests, user_output_directory)
 
     def output_running_tasks(self, requests, output_directory):
+        """ Outputs the number of running tasks as a function of time, for the given requests. """
         TASK_START = 1
         TASK_END = -1
         events = []
@@ -637,7 +639,7 @@ class LogParser:
                            running_tasks_filename)
 
     def output_aggregate_stats(self, requests, output_directory):
-        # Overhead vs best possible response time of a req, given its service times
+        # Overhead versus best possible response time of a request, given its service times
         overheads = []
 
         # Response time is the time from when the job arrived at a scheduler
@@ -702,7 +704,7 @@ class LogParser:
         # Output data for response time and network delay CDFs.
         results_filename = "results.data"
         file = open(os.path.join(output_directory, results_filename), "w")
-        file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRtt(getTask)\t"
+        file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRTT(getTask)\t"
                    "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\t"
                    "GetTaskTaskCount\tOverhead\n")
         network_rtts = []
