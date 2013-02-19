@@ -316,7 +316,8 @@ public class Scheduler {
           taskLaunchSpecs.get(0).taskId,
           nodeMonitorAddress.getHost()));
     } else {
-      AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId));
+      AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId,
+                                              nodeMonitorAddress.getHost()));
     }
     if (taskPlacer.allResponsesReceived()) {
       LOG.debug("All responses received for request " + requestId);

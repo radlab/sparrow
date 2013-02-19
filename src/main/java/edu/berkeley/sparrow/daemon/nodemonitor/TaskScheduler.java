@@ -181,6 +181,8 @@ public abstract class TaskScheduler {
         task.schedulerAddress.getHostName(), SchedulerThrift.DEFAULT_GET_TASK_PORT);
     try {
       getTaskClient = getTaskClientPool.borrowClient(newAddress);
+      LOG.debug("Client pool active clients: " + getTaskClientPool.getNumActive(newAddress) +
+                "; idle clients: " + getTaskClientPool.getNumIdle(newAddress));
     } catch (Exception e) {
       LOG.fatal("Unable to create client to contact scheduler at " +
           newAddress.toString() + ":" + e);

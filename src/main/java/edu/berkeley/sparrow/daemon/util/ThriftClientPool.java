@@ -28,7 +28,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int MIN_IDLE_CLIENTS_PER_ADDR = 5;
   /** See {@link GenericKeyedObjectPool.Config} */
-  public static int EVICTABLE_IDLE_TIME_MS = 1000;
+  public static int EVICTABLE_IDLE_TIME_MILLIS = 1000;
   /** See {@link GenericKeyedObjectPool.Config} */
   public static int TIME_BETWEEN_EVICTION_RUNS_MILLIS = 10000;
   /** See {@link GenericKeyedObjectPool.Config} */
@@ -40,7 +40,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
   protected static Config getPoolConfig() {
     Config conf = new Config();
     conf.minIdle = MIN_IDLE_CLIENTS_PER_ADDR;
-    conf.minEvictableIdleTimeMillis = EVICTABLE_IDLE_TIME_MS;
+    conf.minEvictableIdleTimeMillis = EVICTABLE_IDLE_TIME_MILLIS;
     conf.timeBetweenEvictionRunsMillis = TIME_BETWEEN_EVICTION_RUNS_MILLIS;
     conf.maxActive = MAX_ACTIVE_CLIENTS_PER_ADDR;
     conf.whenExhaustedAction = GenericKeyedObjectPool.WHEN_EXHAUSTED_GROW;
@@ -110,7 +110,7 @@ public class ThriftClientPool<T extends TAsyncClient> {
   }
 
   private class PoolFactory implements KeyedPoolableObjectFactory<InetSocketAddress, T> {
-    // Thrift clients to not expose their underlying transports, so we track them
+    // Thrift clients do not expose their underlying transports, so we track them
     // separately here to let us call close() on the transport associated with a
     // particular client.
     private HashMap<T, TNonblockingTransport> transports =
@@ -188,11 +188,11 @@ public class ThriftClientPool<T extends TAsyncClient> {
     pool.returnObject(socket, client);
   }
 
-  protected int getNumActive(InetSocketAddress socket) {
+  public int getNumActive(InetSocketAddress socket) {
     return pool.getNumActive(socket);
   }
 
-  protected int getNumIdle(InetSocketAddress socket) {
+  public int getNumIdle(InetSocketAddress socket) {
     return pool.getNumIdle(socket);
   }
 }

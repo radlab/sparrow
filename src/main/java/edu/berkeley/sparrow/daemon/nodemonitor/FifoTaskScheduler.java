@@ -15,7 +15,7 @@ import edu.berkeley.sparrow.thrift.TResourceUsage;
 public class FifoTaskScheduler extends TaskScheduler {
   private final static Logger LOG = Logger.getLogger(FifoTaskScheduler.class);
 
-  public int maxActiveTasks = 4;
+  public int maxActiveTasks = 3;
   public Integer activeTasks = 0;
   public LinkedBlockingQueue<TaskSpec> taskReservations =
       new LinkedBlockingQueue<TaskSpec>();
