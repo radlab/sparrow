@@ -186,7 +186,7 @@ public class Scheduler {
     List<InetSocketAddress> allBackends = Lists.newArrayList();
     List<InetSocketAddress> backends = Lists.newArrayList();
     // We assume the below always returns the same order (invalid assumption?)
-    for (InetSocketAddress backend : state.getBackends(req.app).keySet()) {
+    for (InetSocketAddress backend : state.getBackends(req.app)) {
       allBackends.add(backend);
     }
 
@@ -244,7 +244,7 @@ public class Scheduler {
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
-    Set<InetSocketAddress> backends = state.getBackends(app).keySet();
+    Set<InetSocketAddress> backends = state.getBackends(app);
     boolean constrained = false;
     for (TTaskSpec task : tasks) {
       constrained = constrained || (
