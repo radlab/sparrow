@@ -1,6 +1,8 @@
 package edu.berkeley.sparrow.daemon.util;
 
 import java.io.IOException;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
 import java.util.Random;
 
 import org.apache.log4j.FileAppender;
@@ -39,6 +41,34 @@ public class Logging {
     /* We don't want audit messages to be appended to the main appender, which is
      * intended for potentially user-facing messages. */
     auditLogger.setAdditivity(false);
+  }
+
+  /** Returns the total count of garbage collections. */
+  public static long getGCCount() {
+    long totalGarbageCollections = 0;
+
+    for(GarbageCollectorMXBean gc :
+            ManagementFactory.getGarbageCollectorMXBeans()) {
+        long count = gc.getCollectionCount();
+        if (count >= 0) {
+            totalGarbageCollections += count;
+        }
+    }
+    return totalGarbageCollections;
+  }
+
+  /** Returns the total time that has been spent on garbage collection. */
+  public static long getGCTime() {
+    long garbageCollectionTime = 0;
+
+    for(GarbageCollectorMXBean gc :
+            ManagementFactory.getGarbageCollectorMXBeans()) {
+        long time = gc.getCollectionTime();
+        if(time >= 0) {
+            garbageCollectionTime += time;
+        }
+    }
+    return garbageCollectionTime;
   }
 
   /**

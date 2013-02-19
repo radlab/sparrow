@@ -131,15 +131,21 @@ public class Scheduler {
   implements AsyncMethodCallback<enqueueTaskReservations_call> {
     String requestId;
     InetSocketAddress nodeMonitorAddress;
+    long startTimeMillis;
 
     public EnqueueTaskReservationsCallback(String requestId, InetSocketAddress nodeMonitorAddress) {
       this.requestId = requestId;
       this.nodeMonitorAddress = nodeMonitorAddress;
+      this.startTimeMillis = System.currentTimeMillis();
     }
 
     public void onComplete(enqueueTaskReservations_call response) {
       AUDIT_LOG.debug(Logging.auditEventString(
           "scheduler_complete_enqueue_task", requestId,
+          nodeMonitorAddress.getAddress().getHostAddress()));
+      long totalTime = System.currentTimeMillis() - startTimeMillis;
+      LOG.debug(Logging.auditEventString(
+          "scheduler_complete_enqueue_task", totalTime, requestId,
           nodeMonitorAddress.getAddress().getHostAddress()));
       try {
         nodeMonitorClientPool.returnClient(nodeMonitorAddress, (AsyncClient) response.getClient());
@@ -169,6 +175,7 @@ public class Scheduler {
     }
     return true;
   }
+
   /** Handles special case. */
   private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
     LOG.info("Handling special case request: " + req);
@@ -281,6 +288,9 @@ public class Scheduler {
         LOG.debug("Launching enqueueTask for request " + requestId + "on node: " + entry.getKey());
         // Pass in null callback because the RPC doesn't return anything.
         AUDIT_LOG.debug(Logging.auditEventString(
+            "scheduler_launch_enqueue_task", entry.getValue().requestId,
+            entry.getKey().getAddress().getHostAddress()));
+        LOG.debug(Logging.auditEventString(
             "scheduler_launch_enqueue_task", entry.getValue().requestId,
             entry.getKey().getAddress().getHostAddress()));
         client.enqueueTaskReservations(

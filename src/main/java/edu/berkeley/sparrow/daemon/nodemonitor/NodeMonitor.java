@@ -144,6 +144,8 @@ public class NodeMonitor {
     LOG.debug(Logging.functionCall(request));
     AUDIT_LOG.info(Logging.auditEventString("node_monitor_enqueue_task_reservation",
                                             ipAddress, request.requestId));
+    LOG.info(Logging.auditEventString("node_monitor_enqueue_task_reservation",
+        ipAddress, request.requestId));
 
     InetSocketAddress schedulerAddress = new InetSocketAddress(
         request.getSchedulerAddress().getHost(), request.getSchedulerAddress().getPort());
