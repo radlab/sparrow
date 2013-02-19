@@ -193,6 +193,8 @@ public abstract class TaskScheduler {
                 nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
       AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
                                                nodeMonitorInternalAddress.getHost()));
+      LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
+          nodeMonitorInternalAddress.getHost()));
       getTaskClient.getTask(task.requestId, nodeMonitorInternalAddress,
                               new GetTaskCallback(task, newAddress));
     } catch (TException e) {
@@ -261,15 +263,22 @@ public abstract class TaskScheduler {
   private class GetTaskCallback implements AsyncMethodCallback<getTask_call> {
     private TaskSpec task;
     private InetSocketAddress getTaskAddress;
+    private long startTimeMillis;
+    private long startGCCount;
 
     public GetTaskCallback(TaskSpec taskReservation, InetSocketAddress getTaskAddress) {
       this.task = taskReservation;
       this.getTaskAddress = getTaskAddress;
+      startTimeMillis = System.currentTimeMillis();
+      startGCCount = Logging.getGCCount();
     }
 
     @Override
     public void onComplete(getTask_call response) {
       LOG.debug(Logging.functionCall(response));
+      long rpcTime = System.currentTimeMillis() - startTimeMillis;
+      long GCs = Logging.getGCCount() - startGCCount;
+      LOG.debug(Logging.auditEventString("get_task_complete", rpcTime, GCs));
       try {
         getTaskClientPool.returnClient(getTaskAddress, (AsyncClient) response.getClient());
       } catch (Exception e) {

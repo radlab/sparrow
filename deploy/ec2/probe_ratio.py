@@ -8,11 +8,11 @@ import ec2_exp
 def run_cmd(cmd):
     subprocess.check_call(cmd, shell=True)
 
-utilizations = [0.1, 0.5, 0.9]
+utilizations = [0.5]
 sample_ratios = [2.0]
 sample_ratio_constrained = 2
 
-instances_already_launched = True
+instances_already_launched = False
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 100
@@ -74,7 +74,7 @@ for sample_ratio in sample_ratios:
         ec2_exp.start_proto(frontends, backends, opts)
         time.sleep(trial_length)
 
-        log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/021813_%s_%s" % (utilization, sample_ratio)
+        log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/021913_%s_%s" % (utilization, sample_ratio)
         while os.path.exists(log_dirname):
             log_dirname = "%s_a" % log_dirname
         os.mkdir(log_dirname)
