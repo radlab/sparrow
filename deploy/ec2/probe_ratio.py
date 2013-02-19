@@ -12,16 +12,16 @@ utilizations = [0.1, 0.5, 0.9]
 sample_ratios = [2.0]
 sample_ratio_constrained = 2
 
-instances_already_launched = True
+instances_already_launched = False
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 100
-tasks_per_job = 3
+tasks_per_job = 1
 private_ssh_key = "patkey.pem"
 sparrow_branch = "nsdi_fairness"
-num_backends = 8
+num_backends = 2
 num_frontends = 1
-cores_per_backend = 4
+cores_per_backend = 3
 # Run each trial for 5 minutes.
 trial_length = 400
 num_preferred_nodes = 0
