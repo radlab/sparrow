@@ -219,45 +219,12 @@ class Request:
                 rtts.append(rtt_info[1] - rtt_info[0])
         return rtts
 
-    def get_half_enqueue_reservation_rtts(self, first_half):
-        enqueue_reservation_launch_times = [rtt_info[0]
-                                            for rtt_info in self.__enqueue_reservation_rtts.values()
-                                            if rtt_info[0] != INVALID_TIME]
-        enqueue_reservation_launch_times.sort()
-        median = get_percentile(enqueue_reservation_launch_times, 0.5)
-
-        rtts = []
-        for rtt_info in self.__enqueue_reservation_rtts.values():
-            if rtt_info[0] != INVALID_TIME and rtt_info[1] != INVALID_TIME:
-                if first_half and rtt_info[0] <= median:
-                    rtts.append(rtt_info[1] - rtt_info[0])
-                elif not first_half and rtt_info[0] > median:
-                    rtts.append(rtt_info[1] - rtt_info[0])
-        return rtts
-
     def get_get_task_rtts(self):
         rtts = []
         for task in self.__tasks.values():
             if (task.node_monitor_get_task_time != INVALID_TIME and
                 task.node_monitor_launch_time != INVALID_TIME):
                 rtts.append(task.node_monitor_launch_time - task.node_monitor_get_task_time)
-        return rtts
-
-    def get_half_get_task_rtts(self, first_half):
-        node_monitor_get_task_times = [t.node_monitor_get_task_time
-                                       for t in self.__tasks.values()
-                                       if t.node_monitor_get_task_time != INVALID_TIME]
-        node_monitor_get_task_times.sort()
-        median = get_percentile(node_monitor_get_task_times, 0.5)
-
-        rtts = []
-        for task in self.__tasks.values():
-            if (task.node_monitor_get_task_time != INVALID_TIME and
-                task.node_monitor_launch_time != INVALID_TIME):
-                if first_half and task.node_monitor_get_task_time <= median:
-                    rtts.append(task.node_monitor_launch_time - task.node_monitor_get_task_time)
-                elif not first_half and task.node_monitor_get_task_time > median:
-                    rtts.append(task.node_monitor_launch_time - task.node_monitor_get_task_time)
         return rtts
 
     def add_scheduler_get_task(self, time, node_monitor_address):
@@ -686,14 +653,8 @@ class LogParser:
         # Network RTT for the enqueue reservation call.
         enqueue_reservation_rtts = []
 
-        # enqueue reservation call, separated into the first and second halves.
-        first_half_enqueue_reservation_rtts = []
-        second_half_enqueue_reservation_rtts = []
-
         # Network RTT for get task call
         get_task_rtts = []
-        first_half_get_task_rtts = []
-        second_half_get_task_rtts = []
         # Time from when a task completed to when a new task was launched.
         # TODO: add zeros here for all of the tasks that completed immediately.
         get_new_task_times = []
@@ -726,11 +687,7 @@ class LogParser:
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
             enqueue_reservation_rtts.extend(request.get_enqueue_reservation_rtts())
-            first_half_enqueue_reservation_rtts.extend(request.get_half_enqueue_reservation_rtts(True))
-            second_half_enqueue_reservation_rtts.extend(request.get_half_enqueue_reservation_rtts(False))
             get_task_rtts.extend(request.get_get_task_rtts())
-            first_half_get_task_rtts.extend(request.get_half_get_task_rtts(True))
-            second_half_get_task_rtts.extend(request.get_half_get_task_rtts(False))
             service_times.extend(request.service_times())
             start_and_service_times.extend(request.start_and_service_times())
             start_and_response_times.append((request.arrival_time(), request.response_time()))
@@ -763,11 +720,7 @@ class LogParser:
         network_rtts.sort()
         response_times.sort()
         enqueue_reservation_rtts.sort()
-        first_half_enqueue_reservation_rtts.sort()
-        second_half_enqueue_reservation_rtts.sort()
         get_task_rtts.sort()
-        first_half_get_task_rtts.sort()
-        second_half_get_task_rtts.sort()
         get_new_task_times.sort()
         service_times.sort()
         queue_times.sort()
@@ -777,7 +730,7 @@ class LogParser:
         NUM_DATA_POINTS = 100
         for i in range(NUM_DATA_POINTS):
             i = float(i) / NUM_DATA_POINTS
-            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
                 get_percentile(enqueue_reservation_rtts, i),
                 get_percentile(get_task_rtts, i),
@@ -786,11 +739,7 @@ class LogParser:
                 get_percentile(service_times, i),
                 get_percentile(queue_times, i),
                 get_percentile(get_task_task_counts, i),
-                get_percentile(overheads, i),
-                get_percentile(first_half_enqueue_reservation_rtts, i),
-                get_percentile(second_half_enqueue_reservation_rtts, i),
-                get_percentile(first_half_get_task_rtts, i),
-                get_percentile(second_half_get_task_rtts, i)))
+                get_percentile(overheads, i)))
         file.close()
 
         # Output summary CDFs.
@@ -805,15 +754,7 @@ class LogParser:
                            results_filename)
         gnuplot_file.write("'%s' using 4:1 lw 4 with l title 'GetTask RTT',\\\n" %
                            results_filename)
-        gnuplot_file.write("'%s' using 13:1 lw 4 with l title 'GetTask RTT (1st)',\\\n" %
-                           results_filename)
-        gnuplot_file.write("'%s' using 14:1 lw 4 with l title 'GetTask RTT (2nd)',\\\n" %
-                           results_filename)
         gnuplot_file.write("'%s' using 3:1 lw 4 with l title 'Enqueue Reservation RTT',\\\n" %
-                           results_filename)
-        gnuplot_file.write("'%s' using 11:1 lw 4 with l title 'Enqueue Reservation RTT (1st)',\\\n" %
-                           results_filename)
-        gnuplot_file.write("'%s' using 12:1 lw 4 with l title 'Enqueue Reservation RTT (2nd)',\\\n" %
                            results_filename)
         gnuplot_file.write("'%s' using 5:1 lw 4 with l title 'Network RTT',\\\n" %
                            results_filename)
