@@ -41,7 +41,9 @@ public class ThriftPongClient {
     String hostname = args[0];
     InetSocketAddress address = new InetSocketAddress(hostname, 12345);
     while (true) {
+      Long t = System.nanoTime();
       AsyncClient client = pongClientPool.borrowClient(address);
+      System.out.println("Getting client took " + ((System.nanoTime() - t) / (1000000)));
       client.ping("PING", new Callback(address, System.nanoTime()));
       Thread.sleep(30);
     }

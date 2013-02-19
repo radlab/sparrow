@@ -12,7 +12,7 @@ utilizations = [0.5]
 sample_ratios = [2.0]
 sample_ratio_constrained = 2
 
-instances_already_launched = False
+instances_already_launched = True
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 100
