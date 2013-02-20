@@ -17,21 +17,23 @@ instances_already_launched = True
 #TODO: There are issues here...alone, takes more like 145
 task_duration_ms = 100
 tasks_per_job = 1
-private_ssh_key = "patkey.pem"
-sparrow_branch = "nsdi_fairness"
-num_backends = 2
+private_ssh_key = "/home/patrick/.ssh/patkey.pem"
+sparrow_branch = "patrick-testing"
+num_backends = 1
 num_frontends = 1
 cores_per_backend = 3
 # Run each trial for 5 minutes.
-trial_length = 400
+trial_length = 500
 num_preferred_nodes = 0
 num_users = 1
 
+full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
+  (task_duration_ms * tasks_per_job * num_frontends))
+
 # Warmup information
-warmup_s = 20
-post_warmup_s = 60
-warmup_arrival_rate_s = 0.1* (float(num_backends * cores_per_backend * 1000) /
-                         (task_duration_ms * tasks_per_job * num_frontends))
+warmup_s = 120
+post_warmup_s = 30
+warmup_arrival_rate_s = 0.4 * full_utilization_rate_s
 
 if not instances_already_launched:
     print "********Launching instances..."
@@ -41,10 +43,7 @@ if not instances_already_launched:
 
 for sample_ratio in sample_ratios:
     for utilization in utilizations:
-        # Number of jobs that should be generated at each frontend per millisecond.
-        arrival_rate_ms = (float(utilization * num_backends * cores_per_backend) /
-                           (task_duration_ms * tasks_per_job * num_frontends))
-        arrival_rate_s = arrival_rate_ms * 1000
+        arrival_rate_s = utilization * full_utilization_rate_s
 
         # This is a little bit of a hacky way to pass args to the ec2 script.
         (opts, args) = ec2_exp.parse_args(False)
@@ -74,7 +73,7 @@ for sample_ratio in sample_ratios:
         ec2_exp.start_proto(frontends, backends, opts)
         time.sleep(trial_length)
 
-        log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/021913_%s_%s" % (utilization, sample_ratio)
+        log_dirname = "/home/patrick/Documents/sparrow/deploy/ec2/021913_%s_%s" % (utilization, sample_ratio)
         while os.path.exists(log_dirname):
             log_dirname = "%s_a" % log_dirname
         os.mkdir(log_dirname)
@@ -92,6 +91,6 @@ for sample_ratio in sample_ratios:
 
         print "********Parsing logs"
         run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=%s "
-                 "output_dir=%s/results start_sec=190 end_sec=310 && cd -") %
+                 "output_dir=%s/results start_sec=350 end_sec=450 && cd -") %
                 (log_dirname, log_dirname))
 
