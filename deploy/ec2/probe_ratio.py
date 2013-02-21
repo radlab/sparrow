@@ -11,7 +11,7 @@ def run_cmd(cmd):
 
 def main(argv):
     launch_instances = False
-    if argv[0] == "True":
+    if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
     utilizations = [0.5]
@@ -22,10 +22,10 @@ def main(argv):
     task_duration_ms = 100
     tasks_per_job = 1
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "patrick-testing"
-    num_backends = 1
+    sparrow_branch = "debugging"
+    num_backends = 2
     num_frontends = 1
-    cores_per_backend = 3
+    cores_per_backend = 4
     # Run each trial for 5 minutes.
     trial_length = 500
     num_preferred_nodes = 0

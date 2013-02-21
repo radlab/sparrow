@@ -135,4 +135,9 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
     return out;
   }
 
+  @Override
+  int getMaxActiveTasks() {
+    return maxActiveTasks;
+  }
+
 }

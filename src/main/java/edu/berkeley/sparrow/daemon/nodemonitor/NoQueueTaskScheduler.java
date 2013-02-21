@@ -38,4 +38,10 @@ public class NoQueueTaskScheduler extends TaskScheduler {
     // Do nothing
   }
 
+
+  @Override
+  int getMaxActiveTasks() {
+    return -1;
+  }
+
 }

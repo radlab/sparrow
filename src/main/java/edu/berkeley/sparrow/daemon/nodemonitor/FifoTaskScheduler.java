@@ -77,4 +77,8 @@ public class FifoTaskScheduler extends TaskScheduler {
     return out;
   }
 
+  @Override
+  int getMaxActiveTasks() {
+    return maxActiveTasks;
+  }
 }

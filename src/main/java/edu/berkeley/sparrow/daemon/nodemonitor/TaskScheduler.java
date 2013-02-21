@@ -8,22 +8,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
-import org.apache.thrift.TException;
-import org.apache.thrift.async.AsyncMethodCallback;
 
 import com.google.common.collect.Maps;
 
-import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
-import edu.berkeley.sparrow.thrift.GetTaskService;
-import edu.berkeley.sparrow.thrift.GetTaskService.AsyncClient;
-import edu.berkeley.sparrow.thrift.GetTaskService.AsyncClient.getTask_call;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
@@ -96,19 +88,12 @@ public abstract class TaskScheduler {
       new LinkedBlockingQueue<TaskSpec>();
   private HashMap<String, ResourceInfo> resourcesPerRequest = Maps.newHashMap();
 
-  private ThriftClientPool<GetTaskService.AsyncClient> getTaskClientPool =
-      new ThriftClientPool<GetTaskService.AsyncClient>(
-          new ThriftClientPool.GetTaskServiceMakerFactory());
-
-  private THostPort nodeMonitorInternalAddress;
-
   /** Initialize the task scheduler, passing it the current available resources
    *  on the machine. */
   void initialize(TResourceVector capacity, Configuration conf, int nodeMonitorPort) {
     this.capacity = capacity;
     this.conf = conf;
     this.ipAddress = Network.getIPAddress(conf);
-    nodeMonitorInternalAddress = new THostPort(Network.getHostName(conf), nodeMonitorPort);
   }
 
   /**
@@ -174,28 +159,11 @@ public abstract class TaskScheduler {
   }
 
   protected void makeTaskRunnable(TaskSpec task) {
-    LOG.debug("Attempting to get task for request " + task.requestId +
-              " (previous task: " + task.previousTaskId + ")");
-    GetTaskService.AsyncClient getTaskClient;
-    InetSocketAddress newAddress = new InetSocketAddress(
-        task.schedulerAddress.getHostName(), SchedulerThrift.DEFAULT_GET_TASK_PORT);
     try {
-      getTaskClient = getTaskClientPool.borrowClient(newAddress);
-    } catch (Exception e) {
-      LOG.fatal("Unable to create client to contact scheduler at " +
-          newAddress.toString() + ":" + e);
-      return;
-    }
-    try {
-      LOG.debug("Attempting to get task from scheduler at " +
-                nodeMonitorInternalAddress.toString() + " for request " + task.requestId);
-      AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
-                                               nodeMonitorInternalAddress.getHost()));
-      getTaskClient.getTask(task.requestId, nodeMonitorInternalAddress,
-                              new GetTaskCallback(task, newAddress));
-    } catch (TException e) {
-      LOG.error("Unable to getTask() from scheduler at " +
-          newAddress.toString() + ":" + e);
+      LOG.debug("Putting reservation for request " + task.requestId + " in runnable queue");
+      runnableTaskQueue.put(task);
+    } catch (InterruptedException e) {
+      LOG.fatal("Unable to add task to runnable queue: " + e.getMessage());
     }
   }
 
@@ -256,69 +224,10 @@ public abstract class TaskScheduler {
    */
   abstract TResourceUsage getResourceUsage(String appId);
 
-  private class GetTaskCallback implements AsyncMethodCallback<getTask_call> {
-    private TaskSpec task;
-    private InetSocketAddress getTaskAddress;
-    private long startTimeMillis;
-    private long startGCCount;
-
-    public GetTaskCallback(TaskSpec taskReservation, InetSocketAddress getTaskAddress) {
-      this.task = taskReservation;
-      this.getTaskAddress = getTaskAddress;
-      startTimeMillis = System.currentTimeMillis();
-      startGCCount = Logging.getGCCount();
-    }
-
-    @Override
-    public void onComplete(getTask_call response) {
-      LOG.debug(Logging.functionCall(response));
-      long rpcTime = System.currentTimeMillis() - startTimeMillis;
-      long numGarbageCollections = Logging.getGCCount() - startGCCount;
-      LOG.debug("GetTask() RPC completed in " +  rpcTime + "ms (" + numGarbageCollections +
-                "GCs occured during RPC)");
-      try {
-        getTaskClientPool.returnClient(getTaskAddress, (AsyncClient) response.getClient());
-      } catch (Exception e) {
-        LOG.error("Error getting client from scheduler client pool: " + e.getMessage());
-        return;
-      }
-      List<TTaskLaunchSpec> taskLaunchSpecs;
-      try {
-        taskLaunchSpecs = response.getResult();
-      } catch (TException e) {
-        LOG.error("Unable to read result of calling getTask() on scheduler " +
-                  task.schedulerAddress.toString() + ": " + e);
-        noTaskForRequest(task);
-        return;
-      }
-
-      if (taskLaunchSpecs.isEmpty()) {
-        LOG.debug("Didn't receive a task for request " + task.requestId);
-        noTaskForRequest(task);
-        return;
-      }
-
-      if (taskLaunchSpecs.size() > 1) {
-        LOG.warn("Received " + taskLaunchSpecs +
-                 " task launch specifications; ignoring all but the first one.");
-      }
-      task.taskSpec = taskLaunchSpecs.get(0);
-      LOG.debug("Received task for request " + task.requestId + ", task " +
-                task.taskSpec.getTaskId());
-
-      try {
-        runnableTaskQueue.put(task);
-      } catch (InterruptedException e) {
-        LOG.fatal(e);
-      }
-    }
-
-    @Override
-    public void onError(Exception exception) {
-      // Do not return error client to pool.
-      exception.printStackTrace();
-      LOG.error("Error executing getTask() RPC:" + exception.getStackTrace().toString() +
-                exception.toString());
-    }
-  }
+  /**
+   * Returns the maximum number of active tasks allowed (the number of slots).
+   *
+   * -1 signals that the scheduler does not enforce a maximum number of active tasks.
+   */
+  abstract int getMaxActiveTasks();
 }

@@ -13,6 +13,7 @@ import org.apache.thrift.transport.TTransportException;
 
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.FrontendService;
+import edu.berkeley.sparrow.thrift.GetTaskService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.StateStoreService;
@@ -23,13 +24,13 @@ import edu.berkeley.sparrow.thrift.StateStoreService;
 public class TClients {
   private final static Logger LOG = Logger.getLogger(TClients.class);
 
-  public static NodeMonitorService.Client createBlockingNmClient(String host, int port) 
+  public static NodeMonitorService.Client createBlockingNmClient(String host, int port)
       throws IOException {
     return createBlockingNmClient(host, port, 0);
   }
 
   public static NodeMonitorService.Client createBlockingNmClient(String host, int port,
-      int timeout) 
+      int timeout)
       throws IOException {
     TTransport tr = new TFramedTransport(
         new TSocket(host, port, timeout));
@@ -43,17 +44,17 @@ public class TClients {
     NodeMonitorService.Client client = new NodeMonitorService.Client(proto);
     return client;
   }
-  
+
   public static SchedulerService.Client createBlockingSchedulerClient(
       InetSocketAddress socket) throws IOException {
     return createBlockingSchedulerClient(socket.getAddress().getHostAddress(), socket.getPort());
   }
-  
+
   public static SchedulerService.Client createBlockingSchedulerClient(
       String host, int port) throws IOException {
     return createBlockingSchedulerClient(host, port, 0);
   }
-  
+
   public static SchedulerService.Client createBlockingSchedulerClient(
       String host, int port, int timeout) throws IOException {
     TTransport tr = new TFramedTransport(
@@ -68,7 +69,37 @@ public class TClients {
     SchedulerService.Client client = new SchedulerService.Client(proto);
     return client;
   }
-  
+
+  public static GetTaskService.Client createBlockingGetTaskClient(
+      InetSocketAddress socket) throws IOException {
+    return createBlockingGetTaskClient(socket.getAddress().getHostAddress(), socket.getPort());
+  }
+
+  public static GetTaskService.Client createBlockingGetTaskClient(
+      String host, int port) throws IOException {
+    return createBlockingGetTaskClient(host, port, 0);
+  }
+
+  public static GetTaskService.Client createBlockingGetTaskClient(
+      String host, int port, int timeout) throws IOException {
+    TTransport tr = new TFramedTransport(
+        new TSocket(host, port, timeout));
+    try {
+      tr.open();
+    } catch (TTransportException e) {
+      LOG.warn("Error creating scheduler client to " + host + ":" + port);
+      throw new IOException(e);
+    }
+    TProtocol proto = new TBinaryProtocol(tr);
+    GetTaskService.Client client = new GetTaskService.Client(proto);
+    return client;
+  }
+
+  public static BackendService.Client createBlockingBackendClient(
+      InetSocketAddress socket) throws IOException {
+    return createBlockingBackendClient(socket.getAddress().getHostAddress(), socket.getPort());
+  }
+
   public static BackendService.Client createBlockingBackendClient(
       String host, int port) throws IOException {
     TTransport tr = new TFramedTransport(
@@ -83,7 +114,7 @@ public class TClients {
     BackendService.Client client = new BackendService.Client(proto);
     return client;
   }
-  
+
   public static StateStoreService.Client createBlockingStateStoreClient(
       String host, int port) throws IOException {
     TTransport tr = new TFramedTransport(
@@ -98,12 +129,12 @@ public class TClients {
     StateStoreService.Client client = new StateStoreService.Client(proto);
     return client;
   }
-  
+
   public static FrontendService.Client createBlockingFrontendClient(
       InetSocketAddress socket) throws IOException {
     return createBlockingFrontendClient(socket.getAddress().getHostAddress(), socket.getPort());
   }
-  
+
   public static FrontendService.Client createBlockingFrontendClient(
       String host, int port) throws IOException {
     TTransport tr = new TFramedTransport(
