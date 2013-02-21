@@ -50,7 +50,9 @@ public class ProtoFrontend implements FrontendService.Iface {
 
   // Type of benchmark to run, see ProtoBackend static constant for benchmark types
   public static final int DEFAULT_TASK_BENCHMARK = ProtoBackend.BENCHMARK_TYPE_FP_CPU;
-  public static final int DEFAULT_BENCHMARK_ITERATIONS = 10;  // # of benchmark iterations
+  public static final int DEFAULT_BENCHMARK_ITERATIONS = 1000;  // # of benchmark iterations
+
+  public static final int DEFAULT_NUM_USERS = 1;
 
   /**
    * The default number of preferred nodes for each task. 0 signals that tasks are
@@ -77,21 +79,23 @@ public class ProtoFrontend implements FrontendService.Iface {
   private class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
     private SparrowFrontendClient client;
+    String user;
 
-    public JobLaunchRunnable(List<TTaskSpec> request, SparrowFrontendClient client) {
+    public JobLaunchRunnable(List<TTaskSpec> request, String user, SparrowFrontendClient client) {
       this.request = request;
       this.client = client;
+      this.user = user;
     }
 
     @Override
     public void run() {
       long start = System.currentTimeMillis();
-      TUserGroupInfo user = new TUserGroupInfo();
-      user.setUser("*");
-      user.setGroup("*");
+      TUserGroupInfo userInfo = new TUserGroupInfo();
+      userInfo.setUser(user);
+      userInfo.setGroup("*");
       try {
-        client.submitJob(APPLICATION_ID, request, user);
-        LOG.debug("Submitted job: " + request);
+        client.submitJob(APPLICATION_ID, request, userInfo);
+        LOG.debug("Submitted job: " + request + " for user " + userInfo);
       } catch (TException e) {
         LOG.error("Scheduling request failed!", e);
       }
@@ -174,6 +178,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       int benchmarkIterations = conf.getInt("benchmark.iterations",
           DEFAULT_BENCHMARK_ITERATIONS);
       int benchmarkId = conf.getInt("benchmark.id", DEFAULT_TASK_BENCHMARK);
+      int numUsers = conf.getInt("num_users", DEFAULT_NUM_USERS);
 
       List<String> backends = new ArrayList<String>();
       if (numPreferredNodes > 0) {
@@ -199,22 +204,22 @@ public class ProtoFrontend implements FrontendService.Iface {
       if (warmup_duration_s > 0) {
         LOG.debug("Warming up for " + warmup_duration_s + " seconds at arrival rate of " +
                   warmup_lambda + " jobs per second");
-        launchTasks(warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
-            benchmarkId, backends, client);
+        launchTasks(numUsers, warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes,
+            benchmarkIterations, benchmarkId, backends, client);
         LOG.debug("Waiting for queues to drain after warmup (waiting " + post_warmup_s +
                  " seconds)");
         Thread.sleep(post_warmup_s * 1000);
       }
       LOG.debug("Launching experiment for " + experiment_duration_s + " seconds");
-      launchTasks(lambda, experiment_duration_s, tasksPerJob, numPreferredNodes, benchmarkIterations,
-          benchmarkId, backends, client);
+      launchTasks(numUsers, lambda, experiment_duration_s, tasksPerJob, numPreferredNodes,
+          benchmarkIterations, benchmarkId, backends, client);
     }
     catch (Exception e) {
       LOG.error("Fatal exception", e);
     }
   }
 
-  private void launchTasks(double lambda, int launch_duration_s, int tasksPerJob,
+  private void launchTasks(int numUsers, double lambda, int launch_duration_s, int tasksPerJob,
       int numPreferredNodes, int benchmarkIterations, int benchmarkId,
       List<String> backends, SparrowFrontendClient client)
       throws InterruptedException {
@@ -246,10 +251,13 @@ public class ProtoFrontend implements FrontendService.Iface {
         LOG.warn("Lanching task after start time in generated workload.");
       }
       Thread.sleep(toWait);
+
+      // Randomly select which user's task to run.
+      String user = "user" + r.nextInt(numUsers);
       Runnable runnable =  new JobLaunchRunnable(
           generateJob(tasksPerJob, numPreferredNodes, backends, benchmarkId,
                       benchmarkIterations),
-          client);
+          user, client);
       new Thread(runnable).start();
       int launched = tasksLaunched.addAndGet(1);
       double launchRate = (double) launched * 1000.0 /

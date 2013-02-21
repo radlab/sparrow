@@ -8,22 +8,23 @@ import ec2_exp
 def run_cmd(cmd):
     subprocess.check_call(cmd, shell=True)
 
-utilizations = [0.1, 0.5, 0.7, 0.8, 0.9]
+utilizations = [1.5]
 sample_ratios = [2.0]
 sample_ratio_constrained = 2
 
 # Amount of time it takes each task to run in isolation
 #TODO: There are issues here...alone, takes more like 145
-task_duration_ms = 140
-tasks_per_job = 5 #10
-private_ssh_key = "patkey.pem"
-sparrow_branch = "missing_resources_fix"
-num_backends = 51 #90
-num_frontends = 2 #0
+task_duration_ms = 100
+tasks_per_job = 10
+private_ssh_key = "/root/patkey.pem"
+sparrow_branch = "kay_nsdi"
+num_backends = 100
+num_frontends = 10
 cores_per_backend = 4
 # Run each trial for 5 minutes.
 trial_length = 400
 num_preferred_nodes = 0
+num_users = 3
 
 # Warmup information
 warmup_s = 20
@@ -61,8 +62,7 @@ for sample_ratio in sample_ratios:
         print ("********Deploying with arrival rate %s and warmup arrival rate %s"
                % (arrival_rate_s, warmup_arrival_rate_s))
         ec2_exp.deploy_cluster(frontends, backends, opts, warmup_arrival_rate_s, warmup_s,
-                               post_warmup_s)
-        exit(0)
+                               post_warmup_s, num_users)
         ec2_exp.start_sparrow(frontends, backends, opts)
 
         print "*******Sleeping after starting Sparrow"
@@ -71,7 +71,7 @@ for sample_ratio in sample_ratios:
         ec2_exp.start_proto(frontends, backends, opts)
         time.sleep(trial_length)
 
-        log_dirname = "0909_%s_%s" % (utilization, sample_ratio)
+        log_dirname = "/disk1/sparrow/fairness_%s_%s" % (utilization, sample_ratio)
         while os.path.exists(log_dirname):
             log_dirname = "%s_a" % log_dirname
         os.mkdir(log_dirname)
@@ -88,7 +88,7 @@ for sample_ratio in sample_ratios:
         run_cmd("gunzip %s/*.gz" % log_dirname)
 
         print "********Parsing logs"
-        run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=../../../deploy/ec2/%s "
-                 "output_dir=../../../deploy/ec2/%s/results start_sec=190 end_sec=310 && cd -") %
+        run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=%s "
+                 "output_dir=%s/results start_sec=190 end_sec=310 && cd -") %
                 (log_dirname, log_dirname))
 
