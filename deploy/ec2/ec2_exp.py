@@ -56,6 +56,10 @@ def parse_args(force_action=True):
       help="How many ms to wait between shark queries")
   parser.add_option("-m", "--scheduler", type="string", default="mesos",
       help="Which scheduler to use for running spark (mesos/sparrow)")
+  parser.add_option("--spot-price", type="float", default=None,
+      help="If specified, launch slaves as spot instances with the given " +
+            "maximum price (in dollars). To see current spot prices, visit "
+            "http://aws.amazon.com/ec2/spot-instances/#7")
   """ Options used with older TPCH thing
   parser.add_option("-j", "--max-queries", type="int", default=60,
       help="How many spark queries to run before shutting down")
@@ -172,23 +176,80 @@ def launch_cluster(conn, opts):
   except:
     print >> sys.stderr, "Could not find AMI " + opts.ami
     sys.exit(1)
-  frontend_res = image.run(key_name = opts.key_pair,
-                          security_groups = [frontend_group],
-                          instance_type = opts.instance_type,
-                          placement = opts.zone,
-                          min_count = opts.frontends,
-                          max_count = opts.frontends)
-  backend_res = image.run(key_name = opts.key_pair,
-                          security_groups = [backend_group],
-                          instance_type = opts.instance_type,
-                          placement = opts.zone,
-                          min_count = opts.backends,
-                          max_count = opts.backends)
+  if opts.spot_price != None:
+      # Launch spot instances with the requested price.
+      # The launch group ensures that the instances will be launched and
+      # terminated as a set.
+      launch_group_name = "launch-group-sparrow"
+      req_ids = []
+      if opts.frontends > 0:
+        print ("Requesting %d frontends as spot instances with price $%.3f" %
+            (opts.frontends, opts.spot_price))
+        frontend_reqs = conn.request_spot_instances(
+            price = opts.spot_price,
+            image_id = opts.ami,
+            launch_group = launch_group_name,
+            placement = opts.zone,
+            count = opts.frontends,
+            key_name = opts.key_pair,
+            security_groups = [frontend_group],
+            instance_type = opts.instance_type)
 
-  print "Launched cluster with %s frontends and %s backends" % (
-         opts.frontends, opts.backends)
+        req_ids += [req.id for req in frontend_reqs]
+      if opts.backends > 0:
+        print ("Requesting %d backends as spot instances with price $%.3f" %
+            (opts.backends, opts.spot_price))
+        backend_reqs = conn.request_spot_instances(
+            price = opts.spot_price,
+            image_id = opts.ami,
+            launch_group = launch_group_name,
+            placement = opts.zone,
+            count = opts.backends,
+            key_name = opts.key_pair,
+            security_groups = [backend_group],
+            instance_type = opts.instance_type)
+        req_ids += [req.id for req in backend_reqs]
 
-  return(frontend_res.instances, backend_res.instances)
+      print "Waiting for spot instances to be granted..."
+      instances_requested = opts.frontends + opts.backends
+      try:
+        while True:
+          time.sleep(10)
+          # See if all the requests have been fulfilled.
+          reqs = conn.get_all_spot_instance_requests()
+          active_instance_ids = [r.instance_id for r in reqs
+                                 if r.id in req_ids and r.state == "active"]
+          if len(active_instance_ids) == instances_requested:
+            print "All %d frontends and %d backends granted" % (opts.frontends, opts.backends)
+            break
+          else:
+            print ("%d of %d nodes granted; waiting longer" %
+                   (len(active_instance_ids), instances_requested))
+      except:
+        print "Canceling spot instance requests"
+        conn.cancel_spot_instance_requests(req_ids)
+        (frontends, backends) = find_existing_cluster(conn, opts)
+        running = len(frontends) + len(backends)
+        if running:
+          print >> sys.stderr, ("WARNING: %d instances are still running" % running)
+        sys.exit(0)
+  else:
+    print "ARE YOU SURE YOU DON'T WANT TO USE SPOT INSTANCES?"
+    frontend_res = image.run(key_name = opts.key_pair,
+                            security_groups = [frontend_group],
+                            instance_type = opts.instance_type,
+                            placement = opts.zone,
+                            min_count = opts.frontends,
+                            max_count = opts.frontends)
+    backend_res = image.run(key_name = opts.key_pair,
+                            security_groups = [backend_group],
+                            instance_type = opts.instance_type,
+                            placement = opts.zone,
+                            min_count = opts.backends,
+                            max_count = opts.backends)
+
+    print "Launched cluster with %s frontends and %s backends" % (
+           opts.frontends, opts.backends)
 
 # Wait for a set of launched instances to exit the "pending" state
 # (i.e. either to start running or to fail and be terminated)
@@ -511,7 +572,7 @@ def main():
   action = args[0]
 
   if action == "launch":
-    (frontends, backends) = launch_cluster(conn, opts)
+    launch_cluster(conn, opts)
     return
 
   if action == "command" and len(args) < 2:
