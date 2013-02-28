@@ -14,16 +14,16 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [0.5]
+    utilizations = [0.1, 0.5, 0.8, 0.9, 0.95]
     sample_ratios = [2.0]
     sample_ratio_constrained = 1
 
     # Amount of time it takes each task to run in isolation
     task_duration_ms = 100
-    tasks_per_job = 1
+    tasks_per_job = 3
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "master"
-    num_backends = 1
+    sparrow_branch = "debugging"
+    num_backends = 10
     num_frontends = 1
     cores_per_backend = 4
     # Run each trial for 5 minutes.
@@ -77,7 +77,7 @@ def main(argv):
             ec2_exp.start_proto(frontends, backends, opts)
             time.sleep(trial_length)
 
-            log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/022013_%s_%s" % (utilization, sample_ratio)
+            log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/030413_%s_%s" % (utilization, sample_ratio)
             while os.path.exists(log_dirname):
                 log_dirname = "%s_a" % log_dirname
             os.mkdir(log_dirname)

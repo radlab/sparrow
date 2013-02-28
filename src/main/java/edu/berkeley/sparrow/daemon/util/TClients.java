@@ -32,8 +32,7 @@ public class TClients {
   public static NodeMonitorService.Client createBlockingNmClient(String host, int port,
       int timeout)
       throws IOException {
-    TTransport tr = new TFramedTransport(
-        new TSocket(host, port, timeout));
+    TTransport tr = new TFramedTransport(new TSocket(host, port, timeout));
     try {
       tr.open();
     } catch (TTransportException e) {
@@ -57,8 +56,7 @@ public class TClients {
 
   public static SchedulerService.Client createBlockingSchedulerClient(
       String host, int port, int timeout) throws IOException {
-    TTransport tr = new TFramedTransport(
-        new TSocket(host, port, timeout));
+    TTransport tr = new TFramedTransport(new TSocket(host, port, timeout));
     try {
       tr.open();
     } catch (TTransportException e) {
@@ -82,8 +80,7 @@ public class TClients {
 
   public static GetTaskService.Client createBlockingGetTaskClient(
       String host, int port, int timeout) throws IOException {
-    TTransport tr = new TFramedTransport(
-        new TSocket(host, port, timeout));
+    TTransport tr = new TFramedTransport(new TSocket(host, port, timeout));
     try {
       tr.open();
     } catch (TTransportException e) {
@@ -102,8 +99,7 @@ public class TClients {
 
   public static BackendService.Client createBlockingBackendClient(
       String host, int port) throws IOException {
-    TTransport tr = new TFramedTransport(
-        new TSocket(host, port));
+    TTransport tr = new TFramedTransport(new TSocket(host, port));
     try {
       tr.open();
     } catch (TTransportException e) {
@@ -117,8 +113,7 @@ public class TClients {
 
   public static StateStoreService.Client createBlockingStateStoreClient(
       String host, int port) throws IOException {
-    TTransport tr = new TFramedTransport(
-        new TSocket(host, port));
+    TTransport tr = new TFramedTransport(new TSocket(host, port));
     try {
       tr.open();
     } catch (TTransportException e) {
@@ -137,8 +132,7 @@ public class TClients {
 
   public static FrontendService.Client createBlockingFrontendClient(
       String host, int port) throws IOException {
-    TTransport tr = new TFramedTransport(
-        new TSocket(host, port));
+    TTransport tr = new TFramedTransport(new TSocket(host, port));
     try {
       tr.open();
     } catch (TTransportException e) {

@@ -63,11 +63,10 @@ public class ProtoBackend implements BackendService.Iface {
   private static final int DEFAULT_LISTEN_PORT = 20101;
 
   /**
-   * This is just how many threads can concurrently be answering function calls
-   * from the NM. Each task is launched in its own from one of these threads. If tasks
-   * launches arrive fast enough that all worker threads are concurrently executing
-   * a task, this will queue. We currently launch new threads for each task to prevent
-   * this from happening.
+   * This indicates how many threads can concurrently be answering function calls
+   * from the node monitor.  Each node monitor client gets a dedicated thread, so this
+   * should be no less than the expected number of clients. Each task is launched in a
+   * new thread..
    */
   private static final int THRIFT_WORKER_THREADS = 4;
   private static final int TASK_WORKER_THREADS = 4;
@@ -275,6 +274,7 @@ public class ProtoBackend implements BackendService.Iface {
 
     try {
       client.registerBackend(APP_ID, "localhost:" + listenPort);
+      LOG.debug("Client successfullly registered");
     } catch (TTransportException e) {
       LOG.debug("Error while registering backend: " + e.getMessage());
     }

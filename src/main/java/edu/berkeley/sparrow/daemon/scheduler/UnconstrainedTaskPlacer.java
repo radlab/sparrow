@@ -79,8 +79,6 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
       debugString.append(node);
       debugString.append(";");
     }
-    LOG.debug("Request " + requestId + ": Launching enqueueReservation on " +
-              nodeList.size() + " node monitors: " + debugString.toString());
 
     TResourceVector estimatedResources = null;
 
@@ -104,6 +102,8 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
     }
 
     numOutstandingReservations.set(requests.size());
+    LOG.debug("Request " + requestId + ": Launching enqueueReservation on " +
+        nodeList.size() + " node monitors: " + debugString.toString());
 
     return requests;
   }

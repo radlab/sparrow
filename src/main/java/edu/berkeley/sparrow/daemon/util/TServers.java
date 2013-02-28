@@ -4,12 +4,13 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.apache.thrift.TProcessor;
-import org.apache.thrift.server.THsHaServer;
-import org.apache.thrift.server.THsHaServer.Args;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
+import org.apache.thrift.server.TThreadPoolServer;
+import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
+import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TTransportException;
 
 /***
@@ -46,17 +47,30 @@ public class TServers {
   public static void launchThreadedThriftServer(int port, int threads,
       TProcessor processor) throws IOException {
     LOG.info("Staring async thrift server of type: " + processor.getClass().toString()
-    		+ " on port " + port);
-    TNonblockingServerTransport serverTransport;
+    		+ " on port " + port + " with " + threads + " threads.");
+    TServerSocket serverSocket;
     try {
-      serverTransport = new TNonblockingServerSocket(port);
+      serverSocket = new TServerSocket(port);
     } catch (TTransportException e) {
       throw new IOException(e);
     }
-    Args serverArgs = new Args(serverTransport);
+    TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverSocket);
     serverArgs.processor(processor);
-    serverArgs.workerThreads(threads);
-    TServer server = new THsHaServer(serverArgs);
+    /* TThreadPoolServer uses a ThreadPoolExecutor under the hood; minWorkerThreads sets
+     * the corePoolSize for the ThreadPoolExecutor and maxWorkerThreads sets the maxPoolSize.
+     * When the ThreadPoolExecutor gets a new task to execute and fewer than corePoolSize
+     * threads are running, it will create a new thread to handle the task, even if there are other
+     * idle threads.  Setting maxWorkerThreads = minWorkerThreads creates a fixed-size thread
+     * pool.
+     */
+    serverArgs.minWorkerThreads(threads);
+    serverArgs.maxWorkerThreads(threads);
+    /* Need to be sure to use a framed transport, so that the server is compatible with the
+     * asynchronous client. Because the server uses a framed transport, all clients must used
+     * framed transports as well. */
+    serverArgs.inputTransportFactory(new TFramedTransport.Factory());
+    serverArgs.outputTransportFactory(new TFramedTransport.Factory());
+    TServer server = new TThreadPoolServer(serverArgs);
     new Thread(new TServerRunnable(server)).start();
   }
 

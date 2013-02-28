@@ -33,13 +33,13 @@ public class ThriftPongClient {
         pongClientPool.returnClient(address, (AsyncClient) response.getClient());
         System.out.println("Took: " + (System.nanoTime() - t0) / (1000.0 * 1000.0) + "ms");
       } catch (Exception e) {
-        System.out.println("ERROR!!!");
+        e.printStackTrace();
       }
     }
 
     @Override
     public void onError(Exception exception) {
-      System.out.println("ERROR!!!");
+      exception.printStackTrace();
     }
 
   }
@@ -47,6 +47,7 @@ public class ThriftPongClient {
   private static void pongUsingSynchronousClient(String hostname)
       throws TException, InterruptedException {
     TTransport tr = new TFramedTransport(new TSocket(hostname, 12345));
+    tr.open();
     TProtocol proto = new TBinaryProtocol(tr);
     PongService.Client client = new PongService.Client(proto);
     while (true) {

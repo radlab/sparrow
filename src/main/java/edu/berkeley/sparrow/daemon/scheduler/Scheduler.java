@@ -289,7 +289,6 @@ public class Scheduler {
       try {
         InternalService.AsyncClient client = nodeMonitorClientPool.borrowClient(entry.getKey());
         LOG.debug("Launching enqueueTask for request " + requestId + "on node: " + entry.getKey());
-        // Pass in null callback because the RPC doesn't return anything.
         AUDIT_LOG.debug(Logging.auditEventString(
             "scheduler_launch_enqueue_task", entry.getValue().requestId,
             entry.getKey().getAddress().getHostAddress()));

@@ -17,6 +17,6 @@ public class ThriftPongServer implements PongService.Iface {
   public static void main(String[] args) throws IOException {
     PongService.Processor<PongService.Iface> pongProcessor =
         new PongService.Processor<PongService.Iface>(new ThriftPongServer());
-    TServers.launchSingleThreadThriftServer(12345, pongProcessor);
+    TServers.launchThreadedThriftServer(12345, 5, pongProcessor);
   }
 }
