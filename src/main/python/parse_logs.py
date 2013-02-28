@@ -149,13 +149,15 @@ class Request:
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
 
-        # Mapping of node monitor addresses to when getTask() was called from that node monitor.
-        # TODO: this won't work correctly when multiple reservations are sent to one node monitor.
-        self.__node_monitor_get_task_times = {}
-
         # Mapping of node monitor addresses to when a getTask() was received at the scheduler from
         # that node monitor (includes reservations that weren't responded to).
         self.__scheduler_get_task_times = {}
+        # Mapping of node monitor address to a pair of times, the first of which is the time when
+        # the request to get a task was launched, and the second of which is the
+        # time when the request completed.
+        # This is not currently used (it includes times for failed getTask() RPCs, unlike the metric
+        # currently output; it's just here for future reference.
+        self.__get_task_times = {}
         # Mapping of node monitor address to a pair of times, the first of which is the time when
         # the request to enqueue a task reservation was launched, and the second of which is the
         # time when the request completed.
@@ -203,14 +205,21 @@ class Request:
             self.__enqueue_reservation_rtts[ip_only] = [INVALID_TIME, INVALID_TIME]
         self.__enqueue_reservation_rtts[ip_only][1] = time
 
-    def add_node_monitor_get_task_time(self, time, address):
-        self.__node_monitor_get_task_times[address] = time
+    def add_node_monitor_get_task_launch(self, time, address):
+        if address not in self.__get_task_times:
+            self.__get_task_times[address] = [INVALID_TIME, INVALID_TIME]
+        self.__get_task_times[address][0] = time
+
+    def add_node_monitor_get_task_completion(self, time, address):
+        if address not in self.__get_task_times:
+            self.__get_task_times[address] = [INVALID_TIME, INVALID_TIME]
+        self.__get_task_times[address][1] = time
 
     def set_node_monitor_get_task_times_for_tasks(self):
         for task in self.__tasks.values():
             if task.node_monitor_address != "":
-                task.node_monitor_get_task_time = self.__node_monitor_get_task_times[
-                    task.node_monitor_address]
+                task.node_monitor_get_task_time = self.__get_task_times[
+                    task.node_monitor_address][0]
 
     def get_enqueue_reservation_rtts(self):
         rtts = []
@@ -220,6 +229,7 @@ class Request:
         return rtts
 
     def get_get_task_rtts(self):
+        """ This only includes the RTTS for tasks that were actually launched! """
         rtts = []
         for task in self.__tasks.values():
             if (task.node_monitor_get_task_time != INVALID_TIME and
@@ -464,13 +474,15 @@ class LogParser:
             elif audit_event_params[0] == "task_completed":
                 request = self.__get_request(audit_event_params[1])
                 request.add_task_completion(audit_event_params[2], time)
+            elif audit_event_params[0] == "node_monitor_get_task_launch":
+                request = self.__get_request(audit_event_params[1])
+                request.add_node_monitor_get_task_launch(time, audit_event_params[2])
+            elif audit_event_params[0] == "node_monitor_get_task_complete":
+                request = self.__get_request(audit_event_params[1])
+                request.add_node_monitor_get_task_completion(time, audit_event_params[2])
             elif audit_event_params[0] == "node_monitor_get_task_no_task":
                 previous_request = self.__get_request(audit_event_params[2])
-                previous_request.add_subsequent_task_launch_failure(audit_event_params[3])
-            elif audit_event_params[0] == "node_monitor_get_task":
-                request = self.__get_request(audit_event_params[1])
-                request.add_node_monitor_get_task_time(time, audit_event_params[2])
-            else:
+                previous_request.add_subsequent_task_launch_failure(audit_event_params[3])            else:
                 self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
 
         for request in self.__requests.values():

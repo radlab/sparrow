@@ -62,6 +62,8 @@ public class TaskLauncherService {
         TaskSpec task = scheduler.getNextTask(); // blocks until task is ready
 
         List<TTaskLaunchSpec> taskLaunchSpecs = executeGetTaskRpc(task);
+        AUDIT_LOG.info(Logging.auditEventString("node_monitor_get_task_complete", task.requestId,
+            nodeMonitorInternalAddress.getHost()));
 
         if (taskLaunchSpecs.isEmpty()) {
           LOG.debug("Didn't receive a task for request " + task.requestId);
@@ -110,7 +112,7 @@ public class TaskLauncherService {
       long startGCCount = Logging.getGCCount();
 
       LOG.debug("Attempting to get task for request " + task.requestId);
-      AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task", task.requestId,
+      AUDIT_LOG.debug(Logging.auditEventString("node_monitor_get_task_launch", task.requestId,
           nodeMonitorInternalAddress.getHost()));
       List<TTaskLaunchSpec> taskLaunchSpecs;
       try {
