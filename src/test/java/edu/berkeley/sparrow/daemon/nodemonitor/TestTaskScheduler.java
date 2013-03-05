@@ -41,9 +41,9 @@ public class TestTaskScheduler {
    */
   @Test
   public void testFifo() {
-    TaskScheduler scheduler = new FifoTaskScheduler();
+    TaskScheduler scheduler = new FifoTaskScheduler(4);
     TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity, new PropertiesConfiguration());
+    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
 
     final String testApp = "test app";
     final InetSocketAddress backendAddress = new InetSocketAddress("123.4.5.6", 2);
@@ -99,9 +99,9 @@ public class TestTaskScheduler {
    */
   @Test
   public void testBasicRoundRobin() {
-    TaskScheduler scheduler = new RoundRobinTaskScheduler();
+    TaskScheduler scheduler = new RoundRobinTaskScheduler(4);
     TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity, new PropertiesConfiguration());
+    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
 
     final String app1 = "app1";
     final InetSocketAddress address1 = new InetSocketAddress("localhost", 1);

@@ -7,7 +7,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
@@ -27,7 +26,6 @@ import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.sendFrontendMessage_call;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
@@ -112,24 +110,6 @@ public class NodeMonitor {
     appSockets.put(appId, backendAddr);
     appTasks.put(appId, new ArrayList<TFullTaskId>());
     return state.registerBackend(appId, nmAddr);
-  }
-
-  /**
-   * Return a map of applications to current resource usage (aggregated across all users).
-   * If appId is set to "*", this map includes all applications. If it is set to an
-   * application name, the map only includes that application. If it is set to anything
-   * else, an empty map is returned.
-   */
-  public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
-    LOG.debug(Logging.functionCall(appId));
-    Map<String, TResourceUsage> out = new HashMap<String, TResourceUsage>();
-    if (appId.equals("*")) {
-      for (String app : appSockets.keySet()) {
-        out.put(app, scheduler.getResourceUsage(app));
-      }
-    }
-    LOG.debug("Returning " + out);
-    return out;
   }
 
   /**

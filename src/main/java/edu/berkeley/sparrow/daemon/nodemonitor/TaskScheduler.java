@@ -16,7 +16,6 @@ import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.TResourceUsage;
 import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
@@ -191,20 +190,6 @@ public abstract class TaskScheduler {
     TResources.subtractFrom(inUse, nowFreed);
   }
 
-  /**
-   * Return the quantity of free resources on the node. Free resources are determined
-   * by subtracting the currently used resources and currently runnable resources from
-   * the node's capacity.
-   */
-  protected synchronized TResourceVector getFreeResources() {
-    TResourceVector free = TResources.subtract(capacity, inUse);
-    TResourceVector reserved = TResources.none();
-    for (TaskSpec t: runnableTaskQueue) {
-      reserved = TResources.add(reserved, t.estimatedResources);
-    }
-    return TResources.subtract(free, reserved);
-  }
-
   // TASK SCHEDULERS MUST IMPLEMENT THE FOLLOWING
 
   /**
@@ -217,12 +202,6 @@ public abstract class TaskScheduler {
    */
   protected abstract void handleTaskCompleted(String requestId, String lastExecutedTaskRequestId,
                                               String lastExecutedTaskId);
-
-  /**
-   * Returns the current resource usage. If the resource usage is equal to the
-   * machines capacity, this will include the queue length for appId.
-   */
-  abstract TResourceUsage getResourceUsage(String appId);
 
   /**
    * Returns the maximum number of active tasks allowed (the number of slots).

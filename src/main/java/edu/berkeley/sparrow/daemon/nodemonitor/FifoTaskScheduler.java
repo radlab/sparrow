@@ -4,9 +4,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
-import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.TResourceUsage;
-
 /**
  * This scheduler assumes that backends can execute a fixed number of tasks (equal to
  * the number of cores on the machine) and uses a FIFO queue to determine the order to launch
@@ -66,15 +63,6 @@ public class FifoTaskScheduler extends TaskScheduler {
     } else {
       activeTasks -= 1;
     }
-  }
-
-  @Override
-  TResourceUsage getResourceUsage(String appId) {
-    TResourceUsage out = new TResourceUsage();
-    out.resources = TResources.subtract(capacity, getFreeResources());
-    // We use one shared queue for all apps here
-    out.queueLength = taskReservations.size();
-    return out;
   }
 
   @Override

@@ -14,7 +14,7 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [0.1, 0.5, 0.8, 0.9, 0.95]
+    utilizations = [0.9]
     sample_ratios = [2.0]
     sample_ratio_constrained = 1
 

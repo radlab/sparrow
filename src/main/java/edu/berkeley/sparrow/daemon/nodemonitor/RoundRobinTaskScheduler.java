@@ -9,9 +9,6 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
 
-import edu.berkeley.sparrow.daemon.util.TResources;
-import edu.berkeley.sparrow.thrift.TResourceUsage;
-
 /**
  * A {@link TaskScheduler} which round-robins requests over per-user queues.
  *
@@ -116,23 +113,6 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       LOG.debug("No queued tasks, so not launching anything.");
       activeTasks -= 1;
     }
-  }
-
-  /**
-   * THIS DOES NOT CURRENTLY WORK, because we don't track resource usage per-app.
-   */
-  @Override
-  public synchronized TResourceUsage getResourceUsage(String appId) {
-    TResourceUsage out = new TResourceUsage();
-    out.resources = TResources.subtract(capacity, getFreeResources());
-    // We use one shared queue for all apps here
-    if (userQueues.containsKey(appId)) {
-      out.queueLength = userQueues.get(appId).size();
-    } else {
-      LOG.info("Got resource request for application I've never seen: " + appId);
-      out.queueLength = 0;
-    }
-    return out;
   }
 
   @Override

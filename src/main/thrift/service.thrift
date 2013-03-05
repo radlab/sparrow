@@ -8,14 +8,14 @@ service SchedulerService {
   # Register a frontend for the given application.
   bool registerFrontend(1: string app, 2: string socketAddress);
 
-  # Submit a job composed of a list of individual tasks. 
+  # Submit a job composed of a list of individual tasks.
   void submitJob(1: types.TSchedulingRequest req) throws (1: types.IncompleteRequestException e);
 
   # Send a message to be delivered to the frontend for {app} pertaining
   # to the task {taskId}. The {status} field allows for application-specific
   # status enumerations. Right now this is used only for Spark, which relies on
   # the scheduler to send task completion messages to frontends.
-  void sendFrontendMessage(1: string app, 2: types.TFullTaskId taskId, 
+  void sendFrontendMessage(1: string app, 2: types.TFullTaskId taskId,
                            3: i32 status, 4: binary message);
 }
 
@@ -55,7 +55,7 @@ service BackendService {
 # a Scheduler.
 service FrontendService {
   # See SchedulerService.sendFrontendMessage
-  void frontendMessage(1: types.TFullTaskId taskId, 2: i32 status, 
+  void frontendMessage(1: types.TFullTaskId taskId, 2: i32 status,
                        3: binary message);
 }
 
@@ -67,9 +67,6 @@ service InternalService {
   # a GetTask() RPC to the given schedulerAddress when it is ready to launch a task, for each
   # enqueued task reservation. Returns whether or not the task was successfully enqueued.
   bool enqueueTaskReservations(1: types.TEnqueueTaskReservationsRequest request);
-  
-  # Used by the state store.
-  map<string, types.TResourceUsage> getLoad(1: string app, 2: string requestId);
 }
 
 service SchedulerStateStoreService {
@@ -83,4 +80,9 @@ service StateStoreService {
 
   # Register a node monitor with the given socket address (IP: Port)
   void registerNodeMonitor(1: string nodeMonitorAddress);
+}
+
+# Service to use for debugging network latencies.
+service PongService {
+  string ping(1: string data);
 }

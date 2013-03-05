@@ -5,7 +5,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.thrift.TException;
@@ -19,7 +18,6 @@ import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.TResourceUsage;
 
 /**
  * This class extends the thrift Sparrow node monitor interface. It wraps the
@@ -87,12 +85,6 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
       return false; // TODO: maybe we should throw some exception here?
     }
     return nodeMonitor.registerBackend(app, internalAddr, backendAddr.get());
-  }
-
-  @Override
-  public Map<String, TResourceUsage> getLoad(String app, String requestId)
-      throws TException {
-    return nodeMonitor.getLoad(app, requestId);
   }
 
   @Override
