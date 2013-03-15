@@ -12,7 +12,7 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> <cluster> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-tpch-tables, start-shark-tpch")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-tpch-tables, start-shark-tpch")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-9778cefe",
@@ -60,14 +60,6 @@ def parse_args(force_action=True):
       help="If specified, launch slaves as spot instances with the given " +
             "maximum price (in dollars). To see current spot prices, visit "
             "http://aws.amazon.com/ec2/spot-instances/#7")
-  """ Options used with older TPCH thing
-  parser.add_option("-j", "--max-queries", type="int", default=60,
-      help="How many spark queries to run before shutting down")
-  parser.add_option("-v", "--query-rate", type="float", default=1.0,
-      help="What rate to run spark queries at (queries per second)")
-  parser.add_option("-o", "--tpch-query", type="int", default=1,
-      help="Which TPC-H query to run.")
-  """
   parser.add_option("-r", "--parallelism", type="int", default=8,
       help="Level of parallelism for dummy queries.")
   parser.add_option("-u", "--num_partitions", type="int", default=2,
@@ -423,39 +415,6 @@ def start_spark_shark(frontends, backends, opts):
   ssh_all([be.public_dns_name for be in backends], opts,
           "/root/start_spark_backend.sh")
 
-
-""" Starts spark TPCH runner w/ sparrow or mesos. """
-def start_spark_tpch(frontends, backends, opts):
-  if opts.scheduler == "sparrow":
-    print "Starting Spark backends..."
-    ssh_all([be.public_dns_name for be in backends], opts,
-            "/root/start_spark_backend.sh")
-    time.sleep(30)
-  print "Starting Spark frontends..."
-  print opts.max_queries
-
-  # Adjustment to schedule all mesos work on one node
-  if opts.scheduler == "mesos":
-    driver = frontends[0]
-    adjusted_rate = opts.query_rate * len(frontends)
-    adjusted_max = opts.max_queries * len(frontends)
-    ssh(driver.public_dns_name, opts,
-          "/root/start_spark_frontend.sh %s %s %s %s %s" % (
-           opts.scheduler, adjusted_rate, adjusted_max, opts.tpch_query,
-           opts.parallelism))
-    print "WARNING: started spark with adjusted rate:%s and max:%s " % (
-      adjusted_rate, adjusted_max)
-    return
-
-
-  for fe in frontends:
-    ssh(fe.public_dns_name, opts,
-          "/root/start_spark_frontend.sh %s %s %s %s %s" % (
-           opts.scheduler, opts.query_rate, opts.max_queries, opts.tpch_query,
-           opts.parallelism))
-    print "Sleeping to let spark pull into cache on %s" % fe.public_dns_name
-    time.sleep(1 + random.random()) # add some random to avoid synchronization
-
 def stop_spark(frontends, backends, opts):
   print "Stopping spark frontends..."
   ssh_all([fe.public_dns_name for fe in frontends], opts,
@@ -604,8 +563,6 @@ def main():
     start_mesos(frontends, backends, opts)
   elif action == "stop-mesos":
     stop_mesos(frontends, backends, opts)
-  elif action == "start-spark-tpch":
-    start_spark_tpch(frontends, backends, opts)
   elif action == "start-spark-shark":
     start_spark_shark(frontends, backends, opts)
   elif action == "stop-spark":
