@@ -264,20 +264,23 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   public synchronized List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
     numOutstandingReservations--;
     if (!unlaunchedConstrainedTasks.containsKey(nodeMonitorAddress)) {
+      StringBuilder nodeMonitors = new StringBuilder();
+      for (THostPort nodeMonitor: unlaunchedConstrainedTasks.keySet()) {
+        if (nodeMonitors.length() > 0) {
+          nodeMonitors.append(",");
+        }
+        nodeMonitors.append(nodeMonitor.toString());
+      }
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+          ": Node monitor not in the set of node monitors where constrained tasks were " +
+          "enqueued: " + nodeMonitors.toString() +
+          "; attempting to launch an unconstrainted task).");
+
       List<TTaskLaunchSpec> unconstrainedTasks = getUnconstrainedTasks(nodeMonitorAddress);
 
       if (unconstrainedTasks.size() == 0) {
-        StringBuilder nodeMonitors = new StringBuilder();
-        for (THostPort nodeMonitor: unlaunchedConstrainedTasks.keySet()) {
-          if (nodeMonitors.length() > 0) {
-            nodeMonitors.append(",");
-          }
-          nodeMonitors.append(nodeMonitor.toString());
-        }
         LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-            ": Not assigning a task (node monitor not in the set of node monitors where tasks " +
-            "were enqueued: " + nodeMonitors.toString() +
-            ", and no remaining unconstrained tasks).");
+            ": no remaining unconstrained tasks).");
         return Lists.newArrayList();
       } else {
         return unconstrainedTasks;
@@ -313,7 +316,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   private List<TTaskLaunchSpec> getUnconstrainedTasks(THostPort nodeMonitorAddress) {
     if (this.unlaunchedUnconstrainedTasks.size() == 0) {
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-                ": Not assighning a task (no remaining unconstrained unlaunched tasks)");
+                ": Not assigning a task (no remaining unconstrained unlaunched tasks)");
       return Lists.newArrayList();
     }
     TTaskLaunchSpec spec = unlaunchedUnconstrainedTasks.get(0);

@@ -22,13 +22,13 @@ def main(argv):
     task_duration_ms = 100
     tasks_per_job = 1
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "debugging"
-    num_backends = 2
+    sparrow_branch = "master"
+    num_backends = 1
     num_frontends = 1
     cores_per_backend = 4
     # Run each trial for 5 minutes.
     trial_length = 500
-    num_preferred_nodes = 0
+    num_preferred_nodes = 1
     num_users = 1
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /

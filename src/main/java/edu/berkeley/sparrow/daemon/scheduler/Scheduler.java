@@ -243,10 +243,14 @@ public class Scheduler {
     // However, it simplifies the process of aggregating the logs, and will
     // also be useful when we support multiple daemons running on a single
     // machine.
+    String user = "";
+    if (request.getUser() != null) {
+      user = request.getUser().getUser();
+    }
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
                                             request.getTasks().size(),
                                             address.getHost(), address.getPort(),
-                                            request.getUser().getUser()));
+                                            user));
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
