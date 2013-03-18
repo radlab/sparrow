@@ -33,7 +33,7 @@ public class SparrowConf {
   public final static String NM_THRIFT_THREADS = "agent.thrift.threads";
   public final static String INTERNAL_THRIFT_THREADS =
       "internal_agent.thrift.threads";
-  /** Type of task scheduler to use on node monitor. Values: "fifo", "round_robin". */
+  /** Type of task scheduler to use on node monitor. Values: "fifo," "round_robin, " "priority." */
   public final static String NM_TASK_SCHEDULER_TYPE = "node_monitor.task_scheduler";
 
   public final static String SYSTEM_MEMORY = "system.memory";

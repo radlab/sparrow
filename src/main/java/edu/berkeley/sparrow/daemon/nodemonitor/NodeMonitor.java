@@ -88,6 +88,8 @@ public class NodeMonitor {
       scheduler = new RoundRobinTaskScheduler(cores);
     } else if (task_scheduler_type.equals("fifo")) {
       scheduler = new FifoTaskScheduler(cores);
+    } else if (task_scheduler_type.equals("priority")) {
+      scheduler = new PriorityTaskScheduler(cores);
     } else {
       throw new RuntimeException("Unsupported task scheduler type: " + mode);
     }

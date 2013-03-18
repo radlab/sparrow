@@ -32,6 +32,7 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
 
   private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField GROUP_FIELD_DESC = new org.apache.thrift.protocol.TField("group", org.apache.thrift.protocol.TType.STRING, (short)2);
+  private static final org.apache.thrift.protocol.TField PRIORITY_FIELD_DESC = new org.apache.thrift.protocol.TField("priority", org.apache.thrift.protocol.TType.I32, (short)3);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -41,11 +42,13 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
 
   public String user; // required
   public String group; // required
+  public int priority; // required
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     USER((short)1, "user"),
-    GROUP((short)2, "group");
+    GROUP((short)2, "group"),
+    PRIORITY((short)3, "priority");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -64,6 +67,8 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
           return USER;
         case 2: // GROUP
           return GROUP;
+        case 3: // PRIORITY
+          return PRIORITY;
         default:
           return null;
       }
@@ -104,6 +109,8 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
   }
 
   // isset id assignments
+  private static final int __PRIORITY_ISSET_ID = 0;
+  private BitSet __isset_bit_vector = new BitSet(1);
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -111,6 +118,8 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
     tmpMap.put(_Fields.GROUP, new org.apache.thrift.meta_data.FieldMetaData("group", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+    tmpMap.put(_Fields.PRIORITY, new org.apache.thrift.meta_data.FieldMetaData("priority", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TUserGroupInfo.class, metaDataMap);
   }
@@ -120,23 +129,29 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
 
   public TUserGroupInfo(
     String user,
-    String group)
+    String group,
+    int priority)
   {
     this();
     this.user = user;
     this.group = group;
+    this.priority = priority;
+    setPriorityIsSet(true);
   }
 
   /**
    * Performs a deep copy on <i>other</i>.
    */
   public TUserGroupInfo(TUserGroupInfo other) {
+    __isset_bit_vector.clear();
+    __isset_bit_vector.or(other.__isset_bit_vector);
     if (other.isSetUser()) {
       this.user = other.user;
     }
     if (other.isSetGroup()) {
       this.group = other.group;
     }
+    this.priority = other.priority;
   }
 
   public TUserGroupInfo deepCopy() {
@@ -146,6 +161,8 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
   public void clear() {
     this.user = null;
     this.group = null;
+    setPriorityIsSet(false);
+    this.priority = 0;
   }
 
   public String getUser() {
@@ -196,6 +213,29 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
     }
   }
 
+  public int getPriority() {
+    return this.priority;
+  }
+
+  public TUserGroupInfo setPriority(int priority) {
+    this.priority = priority;
+    setPriorityIsSet(true);
+    return this;
+  }
+
+  public void unsetPriority() {
+    __isset_bit_vector.clear(__PRIORITY_ISSET_ID);
+  }
+
+  /** Returns true if field priority is set (has been assigned a value) and false otherwise */
+  public boolean isSetPriority() {
+    return __isset_bit_vector.get(__PRIORITY_ISSET_ID);
+  }
+
+  public void setPriorityIsSet(boolean value) {
+    __isset_bit_vector.set(__PRIORITY_ISSET_ID, value);
+  }
+
   public void setFieldValue(_Fields field, Object value) {
     switch (field) {
     case USER:
@@ -214,6 +254,14 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
       }
       break;
 
+    case PRIORITY:
+      if (value == null) {
+        unsetPriority();
+      } else {
+        setPriority((Integer)value);
+      }
+      break;
+
     }
   }
 
@@ -224,6 +272,9 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
 
     case GROUP:
       return getGroup();
+
+    case PRIORITY:
+      return Integer.valueOf(getPriority());
 
     }
     throw new IllegalStateException();
@@ -240,6 +291,8 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
       return isSetUser();
     case GROUP:
       return isSetGroup();
+    case PRIORITY:
+      return isSetPriority();
     }
     throw new IllegalStateException();
   }
@@ -272,6 +325,15 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
       if (!(this_present_group && that_present_group))
         return false;
       if (!this.group.equals(that.group))
+        return false;
+    }
+
+    boolean this_present_priority = true;
+    boolean that_present_priority = true;
+    if (this_present_priority || that_present_priority) {
+      if (!(this_present_priority && that_present_priority))
+        return false;
+      if (this.priority != that.priority)
         return false;
     }
 
@@ -311,6 +373,16 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
         return lastComparison;
       }
     }
+    lastComparison = Boolean.valueOf(isSetPriority()).compareTo(typedOther.isSetPriority());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetPriority()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.priority, typedOther.priority);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
     return 0;
   }
 
@@ -346,6 +418,10 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
       sb.append(this.group);
     }
     first = false;
+    if (!first) sb.append(", ");
+    sb.append("priority:");
+    sb.append(this.priority);
+    first = false;
     sb.append(")");
     return sb.toString();
   }
@@ -364,6 +440,8 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
 
   private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
     try {
+      // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+      __isset_bit_vector = new BitSet(1);
       read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
     } catch (org.apache.thrift.TException te) {
       throw new java.io.IOException(te.getMessage());
@@ -404,6 +482,14 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
+          case 3: // PRIORITY
+            if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
+              struct.priority = iprot.readI32();
+              struct.setPriorityIsSet(true);
+            } else { 
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+            }
+            break;
           default:
             org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
         }
@@ -429,6 +515,9 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
         oprot.writeString(struct.group);
         oprot.writeFieldEnd();
       }
+      oprot.writeFieldBegin(PRIORITY_FIELD_DESC);
+      oprot.writeI32(struct.priority);
+      oprot.writeFieldEnd();
       oprot.writeFieldStop();
       oprot.writeStructEnd();
     }
@@ -453,19 +542,25 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
       if (struct.isSetGroup()) {
         optionals.set(1);
       }
-      oprot.writeBitSet(optionals, 2);
+      if (struct.isSetPriority()) {
+        optionals.set(2);
+      }
+      oprot.writeBitSet(optionals, 3);
       if (struct.isSetUser()) {
         oprot.writeString(struct.user);
       }
       if (struct.isSetGroup()) {
         oprot.writeString(struct.group);
       }
+      if (struct.isSetPriority()) {
+        oprot.writeI32(struct.priority);
+      }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TUserGroupInfo struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(2);
+      BitSet incoming = iprot.readBitSet(3);
       if (incoming.get(0)) {
         struct.user = iprot.readString();
         struct.setUserIsSet(true);
@@ -473,6 +568,10 @@ public class TUserGroupInfo implements org.apache.thrift.TBase<TUserGroupInfo, T
       if (incoming.get(1)) {
         struct.group = iprot.readString();
         struct.setGroupIsSet(true);
+      }
+      if (incoming.get(2)) {
+        struct.priority = iprot.readI32();
+        struct.setPriorityIsSet(true);
       }
     }
   }

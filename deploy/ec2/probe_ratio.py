@@ -14,7 +14,7 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [0.9]
+    utilizations = [1.25]
     sample_ratios = [2.0]
     sample_ratio_constrained = 1
 
@@ -28,7 +28,7 @@ def main(argv):
     cores_per_backend = 4
     # Run each trial for 5 minutes.
     trial_length = 500
-    num_preferred_nodes = 1
+    num_preferred_nodes = 0
     num_users = 1
     cluster = "probe_ratio"
 
@@ -71,7 +71,7 @@ def main(argv):
             print ("********Deploying with arrival rate %s and warmup arrival rate %s"
                    % (arrival_rate_s, warmup_arrival_rate_s))
             ec2_exp.deploy_cluster(frontends, backends, opts, warmup_arrival_rate_s, warmup_s,
-                                   post_warmup_s, num_users)
+                                   post_warmup_s, nm_task_scheduler)
             ec2_exp.start_sparrow(frontends, backends, opts)
 
             print "*******Sleeping after starting Sparrow"

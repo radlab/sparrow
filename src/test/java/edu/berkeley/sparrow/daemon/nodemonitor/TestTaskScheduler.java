@@ -20,20 +20,28 @@ import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 public class TestTaskScheduler {
+  int requestId;
+
   @Before
   public void setUp() {
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
+    requestId = 1;
   }
 
   private TEnqueueTaskReservationsRequest createTaskReservationRequest(
-      int numTasks, int requestId, TaskScheduler scheduler, String appId) {
-    String idStr = Integer.toString(requestId);
-    TUserGroupInfo user = new TUserGroupInfo("user", "group");
+      int numTasks, TaskScheduler scheduler, String userId) {
+    return createTaskReservationRequest(numTasks, scheduler, userId, 0);
+  }
+
+  private TEnqueueTaskReservationsRequest createTaskReservationRequest(
+      int numTasks, TaskScheduler scheduler, String userId, int priority) {
+    String idStr = Integer.toString(requestId++);
+    TUserGroupInfo user = new TUserGroupInfo(userId, "group", priority);
     TResourceVector estimatedResources = new TResourceVector(0, 1);
     THostPort schedulerAddress = new THostPort("1.2.3.4", 52);
     return new TEnqueueTaskReservationsRequest(
-        appId, user, idStr, estimatedResources, schedulerAddress, numTasks);
+        "appId", user, idStr, estimatedResources, schedulerAddress, numTasks);
   }
 
   /**
@@ -49,20 +57,20 @@ public class TestTaskScheduler {
     final InetSocketAddress backendAddress = new InetSocketAddress("123.4.5.6", 2);
 
     // Make sure that tasks are launched right away, if resources are available.
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 1, scheduler, testApp),
+    scheduler.submitTaskReservations(createTaskReservationRequest(1, scheduler, testApp),
                                      backendAddress);
     assertEquals(1, scheduler.runnableTasks());
     TaskSpec task = scheduler.getNextTask();
     assertEquals("1", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.submitTaskReservations(createTaskReservationRequest(2, 2, scheduler, testApp),
+    scheduler.submitTaskReservations(createTaskReservationRequest(2, scheduler, testApp),
                                      backendAddress);
     assertEquals(2, scheduler.runnableTasks());
 
     // Make sure the request to schedule 3 tasks is appropriately split, with one task running
     // now and others started later.
-    scheduler.submitTaskReservations(createTaskReservationRequest(3, 3, scheduler, testApp),
+    scheduler.submitTaskReservations(createTaskReservationRequest(3, scheduler, testApp),
                                      backendAddress);
     /* 4 tasks have been launched but one was already removed from the runnable queue using
      * getTask(), leaving 3 runnable tasks. */
@@ -72,7 +80,7 @@ public class TestTaskScheduler {
     task = scheduler.getNextTask();
     assertEquals("2", task.requestId);
     /* Make a list of task ids to use in every call to tasksFinished, and just update the request
-     * id. */
+     * id for each call. */
     TFullTaskId fullTaskId = new TFullTaskId();
     fullTaskId.taskId = "";
     List<TFullTaskId> completedTasks = Lists.newArrayList();
@@ -103,46 +111,51 @@ public class TestTaskScheduler {
     TResourceVector capacity = TResources.createResourceVector(0, 4);
     scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
 
-    final String app1 = "app1";
+    final String user1 = "user1";
     final InetSocketAddress address1 = new InetSocketAddress("localhost", 1);
-    final String app2 = "app2";
+    final String user2 = "user2";
     final InetSocketAddress address2 = new InetSocketAddress("localhost", 1);
-    final String app3 = "app3";
+    final String user3 = "user3";
     final InetSocketAddress address3 = new InetSocketAddress("localhost", 1);
-    final String app4 = "app4";
+    final String user4 = "user4";
     final InetSocketAddress address4 = new InetSocketAddress("localhost", 1);
 
     // Submit enough tasks to saturate the existing capacity.
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 1, scheduler, app1), address1);
+    scheduler.submitTaskReservations(createTaskReservationRequest(1, scheduler, user1), address1);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 2, scheduler, app2), address2);
+    scheduler.submitTaskReservations(createTaskReservationRequest(1, scheduler, user2), address2);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 3, scheduler, app3), address3);
+    scheduler.submitTaskReservations(createTaskReservationRequest(1, scheduler, user3), address3);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
 
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 4, scheduler, app4), address4);
+    scheduler.submitTaskReservations(createTaskReservationRequest(1, scheduler, user4), address4);
     assertEquals(1, scheduler.runnableTasks());
     scheduler.getNextTask();
     assertEquals(0, scheduler.runnableTasks());
 
     /* Create the following backlogs.
-     * app1: 2 tasks
-     * app2: 3 tasks
-     * app3: 4 tasks
+     * user1: 2 tasks
+     * user2: 3 tasks
+     * user3: 4 tasks
      */
-    scheduler.submitTaskReservations(createTaskReservationRequest(2, 5, scheduler, app1), address1);
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 6, scheduler, app2), address2);
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 7, scheduler, app2), address2);
-    scheduler.submitTaskReservations(createTaskReservationRequest(1, 8, scheduler, app2), address2);
-    scheduler.submitTaskReservations(createTaskReservationRequest(4, 9, scheduler, app3), address3);
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(2, scheduler, user1), address1);
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(1, scheduler, user2), address2);
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(1, scheduler, user2), address2);
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(1, scheduler, user2), address2);
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(4, scheduler, user3), address3);
 
     assertEquals(0, scheduler.runnableTasks());
 
@@ -215,6 +228,76 @@ public class TestTaskScheduler {
     assertEquals(1, scheduler.runnableTasks());
     task = scheduler.getNextTask();
     assertEquals("9", task.requestId);
+    assertEquals(0, scheduler.runnableTasks());
+  }
+
+  @Test
+  public void testPriority() {
+    /* Submit tasks at priority 0, 1, and 2 and ensure that the highest priority tasks are
+     * run soonest.
+     */
+    TaskScheduler scheduler = new PriorityTaskScheduler(4);
+    TResourceVector capacity = TResources.createResourceVector(0, 4);
+    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
+
+    final InetSocketAddress appBackendAddress = new InetSocketAddress("localhost", 1);
+    final String user = "user";
+
+    // Submit enough tasks to saturate the existing capacity (with one task queued).
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(5, scheduler, user, 2), appBackendAddress);
+    assertEquals(4, scheduler.runnableTasks());
+
+    // Submit 3 tasks for higher priority users (2 at priority 1 and 1 at priority 0).
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(2, scheduler, user, 1), appBackendAddress);
+    scheduler.submitTaskReservations(
+        createTaskReservationRequest(1, scheduler, user, 0), appBackendAddress);
+
+    TaskSpec task = scheduler.getNextTask();
+    assertEquals("1", task.requestId);
+    assertEquals(3, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("1", task.requestId);
+    assertEquals(2, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("1", task.requestId);
+    assertEquals(1, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("1", task.requestId);
+    assertEquals(0, scheduler.runnableTasks());
+
+    /* Make sure that as tasks finish, new tasks are added to the runqueue in strictly priority
+     * order.
+     */
+    TFullTaskId fullTaskId = new TFullTaskId();
+    fullTaskId.taskId = "";
+    List<TFullTaskId> completedTasks = Lists.newArrayList();
+    completedTasks.add(fullTaskId);
+    fullTaskId.requestId = "1";
+
+    scheduler.tasksFinished(completedTasks);
+    assertEquals(1, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("3", task.requestId);
+    assertEquals(0, scheduler.runnableTasks());
+
+    scheduler.tasksFinished(completedTasks);
+    assertEquals(1, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("2", task.requestId);
+    assertEquals(0, scheduler.runnableTasks());
+
+    scheduler.tasksFinished(completedTasks);
+    assertEquals(1, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("2", task.requestId);
+    assertEquals(0, scheduler.runnableTasks());
+
+    scheduler.tasksFinished(completedTasks);
+    assertEquals(1, scheduler.runnableTasks());
+    task = scheduler.getNextTask();
+    assertEquals("1", task.requestId);
     assertEquals(0, scheduler.runnableTasks());
   }
 }

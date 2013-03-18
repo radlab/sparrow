@@ -40,6 +40,9 @@ struct TFullTaskId {
 struct TUserGroupInfo {
   1: string user;
   2: string group;
+  // Priority of the user. If the node monitor is using the priority task scheduler,
+  // it will place the tasks with the smallest numbered priority first.
+  3: i32 priority;
 }
 
 struct TTaskSpec {

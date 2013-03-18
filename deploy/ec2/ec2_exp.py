@@ -304,12 +304,11 @@ def find_existing_cluster(conn, opts, cluster_name):
 
 # Deploy Sparrow binaries and configuration on a launched cluster
 def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0,
-                   post_warmup_s=0, num_users=1):
+                   post_warmup_s=0, nm_task_scheduler="fifo",
+                   users="user0:1:0"):
   # Replace template vars
   tmp_dir = tempfile.mkdtemp()
   nm_task_scheduler = "fifo"
-  if num_users > 1:
-      nm_task_scheduler = "round_robin"
 
   template_vars = {
     "static_frontends": ",".join(["%s:12345" % i.public_dns_name \
@@ -336,10 +335,10 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "warmup_s": "%s" % warmup_s,
     "post_warmup_s": "%s" % post_warmup_s,
     "node_monitor_task_scheduler": "%s" % nm_task_scheduler,
-    "num_users": "%s" % num_users,
     "num_partitions": "%s" % opts.num_partitions,
     "num_partitions_minus_one": "%s" % (opts.num_partitions - 1),
     "inter_query_delay": "%s" % opts.inter_query_delay,
+    "users": users,
   }
 
   for dirpath, dirnames, filenames in os.walk("template"):

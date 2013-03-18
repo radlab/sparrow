@@ -52,8 +52,6 @@ public class ProtoFrontend implements FrontendService.Iface {
   public static final int DEFAULT_TASK_BENCHMARK = ProtoBackend.BENCHMARK_TYPE_FP_CPU;
   public static final int DEFAULT_BENCHMARK_ITERATIONS = 1000;  // # of benchmark iterations
 
-  public static final int DEFAULT_NUM_USERS = 1;
-
   /**
    * The default number of preferred nodes for each task. 0 signals that tasks are
    * unconstrained.
@@ -65,6 +63,14 @@ public class ProtoFrontend implements FrontendService.Iface {
    * tasks).
    */
   public static final String BACKENDS = "backends";
+
+  /**
+   * Configuration parameter name for the set of users. Users should be specified by three
+   * values: a user id, an integral priority, and an integral demand, where the demand of each user
+   * is specified relative to the demands of other users. These three values should be semi-colon
+   * separated.
+   */
+  public static final String USERS = "users";
 
   /**
    * Default application name.
@@ -79,9 +85,9 @@ public class ProtoFrontend implements FrontendService.Iface {
   private class JobLaunchRunnable implements Runnable {
     private List<TTaskSpec> request;
     private SparrowFrontendClient client;
-    String user;
+    UserInfo user;
 
-    public JobLaunchRunnable(List<TTaskSpec> request, String user, SparrowFrontendClient client) {
+    public JobLaunchRunnable(List<TTaskSpec> request, UserInfo user, SparrowFrontendClient client) {
       this.request = request;
       this.client = client;
       this.user = user;
@@ -90,9 +96,7 @@ public class ProtoFrontend implements FrontendService.Iface {
     @Override
     public void run() {
       long start = System.currentTimeMillis();
-      TUserGroupInfo userInfo = new TUserGroupInfo();
-      userInfo.setUser(user);
-      userInfo.setGroup("*");
+      TUserGroupInfo userInfo = new TUserGroupInfo(user.user, "*", user.priority);
       try {
         client.submitJob(APPLICATION_ID, request, userInfo);
         LOG.debug("Submitted job: " + request + " for user " + userInfo);
@@ -101,6 +105,25 @@ public class ProtoFrontend implements FrontendService.Iface {
       }
       long end = System.currentTimeMillis();
       LOG.debug("Scheduling request duration " + (end - start));
+    }
+  }
+
+  public static class UserInfo {
+    public String user;
+    public int cumulativeWeight;
+    public int priority;
+    /** Used for debugging purposes, to ensure user weights are being used correctly. */
+    public int totalTasksLaunched;
+
+    /** Total weight assigned across all users. */
+    public static int totalWeight = 0;
+
+    public UserInfo(String user, int weight, int priority) {
+      this.user = user;
+      this.cumulativeWeight = totalWeight + weight;
+      totalWeight = this.cumulativeWeight;
+      this.priority = priority;
+      this.totalTasksLaunched = 0;
     }
   }
 
@@ -178,7 +201,6 @@ public class ProtoFrontend implements FrontendService.Iface {
       int benchmarkIterations = conf.getInt("benchmark.iterations",
           DEFAULT_BENCHMARK_ITERATIONS);
       int benchmarkId = conf.getInt("benchmark.id", DEFAULT_TASK_BENCHMARK);
-      int numUsers = conf.getInt("num_users", DEFAULT_NUM_USERS);
 
       List<String> backends = new ArrayList<String>();
       if (numPreferredNodes > 0) {
@@ -196,6 +218,23 @@ public class ProtoFrontend implements FrontendService.Iface {
         }
       }
 
+      List<UserInfo> users = new ArrayList<UserInfo>();
+      if (conf.containsKey(USERS)) {
+        for (String userSpecification : conf.getStringArray(USERS)) {
+          String[] parts = userSpecification.split(":");
+          if (parts.length != 3) {
+            LOG.error("Unexpected user specification string: " + userSpecification +
+                "; ignoring user");
+            continue;
+          }
+          users.add(new UserInfo(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2])));
+        }
+      }
+      if (users.size() == 0) {
+        // Add a dummy user.
+        users.add(new UserInfo("defaultUser", 1, 0));
+      }
+
       SparrowFrontendClient client = new SparrowFrontendClient();
       int schedulerPort = conf.getInt("scheduler_port",
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
@@ -204,14 +243,14 @@ public class ProtoFrontend implements FrontendService.Iface {
       if (warmup_duration_s > 0) {
         LOG.debug("Warming up for " + warmup_duration_s + " seconds at arrival rate of " +
                   warmup_lambda + " jobs per second");
-        launchTasks(numUsers, warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes,
+        launchTasks(users, warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes,
             benchmarkIterations, benchmarkId, backends, client);
         LOG.debug("Waiting for queues to drain after warmup (waiting " + post_warmup_s +
                  " seconds)");
         Thread.sleep(post_warmup_s * 1000);
       }
       LOG.debug("Launching experiment for " + experiment_duration_s + " seconds");
-      launchTasks(numUsers, lambda, experiment_duration_s, tasksPerJob, numPreferredNodes,
+      launchTasks(users, lambda, experiment_duration_s, tasksPerJob, numPreferredNodes,
           benchmarkIterations, benchmarkId, backends, client);
     }
     catch (Exception e) {
@@ -219,8 +258,8 @@ public class ProtoFrontend implements FrontendService.Iface {
     }
   }
 
-  private void launchTasks(int numUsers, double lambda, int launch_duration_s, int tasksPerJob,
-      int numPreferredNodes, int benchmarkIterations, int benchmarkId,
+  private void launchTasks(List<UserInfo> users, double lambda, int launch_duration_s,
+      int tasksPerJob, int numPreferredNodes, int benchmarkIterations, int benchmarkId,
       List<String> backends, SparrowFrontendClient client)
       throws InterruptedException {
     /* This is a little tricky.
@@ -252,8 +291,20 @@ public class ProtoFrontend implements FrontendService.Iface {
       }
       Thread.sleep(toWait);
 
-      // Randomly select which user's task to run.
-      String user = "user" + r.nextInt(numUsers);
+      // Randomly select which user's task to run, according to weight.
+      int userIndex = r.nextInt(UserInfo.totalWeight);
+      UserInfo user = null;
+      for (UserInfo potentialUser : users) {
+        if (userIndex < potentialUser.cumulativeWeight) {
+          user = potentialUser;
+          break;
+        }
+      }
+      assert(user != null);
+      ++user.totalTasksLaunched;
+      LOG.debug("Launching task for user " + user.user + " (" + user.totalTasksLaunched +
+          " total tasks launched for this user)");
+
       Runnable runnable =  new JobLaunchRunnable(
           generateJob(tasksPerJob, numPreferredNodes, backends, benchmarkId,
                       benchmarkIterations),
