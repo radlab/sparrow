@@ -3,7 +3,7 @@ import re
 import time
 import datetime
 
-START_SEC = 200
+START_SEC = 250
 END_SEC = 300
 id_counter = 0
 min_date_seen = datetime.datetime(2030, 1, 1)
@@ -59,14 +59,13 @@ class Phase:
     return out
 
 class Task:
-  def __init__(self, wait_time, service_time):
-    self.wait_time = wait_time
-    self.service_time = service_time
+  def __init__(self, response_time):
+    self.response_time = response_time
   def get_response_time(self):
-    return self.wait_time + self.service_time
+    return self.response_time
   def __repr__(self):
-    return "Task: response time  %s (%s/%s)" % (
-      self.get_response_time(), self.wait_time, self.service_time)
+    return "Task: response time  %s" % (
+      self.get_response_time())
 
 trials_per_file = {}
 skipped_trials = 0
@@ -132,7 +131,7 @@ for f in sys.argv[1:]:
       trials[curr_trial].add_phase(curr_phase, Phase(curr_phase, stage))
 
     # A task finished
-    if "Task" in line and "finished" in line and "service" in line:
+    if "Task" in line and "response" in line:
       stage_match = match_or_die(r".*\((\d+), (\d+)\).*", line)
       stage = stage_match.group(1)
       if stage not in stages_to_thread:
@@ -140,14 +139,13 @@ for f in sys.argv[1:]:
         continue
       thread = stages_to_thread[stage]
 
-      match = match_or_die(r".*\(wait: (\d+)ms, service: (\d+)ms\).*", line)
-      wait_time = int(match.group(1))
-      service_time = int(match.group(2))
+      match = match_or_die(r".*\(response: (\d+)ms\).*", line)
+      response_time = int(match.group(1))
       curr_trial = curr_trial_per_thread[thread]
       curr_phase = curr_phase_per_thread[thread]
 
       trials[curr_trial].get_phase(curr_phase).add_task(
-        Task(wait_time, service_time))
+        Task(response_time))
 
     # A Job finished
     if "Job" in line and "finished" in line:
@@ -246,34 +244,14 @@ for (time, trials) in trials_per_time.items():
 f.close()
 
 ### Create CDF's across all fe's/trials
-all_wait_times = []
-all_service_times = []
 all_response_times = []
 
 for trials in trials_per_file.values():
   for trial in trials.values():
     for phase in trial.get_phases():
       for task in trial.get_phase(phase).get_tasks():
-        all_wait_times.append(task.wait_time)
-        all_service_times.append(task.service_time)
         all_response_times.append(task.get_response_time())
-all_wait_times.sort()
-all_service_times.sort()
 all_response_times.sort()
-
-wait_file = open("tpch_wait_times.txt", 'w')
-for x in range(99):
-  fl = float(x) / 100
-  index = int(fl * len(all_wait_times))
-  wait_file.write("%s\t%s\n" % (fl, all_wait_times[index]))
-wait_file.close()
-
-service_file = open("tpch_service_times.txt", 'w')
-for x in range(99):
-  fl = float(x) / 100
-  index = int(fl * len(all_service_times))
-  service_file.write("%s\t%s\n" % (fl, all_service_times[index]))
-service_file.close()
 
 service_file = open("tpch_response_times.txt", 'w')
 for x in range(99):
