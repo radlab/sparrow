@@ -60,6 +60,8 @@ def parse_args(force_action=True):
       help="If specified, launch slaves as spot instances with the given " +
             "maximum price (in dollars). To see current spot prices, visit "
             "http://aws.amazon.com/ec2/spot-instances/#7")
+  parser.add_option("--frontend-type", type="string", default="ProtoFrontend",
+      help="Classname (not fully qualified!) of the frontend to use")
   """ Options used with older TPCH thing
   parser.add_option("-j", "--max-queries", type="int", default=60,
       help="How many spark queries to run before shutting down")
@@ -338,6 +340,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "num_partitions_minus_one": "%s" % (opts.num_partitions - 1),
     "inter_query_delay": "%s" % opts.inter_query_delay,
     "users": users,
+    "frontend_type": opts.frontend_type,
   }
 
   for dirpath, dirnames, filenames in os.walk("template"):

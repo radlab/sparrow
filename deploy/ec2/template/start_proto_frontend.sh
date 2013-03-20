@@ -3,14 +3,14 @@
 
 LOG=/disk1/sparrow/protoFrontend.log
 
-APPCHK=$(ps aux | grep -v grep | grep -c ProtoFrontend)
+APPCHK=$(ps aux | grep -v grep | grep -c {{frontend_type}})
 
 if [ ! $APPCHK = '0' ]; then
   echo "Frontend already running, cannot start it."
   exit 1;
 fi
 
-nohup java -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCTimeStamps -Xmx2046m -XX:+PrintGCDetails  -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoFrontend -c frontend.conf > $LOG 2>&1 &
+nohup java -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCTimeStamps -Xmx2046m -XX:+PrintGCDetails  -cp ./sparrow/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.{{frontend_type}} -c frontend.conf > $LOG 2>&1 &
 PID=$!
 echo "Logging to $LOG"
 sleep 1

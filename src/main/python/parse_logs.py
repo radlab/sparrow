@@ -617,6 +617,8 @@ class LogParser:
         self.output_aggregate_stats(self.__requests, output_directory)
 
         for user in self.__users:
+            if user == "warmupUser":
+                continue
             print "Outputting stats for user " + user
             user_output_directory = os.path.join(output_directory, user)
             os.mkdir(user_output_directory)
