@@ -49,8 +49,7 @@ public abstract class TaskScheduler {
 
     public TTaskLaunchSpec taskSpec;
 
-    public TaskSpec(TEnqueueTaskReservationsRequest request,
-                           InetSocketAddress appBackendAddress) {
+    public TaskSpec(TEnqueueTaskReservationsRequest request, InetSocketAddress appBackendAddress) {
       appId = request.getAppId();
       user = request.getUser();
       requestId = request.getRequestId();
@@ -119,29 +118,24 @@ public abstract class TaskScheduler {
   void tasksFinished(List<TFullTaskId> finishedTasks) {
     for (TFullTaskId t : finishedTasks) {
       AUDIT_LOG.info(Logging.auditEventString("task_completed", t.getRequestId(), t.getTaskId()));
-      taskCompleted(t.getRequestId(), t.getRequestId(), t.getTaskId());
+      releaseResources(t.getRequestId());
+      handleTaskFinished(t.getRequestId(), t.getTaskId());
     }
   }
 
-  void noTaskForRequest(TaskSpec taskReservation) {
+  void noTaskForReservation(TaskSpec taskReservation) {
     AUDIT_LOG.info(Logging.auditEventString("node_monitor_get_task_no_task",
                                             taskReservation.requestId,
                                             taskReservation.previousRequestId,
                                             taskReservation.previousTaskId));
-    taskCompleted(taskReservation.requestId, taskReservation.previousRequestId,
-                  taskReservation.previousTaskId);
+    releaseResources(taskReservation.requestId);
+    handleNoTaskForReservation(taskReservation);
   }
 
   /**
-   * Signals that a task associated with the given requestId has completed. lastExecutedTaskId
-   * and lastExecutedTaskRequestId describe the last task that executed (as opposed to tasks that
-   * the node monitor attempted to get from the scheduler, but the scheduler didn't return a task
-   * because all tasks for the job had been executed). Used to determine how long it takes the node
-   * monitor to launch a task from the queue. Empty strings indicate that the task was launched
-   * directly from the queue (so there was no immediately prevoius task).
+   * Releases the resources associated with the given request.
    */
-  private synchronized void taskCompleted(String requestId, String lastExecutedTaskRequestId,
-                                          String lastExecutedTaskId) {
+  private synchronized void releaseResources(String requestId) {
     LOG.debug(Logging.functionCall(requestId));
     ResourceInfo resourceInfo = resourcesPerRequest.get(requestId);
     if (resourceInfo == null) {
@@ -154,7 +148,6 @@ public abstract class TaskScheduler {
       resourcesPerRequest.remove(requestId);
     }
     freeResourceInUse(resourceInfo.resources);
-    handleTaskCompleted(requestId, lastExecutedTaskRequestId, lastExecutedTaskId);
   }
 
   protected void makeTaskRunnable(TaskSpec task) {
@@ -198,10 +191,16 @@ public abstract class TaskScheduler {
   abstract int handleSubmitTaskReservation(TaskSpec taskReservation);
 
   /**
-   * Signal that a given task has completed.
+   * Handles the completion of a task that has finished executing.
    */
-  protected abstract void handleTaskCompleted(String requestId, String lastExecutedTaskRequestId,
-                                              String lastExecutedTaskId);
+  protected abstract void handleTaskFinished(String requestId, String taskId);
+
+  /**
+   * Handles the case when the node monitor tried to launch a task for a reservation, but
+   * the corresponding scheduler didn't return a task (typically because all of the corresponding
+   * job's tasks have been launched).
+   */
+  protected abstract void handleNoTaskForReservation(TaskSpec taskSpec);
 
   /**
    * Returns the maximum number of active tasks allowed (the number of slots).

@@ -67,7 +67,7 @@ public class TaskLauncherService {
 
         if (taskLaunchSpecs.isEmpty()) {
           LOG.debug("Didn't receive a task for request " + task.requestId);
-          scheduler.noTaskForRequest(task);
+          scheduler.noTaskForReservation(task);
           continue;
         }
         if (taskLaunchSpecs.size() > 1) {

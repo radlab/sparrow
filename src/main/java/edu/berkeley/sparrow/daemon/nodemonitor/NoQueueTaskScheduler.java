@@ -2,6 +2,7 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 
 
 
+
 /**
  * A {@link TaskScheduler} which makes tasks instantly available for launch.
  *
@@ -19,9 +20,15 @@ public class NoQueueTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected void handleTaskCompleted(String requestId, String lastExecutedTaskRequestId,
-                                     String lastExecutedTaskId) {
-    // Do nothing
+  protected void handleTaskFinished(String requestId, String taskId) {
+    // Do nothing.
+
+  }
+
+  @Override
+  protected void handleNoTaskForReservation(TaskSpec taskSpec) {
+    // Do nothing.
+
   }
 
 

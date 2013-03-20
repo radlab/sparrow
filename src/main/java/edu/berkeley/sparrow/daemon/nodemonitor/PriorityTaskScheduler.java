@@ -67,8 +67,25 @@ public class PriorityTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected synchronized void handleTaskCompleted(
-      String requestId, String lastExecutedTaskRequestId, String lastExecutedTaskId) {
+  protected void handleTaskFinished(String requestId, String taskId) {
+    attemptTaskLaunch(requestId, taskId);
+  }
+
+  @Override
+  protected void handleNoTaskForReservation(TaskSpec taskSpec) {
+    attemptTaskLaunch(taskSpec.previousRequestId, taskSpec.previousTaskId);
+  }
+
+  /**
+   * Attempts to launch a new task.
+   *
+   * The parameters {@code lastExecutedRequestId} and {@code lastExecutedTaskId} are used purely
+   * for logging purposes, to determine how long the node monitor spends trying to find a new
+   * task to execute. This method needs to be synchronized to prevent a race condition with
+   * {@link handleSubmitTaskReservation}.
+   */
+  private synchronized void attemptTaskLaunch(
+      String lastExecutedRequestId, String lastExecutedTaskId) {
     if (numQueuedReservations != 0) {
       // Launch a task for the lowest valued priority with queued tasks.
       for (Entry<Integer, Queue<TaskSpec>> entry : priorityQueues.entrySet()) {
@@ -76,7 +93,7 @@ public class PriorityTaskScheduler extends TaskScheduler {
         if (nextTask != null) {
           LOG.debug("Launching task for request " + nextTask.requestId + " (priority " +
                     entry.getKey() + ")");
-          nextTask.previousRequestId = lastExecutedTaskRequestId;
+          nextTask.previousRequestId = lastExecutedRequestId;
           nextTask.previousTaskId = lastExecutedTaskId;
           makeTaskRunnable(nextTask);
           numQueuedReservations--;

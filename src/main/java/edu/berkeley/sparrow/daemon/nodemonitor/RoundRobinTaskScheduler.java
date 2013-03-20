@@ -13,9 +13,8 @@ import com.google.common.collect.Maps;
  * A {@link TaskScheduler} which round-robins requests over per-user queues.
  *
  * When a user is allocated a "slot", this scheduler attempts to fetch a task for the next
- * queued reservation.  If a task for the given reservation is not available, the user looses
- * that "slot."
- * TODO: The above functionality is probably not what we actually want. Fix this.
+ * queued reservation.  If a task for the given reservation is not available, the scheduler will
+ * try to launch anothe task for the same user.
  *
  * NOTE: This currently round-robins over users, rather than applications. Not sure
  * what we want here going forward.
@@ -31,7 +30,7 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
 
   private ArrayList<String> users = new ArrayList<String>();
   private int currentIndex = 0; // Round robin index, always used (mod n) where n is
-                                // the number of apps.
+                                // the number of users.
 
   public RoundRobinTaskScheduler(int maxActiveTasks) {
     this.maxActiveTasks = maxActiveTasks;
@@ -77,10 +76,32 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  protected synchronized void handleTaskCompleted(
-      String requestId, String lastExecutedTaskRequestId, String lastExecutedTaskId) {
+  protected void handleTaskFinished(String requestId, String taskId) {
+    attemptTaskLaunch(requestId, taskId);
+  }
+
+  @Override
+  protected void handleNoTaskForReservation(TaskSpec taskSpec) {
+    if (attemptTaskLaunchForUser(
+        taskSpec.previousRequestId, taskSpec.previousTaskId, taskSpec.user.getUser())) {
+      // Don't update currentIndex! Trying to launch another task for a user whose previous
+      // reservations couldn't be fulfilled shouldn't affect round robin ordering.
+      return;
+    }
+    attemptTaskLaunch(taskSpec.previousRequestId, taskSpec.previousTaskId);
+  }
+
+  /**
+   * Attempts to launch a new task, using round-robin ordering to determine the user.
+   *
+   * The parameters {@code lastExecutedRequestId} and {@code lastExecutedTaskId} are used purely
+   * for logging purposes, to determine how long the node monitor spends trying to find a new
+   * task to execute. This method must be synchronized to prevent a race condition with
+   * {@link handleSubmitTaskReservation}.
+   */
+  private synchronized void attemptTaskLaunch(String lastExecutedRequestId, String lastExecutedTaskId) {
     if (numQueuedReservations != 0) {
-      /* Scan through the list of apps (starting at currentIndex) and find the first
+      /* Scan through the list of users (starting at currentIndex) and find the first
        * one with a pending task. If we find a pending task, make that task runnable
        * and update the round robin index.
        *
@@ -90,21 +111,10 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
        * but will not be the case if tasks take different amounts of resources. */
       for (int offset = 0; offset < users.size(); offset++) {
         String user = users.get((currentIndex + offset) % users.size());
-        Queue<TaskSpec> considering = userQueues.get(user);
-        TaskSpec nextTask = considering.poll();
-        if (nextTask != null) {
-          LOG.debug("Task for user " + user + ", request " + nextTask.requestId +
-                    " now runnable.");
-          nextTask.previousRequestId = lastExecutedTaskRequestId;
-          nextTask.previousTaskId = lastExecutedTaskId;
-          makeTaskRunnable(nextTask);
+        if (attemptTaskLaunchForUser(lastExecutedRequestId, lastExecutedTaskId, user)) {
           currentIndex = (currentIndex + offset + 1) % users.size();
-          numQueuedReservations--;
-          /* Never remove users from the queue, because it will make currentIndex no longer right,
-           * and we don't expect user churn right now. */
           return;
         }
-        LOG.debug("Skipping user " + user + " that has no runnable tasks.");
       }
       String errorMessage = ("numQueuedReservations=" + numQueuedReservations +
                              " but no queued tasks found.");
@@ -113,6 +123,32 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
       LOG.debug("No queued tasks, so not launching anything.");
       activeTasks -= 1;
     }
+  }
+
+  /**
+   * Launches a task for the given user, if that user has any tasks queued.
+   *
+   * Returns true if a task was launched for the given user. This method must be synchronized to
+   * avoid concurrent concurrent modification to {@link userQueues} in
+   * {@link handleSubmitTaskReservation}.
+   */
+  private synchronized boolean attemptTaskLaunchForUser(String lastExecutedTaskRequestId,
+      String lastExecutedTaskId, String user) {
+    Queue<TaskSpec> considering = userQueues.get(user);
+    TaskSpec nextTask = considering.poll();
+    if (nextTask != null) {
+      LOG.debug("Task for user " + user + ", request " + nextTask.requestId +
+                " now runnable.");
+      nextTask.previousRequestId = lastExecutedTaskRequestId;
+      nextTask.previousTaskId = lastExecutedTaskId;
+      makeTaskRunnable(nextTask);
+      numQueuedReservations--;
+      /* Never remove users from the queue, because it will make currentIndex no longer right,
+       * and we don't expect user churn right now. */
+      return true;
+    }
+    LOG.debug("Skipping user " + user + " that has no runnable tasks.");
+    return false;
   }
 
   @Override

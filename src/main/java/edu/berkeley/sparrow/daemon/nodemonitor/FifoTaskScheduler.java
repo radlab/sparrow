@@ -53,11 +53,28 @@ public class FifoTaskScheduler extends TaskScheduler {
   }
 
   @Override
-  synchronized protected void handleTaskCompleted(
-      String requestId, String lastExecutedTaskRequestId, String lastExecutedTaskId) {
+  protected void handleTaskFinished(String requestId, String taskId) {
+    attemptTaskLaunch(requestId, taskId);
+  }
+
+  @Override
+  protected void handleNoTaskForReservation(TaskSpec taskSpec) {
+    attemptTaskLaunch(taskSpec.previousRequestId, taskSpec.previousTaskId);
+  }
+
+  /**
+   * Attempts to launch a new task.
+   *
+   * The parameters {@code lastExecutedRequestId} and {@code lastExecutedTaskId} are used purely
+   * for logging purposes, to determine how long the node monitor spends trying to find a new
+   * task to execute. This method needs to be synchronized to prevent a race condition with
+   * {@link handleSubmitTaskReservation}.
+   */
+  private synchronized void attemptTaskLaunch(
+      String lastExecutedRequestId, String lastExecutedTaskId) {
     TaskSpec reservation = taskReservations.poll();
     if (reservation != null) {
-      reservation.previousRequestId = lastExecutedTaskRequestId;
+      reservation.previousRequestId = lastExecutedRequestId;
       reservation.previousTaskId = lastExecutedTaskId;
       makeTaskRunnable(reservation);
     } else {
