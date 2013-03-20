@@ -186,15 +186,15 @@ public class ProtoFrontend implements FrontendService.Iface {
         conf = new PropertiesConfiguration(configFile);
       }
 
-      double warmup_lambda = conf.getDouble("warmup_job_arrival_rate_s",
+      double warmupLambda = conf.getDouble("warmup_job_arrival_rate_s",
                                             DEFAULT_WARMUP_JOB_ARRIVAL_RATE_S);
-      int warmup_duration_s = conf.getInt("warmup_s", DEFAULT_WARMUP_S);
-      int post_warmup_s = conf.getInt("post_warmup_s", DEFAULT_POST_WARMUP_S);
+      int warmupDurationS = conf.getInt("warmup_s", DEFAULT_WARMUP_S);
+      int postWarmupS = conf.getInt("post_warmup_s", DEFAULT_POST_WARMUP_S);
 
       double lambda = conf.getDouble("job_arrival_rate_s", DEFAULT_JOB_ARRIVAL_RATE_S);
-      int experiment_duration_s = conf.getInt("experiment_s", DEFAULT_EXPERIMENT_S);
+      int experimentDurationS = conf.getInt("experiment_s", DEFAULT_EXPERIMENT_S);
       LOG.debug("Using arrival rate of  " + lambda +
-          " tasks per second and running experiment for " + experiment_duration_s + " seconds.");
+          " tasks per second and running experiment for " + experimentDurationS + " seconds.");
       int tasksPerJob = conf.getInt("tasks_per_job", DEFAULT_TASKS_PER_JOB);
       int numPreferredNodes = conf.getInt("num_preferred_nodes", DEFAULT_NUM_PREFERRED_NODES);
       LOG.debug("Using " + numPreferredNodes + " preferred nodes for each task.");
@@ -240,17 +240,17 @@ public class ProtoFrontend implements FrontendService.Iface {
           SchedulerThrift.DEFAULT_SCHEDULER_THRIFT_PORT);
       client.initialize(new InetSocketAddress("localhost", schedulerPort), APPLICATION_ID, this);
 
-      if (warmup_duration_s > 0) {
-        LOG.debug("Warming up for " + warmup_duration_s + " seconds at arrival rate of " +
-                  warmup_lambda + " jobs per second");
-        launchTasks(users, warmup_lambda, warmup_duration_s, tasksPerJob, numPreferredNodes,
+      if (warmupDurationS > 0) {
+        LOG.debug("Warming up for " + warmupDurationS + " seconds at arrival rate of " +
+                  warmupLambda + " jobs per second");
+        launchTasks(users, warmupLambda, warmupDurationS, tasksPerJob, numPreferredNodes,
             benchmarkIterations, benchmarkId, backends, client);
-        LOG.debug("Waiting for queues to drain after warmup (waiting " + post_warmup_s +
+        LOG.debug("Waiting for queues to drain after warmup (waiting " + postWarmupS +
                  " seconds)");
-        Thread.sleep(post_warmup_s * 1000);
+        Thread.sleep(postWarmupS * 1000);
       }
-      LOG.debug("Launching experiment for " + experiment_duration_s + " seconds");
-      launchTasks(users, lambda, experiment_duration_s, tasksPerJob, numPreferredNodes,
+      LOG.debug("Launching experiment for " + experimentDurationS + " seconds");
+      launchTasks(users, lambda, experimentDurationS, tasksPerJob, numPreferredNodes,
           benchmarkIterations, benchmarkId, backends, client);
     }
     catch (Exception e) {

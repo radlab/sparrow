@@ -308,7 +308,6 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
                    users="user0:1:0"):
   # Replace template vars
   tmp_dir = tempfile.mkdtemp()
-  nm_task_scheduler = "fifo"
 
   template_vars = {
     "static_frontends": ",".join(["%s:12345" % i.public_dns_name \
