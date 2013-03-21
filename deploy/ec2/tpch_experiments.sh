@@ -6,8 +6,9 @@ num_nodes = 18
 wait_delay = 24 * 60
 results_dirname = "results"
 partitions = 6
-ratios = [(2, 2)] #-p, -q
-rates = [400]
+ratios = [(2, 2), (1, 1)] #-p, -q
+rates = [76]
+backend_mem = "10g"
 
 def run_cmd(cmd):
   subprocess.check_call(cmd, shell=True)
