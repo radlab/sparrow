@@ -238,7 +238,7 @@ public class FairnessTestingFrontend implements FrontendService.Iface {
       // For the first two minutes, the first user submits at a rate to fully utilize the cluster.
       List<UserInfo> onlyUser0 = new ArrayList<UserInfo>();
       onlyUser0.add(new UserInfo("user0", 1, 0));
-      experiments.add(new SubExperiment(onlyUser0, 120, fullyUtilizedArrivalRate));
+      experiments.add(new SubExperiment(onlyUser0, 10, fullyUtilizedArrivalRate));
 
       // For the next minute, user1 increases her rate to 25% of the cluster.
       List<UserInfo> user1QuarterDemand = new ArrayList<UserInfo>();
@@ -304,7 +304,9 @@ public class FairnessTestingFrontend implements FrontendService.Iface {
      * scheduled launch time, but we will not systematically "fall behind" due to
      * compounding time lost during sleep()'s;
      */
-    Random r = new Random();
+    // Used to determine which user to launch tasks for. The frontend rotates through users
+    // in a deterministic order.
+    int userIndex = 0;
     for (SubExperiment experiment : experiments) {
       // Store this as a double so we don't end up perpetually behind if the launch rate
       // includes some fractional number of milliseconds.
@@ -324,15 +326,14 @@ public class FairnessTestingFrontend implements FrontendService.Iface {
         }
         Thread.sleep(toWait);
 
-        // Randomly select which user's task to run, according to weight.
-        int userIndex = r.nextInt(experiment.totalWeight);
         UserInfo user = null;
         for (UserInfo potentialUser : experiment.users) {
-          if (userIndex < potentialUser.cumulativeWeight) {
+          if ((userIndex % experiment.totalWeight) < potentialUser.cumulativeWeight) {
             user = potentialUser;
             break;
           }
         }
+        userIndex++;
         ++user.totalJobsLaunched;
         LOG.debug("Launching " + tasksPerJob + " task job for user " + user.user + " (" +
             user.totalJobsLaunched + " total jobs launched for this user)");
