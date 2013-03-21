@@ -469,8 +469,9 @@ def stop_proto(frontends, backends, opts):
 
 def create_tpch_tables(frontends, backends, opts):
   print "Creating tpch tables..."
-  ssh_all([fe.public_dns_name for fe in frontends], opts,
-          "/root/create_tpch_tables.sh")
+  
+  ssh(frontends[0].public_dns_name, opts, 
+      "/root/create_tpch_tables_primary.sh")
 
 def start_shark_tpch(frontends, backends, opts):
   print "Starting Shark/TPCH workloads"
