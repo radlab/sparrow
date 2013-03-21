@@ -70,6 +70,8 @@ def parse_args(force_action=True):
   parser.add_option("-u", "--num_partitions", type="int", default=-1,
       help="Number of partitions for shark tables. Also used to determine"
            " when to use the Sparrow 'special case' code.")
+  parser.add_option("--spark-backend-mem", default="2g",
+      help="Amount of memory to give spark backends.")
 
   (opts, args) = parser.parse_args()
   if len(args) < 2 and force_action:
@@ -336,6 +338,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "users": users,
     "frontend_type": opts.frontend_type,
     "cpus": "%s" % opts.cpus,
+    "spark_backend_mem": "%s" % opts.spark_backend_mem
   }
 
   for dirpath, dirnames, filenames in os.walk("template"):

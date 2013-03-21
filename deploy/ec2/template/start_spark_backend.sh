@@ -19,6 +19,7 @@ for fe in $FRONTENDS; do
   chmod 755 spark-run.sh
   HOSTNAME=`ec2metadata  | grep local-hostname  | cut -d " " -f 2`
   export SPARK_HOSTNAME=$HOSTNAME
+  export SPARK_MEM={{spark_backend_mem}}
 
   ./spark-run.sh -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=$HOSTNAME -Dspark.master.host=$ip -Dsparrow.app.name=$id -Dsparrow.app.port=$port -Dspark.httpBroadcast.uri=http://$ip:33324 spark.executor.SparrowExecutorBackend > $log 2>&1 &
   ((port++))

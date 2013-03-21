@@ -18,7 +18,8 @@ start_cmd = "./ec2-exp.sh -i ~/.ssh/patkey.pem start-shark-tpch"
 for rate in rates:
   for (p, q) in ratios:
     dep_cmd = "./ec2-exp.sh deploy -g nsdi-patrick -s dev-sparrow-newcode " +\
-      "-i ~/.ssh/patkey.pem -p %s -q %s -u %s -v %s" % (p, q, partitions, rate)
+      "-i ~/.ssh/patkey.pem -p %s -q %s -u %s -v %s --spark-backend-mem=%s" % (
+      p, q, partitions, rate, backend_mem)
     run_cmd(dep_cmd)
     run_cmd(restart_cmd)
     run_cmd(start_cmd)
