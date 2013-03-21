@@ -70,48 +70,48 @@ class Probe:
                               "twice; expect it to only launch once") %
                               (self.request_id, self.address))
         self.launch_time = time
-        
+
     def set_received_time(self, time):
         if self.received_time != INVALID_TIME:
             self.__logger.warn(("Probe for request %s on machine %s received "
                               "twice; expect it to only be received once") %
                              (self.request_id, self.address))
         self.received_time = time
-        
+
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
             self.__logger.warn(("Probe for request %s on machine %s completed "
                               "twice; expect it to only launch once") %
                              (self.request_id, self.address))
         self.completion_time = time
-        
+
     def complete(self):
         """ Returns whether there's complete log information for this probe."""
         return (self.launch_time != INVALID_TIME and
                 self.received_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME)
-        
+
     def round_trip_time(self):
         """ Returns the delay experienced by the probing machine. """
         return self.completion_time - self.launch_time
 
     def get_clock_skew(self):
         """ Returns the clock skew of the probed machine.
-        
+
         Returns the number of milliseconds by which the probed machine is ahead
         of the probing machine.  The caller should verify that complete
         information is available for this probe before calling this function.
-        
+
         Ignores processing time at the node monitor, which we assume to be
         small.
         """
         expected_received_time = (self.launch_time + self.completion_time) / 2.
         return self.received_time - expected_received_time
-        
+
 
 class Task:
     """ Class to store information about a task.
-    
+
 			  We store a variety of events corresponding to each task launch,
         as described in __init__
     """
@@ -119,7 +119,7 @@ class Task:
         self.__logger = logging.getLogger("Task")
 
         # When the scheduler (resident with the frontend) launched the task
-        self.scheduler_launch_time = INVALID_TIME 
+        self.scheduler_launch_time = INVALID_TIME
         # When the node monitor queued the task for execution
         self.node_monitor_submit_time = INVALID_TIME
         # When the node monitor (resident with the backend) launched the task
@@ -132,13 +132,13 @@ class Task:
         # Address of the machine that the task ran on.
         self.address = ""
         self.id = id
-        
+
     def set_scheduler_launch_time(self, time):
         if self.scheduler_launch_time != INVALID_TIME:
             self.__logger.warn(("Task %s launched at scheduler twice; expect "
                               "task to only launch once") % id)
         self.scheduler_launch_time = time
-        
+
     def set_node_monitor_launch_time(self, address, time):
         if self.node_monitor_launch_time != INVALID_TIME:
             self.__logger.warn(("Task %s launched at %s twice; expect task to "
@@ -151,16 +151,16 @@ class Task:
                                 "only submit once") % (id, address))
         self.node_monitor_submit_time = time
         self.address = address
-        
+
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
             self.__logger.warn(("Task %s completed twice; "
                               "expect task to only complete once") % id)
-        self.completion_time = time        
+        self.completion_time = time
 
     def network_delay(self):
         """ Returns the network delay (as the difference between launch times).
-        
+
         In the presence of clock skew, this may be negative. The caller should
         ensure that complete information is available for this task before
         calling this function.
@@ -170,12 +170,12 @@ class Task:
 
     def queued_time(self):
         """ Returns the time spent waiting to launch on the backend. """
-        return (self.node_monitor_launch_time - self.node_monitor_submit_time) 
+        return (self.node_monitor_launch_time - self.node_monitor_submit_time)
 
-    def service_time(self):    
+    def service_time(self):
         """ Returns the service time (time executing on backend)."""
         return (self.completion_time - self.node_monitor_launch_time)
-    
+
     def complete(self):
         """ Returns whether we have complete information on this task. """
         return (self.scheduler_launch_time != INVALID_TIME and
@@ -200,37 +200,37 @@ class Request:
           sorted(self.__probes.items(), key=lambda k:k[1].completion_time)
         # print ["%s " % x[1].completion_time for x in probe_items_sorted]
         machines_sorted = [k[0] for k in probe_items_sorted]
-        
+
         out = []
         for (i, machine) in enumerate(machines_sorted):
             for task in self.__tasks.values():
                 if task.address == machine:
                     out.append(i)
-        return out    
-                    
-        
+        return out
+
+
     def add_arrival(self, time, num_tasks, address):
         self.__arrival_time = time
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
-        
+
     def add_probe_launch(self, address, time):
         probe = self.__get_probe(address)
         probe.set_launch_time(time)
-        
+
     def add_probe_received(self, address, time):
         probe = self.__get_probe(address)
         probe.set_received_time(time)
-        
+
     def add_probe_completion(self, address, queue_length, time):
         probe = self.__get_probe(address)
         probe.set_completion_time(time)
         probe.set_queue_length(queue_length)
-        
+
     def add_scheduler_task_launch(self, task_id, launch_time):
         task = self.__get_task(task_id)
         task.set_scheduler_launch_time(launch_time)
-        
+
     def add_node_monitor_task_launch(self, address, task_id, launch_time):
         task = self.__get_task(task_id)
         task.set_node_monitor_launch_time(address, launch_time)
@@ -244,7 +244,7 @@ class Request:
         # order that we read log files in.
         task = self.__get_task(task_id)
         task.set_completion_time(completion_time)
-        
+
     def set_clock_skews(self):
         """ Sets the clock skews for all tasks. """
         for task in self.__tasks.values():
@@ -259,24 +259,24 @@ class Request:
                                   "%s incomplete") % (self.__id, task.address))
             else:
                 task.clock_skew = probe.get_clock_skew()
-                
+
     def arrival_time(self):
         """ Returns the time at which the task arrived at the scheduler. """
         return self.__arrival_time
-                
+
     def scheduler_address(self):
         return self.__scheduler_address
-                
+
     def clock_skews(self):
         """ Returns a map of machines to clock skews.
-        
+
         Clock skews are given relative to the scheduler.
         """
         clock_skews = {}
         for address, probe in self.__probes.items():
             clock_skews[address] = probe.get_clock_skew()
         return clock_skews
-        
+
     def network_delays(self):
         """ Returns a list of delays for all __tasks with delay information. """
         network_delays = []
@@ -292,7 +292,7 @@ class Request:
                   print task.address
                   print
         return network_delays
-    
+
     def service_times(self):
         """ Returns a list of service times for complete __tasks. """
         service_times = []
@@ -321,6 +321,7 @@ class Request:
         return probe_times
 
     def receive_and_probing_time(self):
+        """ Returns the time from when the request arrived until the last probe completed. """
         latest_completion = 0
         for probe in self.__probes.values():
 		  	    if probe.complete():
@@ -350,27 +351,27 @@ class Request:
 
           This represents the thoeretical limit of the minimum time we could
           have spent probing that actually gets a probe from as many machines
-          as we have tasks. Note that in practice, if we are only waiting 
-          for ||tasks|| machines to respond we might as well just send the 
+          as we have tasks. Note that in practice, if we are only waiting
+          for ||tasks|| machines to respond we might as well just send the
           tasks randomly. """
       probe_times = self.probe_times()
       num_tasks = len(self.__tasks)
       if len(probe_times) < num_tasks:
-        self.__logger.warn("Fewer probes send than tasks for task %s." 
+        self.__logger.warn("Fewer probes send than tasks for task %s."
                            % self.__id)
-      
+
       if len(probe_times) == 0:
         return 0
       return sorted(probe_times)[min(num_tasks - 1, len(probe_times) - 1)]
 
     def response_time(self, incorporate_skew=True):
         """ Returns the time from when the task arrived to when it completed.
-        
+
         Returns -1 if we don't have completion information on the task.  Note
         that we may have information about when the task completed, but not
         complete information about the task (e.g. we don't know when the task
         was launched).
-        
+
         Arguments:
             incorporate_skew: Boolean specifying whether to incorporate the
                 perceived skew in the response time.
@@ -397,7 +398,7 @@ class Request:
                                         "completion time before arrival time, "
                                         "indicating inaccuracy in clock skew "
                                         "computation.") % (task_id, self.__id))
-            else: 
+            else:
              	if task.scheduler_launch_time > task.node_monitor_launch_time:
 								self.__logger.warn("Task %s suggests clock skew: " % task_id)
             completion_time = max(completion_time, task_completion_time)
@@ -412,10 +413,10 @@ class Request:
           print "EST: %s" % (max(self.service_times()) + max(self.network_delays()) + self.probing_time())
           """
         return completion_time - self.__arrival_time
-        
+
     def complete(self):
         """ Returns whether we have complete info for the request.
-        
+
         Due to incomplete log files, it's possible that we'll have completion
         information but not start information for a job. """
         if (self.__num_tasks == 0 or
@@ -428,20 +429,20 @@ class Request:
         if len(self.__probes) == 0:
           return False # Don't consider non-probing requests
         return True
-    
+
     def __get_task(self, task_id):
         """ Gets the task from the map of __tasks.
-        
+
         Creates a new task if the task with the given ID doesn't already
         exist.
         """
         if task_id not in self.__tasks:
             self.__tasks[task_id] = Task(task_id)
         return self.__tasks[task_id]
-    
+
     def __get_probe(self, address):
         """ Gets the probe from the map of __probes.
-        
+
         Creates a new probe if the probe with the given address doesn't already
         exist.
         """
@@ -451,7 +452,7 @@ class Request:
 
 class LogParser:
     """ Helps extract job information from log files.
-    
+
     Attributes:
         requests: A map of strings specifying request IDs to jobs.
     """
@@ -473,10 +474,10 @@ class LogParser:
                                   "number of items (expected 3; found %d)") %
                                  (line, len(items)))
                 continue
-            
+
             # Time is expressed in epoch milliseconds.
             time = int(items[self.TIME_INDEX])
-            self.__earliest_time = min(self.__earliest_time, time)            
+            self.__earliest_time = min(self.__earliest_time, time)
 
             audit_event_params = items[self.AUDIT_EVENT_INDEX].split(":")
             if audit_event_params[0] == "arrived":
@@ -510,7 +511,7 @@ class LogParser:
                 # First param = ip address is not used
                 self.__add_task_completion(audit_event_params[1],
                                            audit_event_params[2], time)
-                
+
     def output_results(self, file_prefix):
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
@@ -535,7 +536,7 @@ class LogParser:
 
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
-                                     k.complete(), 
+                                     k.complete(),
                                      self.__requests.values())
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
@@ -583,7 +584,7 @@ class LogParser:
 
         for i in range(100):
             i = float(i) / 100
-            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i, 
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
                 get_percentile(network_delays, i),
                 get_percentile(service_times, i),
@@ -595,9 +596,9 @@ class LogParser:
                 get_percentile(queue_lengths, i)))
 
         file.close()
-        
+
         self.plot_response_time_cdf(results_filename, file_prefix)
-        """        
+        """
         # Output data about clock skews.  Currently this writes a different
         # file for each pair of machines; we may want to change this when
         # we do larger experiments.
@@ -613,7 +614,7 @@ class LogParser:
                 percentile = (i + 1) * stride * 1.0 / len(skews)
                 file.write("%f\t%d\t%d\n" % (percentile, skew, time))
         self.plot_skew_cdf(skew_filenames, file_prefix)
-        """    
+        """
         summary_file = open("%s_response_time_summary" % file_prefix, 'w')
         summary_file.write("%s %s %s" % (get_percentile(response_times, .5),
                                          get_percentile(response_times, .95),
@@ -632,7 +633,7 @@ class LogParser:
             arr = wait_times_per_queue_len.get(queue_length, [])
             arr.append(wait_time)
             wait_times_per_queue_len[queue_length] = arr
-        
+
         # Queue length vs response time
         files = [] # (file name, queue length, # items)
         for (queue_len, waits) in wait_times_per_queue_len.items():
@@ -676,8 +677,8 @@ class LogParser:
             gnuplot_file.write("'%s' using 2:3 with p axis x1y2" %
                                results_filename)
         gnuplot_file.close()
-        
-        
+
+
     def plot_response_time_cdf(self, results_filename, file_prefix):
         gnuplot_file = open("%s_response_time_cdf.gp" % file_prefix, "w")
         gnuplot_file.write("set terminal postscript color\n")
@@ -690,21 +691,21 @@ class LogParser:
         gnuplot_file.write("plot '%s' using 2:1 lw 4 with lp\\\n" %
                            results_filename)
         gnuplot_file.close()
-        
+
     def __get_request(self, request_id):
         """ Gets the request from the map of requests.
-        
+
         Creates a new request if a request with the given ID doesn't already
         exist.
         """
         if request_id not in self.__requests:
             self.__requests[request_id] = Request(request_id)
         return self.__requests[request_id]
-        
+
     def __add_scheduler_task_launch(self, request_id, task_id, time):
         request = self.__get_request(request_id)
         request.add_scheduler_task_launch(task_id, time)
-        
+
     def __add_node_monitor_task_submit(self, address, request_id, task_id, time):
         request = self.__get_request(request_id)
         request.add_node_monitor_task_submit(address, task_id, time)
@@ -724,9 +725,9 @@ def main(argv):
         print ("Usage: python parse_logs.py " +
                " ".join(["[%s=v]" % k for k in PARAMS]))
         return
-        
+
     log_parser = LogParser()
-    
+
     log_files = []
     output_filename = "experiment"
     for arg in argv:
@@ -747,18 +748,18 @@ def main(argv):
             END_SEC = int(kv[1])
         else:
             print "Warning: ignoring parameter %s" % kv[0]
-            
+
     if len(log_files) == 0:
         print "No valid log files found!"
         return
-    
+
     logging.basicConfig(level=logging.DEBUG)
-        
+
     for filename in log_files:
         log_parser.parse_file(filename)
-        
+
     log_parser.output_results(output_filename)
-    
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
