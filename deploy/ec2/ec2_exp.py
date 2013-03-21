@@ -569,13 +569,14 @@ def login_backend(frontends, backends, opts):
 def main():
   (opts, args) = parse_args()
   conn = boto.connect_ec2()
-  (action, cluster) = args
+  action = args[0]
+  cluster = args[1]
 
   if action == "launch":
     launch_cluster(conn, opts, cluster)
     return
 
-  if action == "command" and len(args) < 2:
+  if action == "command" and len(args) < 3:
     print "Command action requires command string"
 
   # Wait until ec2 says the cluster is started, then possibly wait more time
@@ -591,7 +592,7 @@ def main():
   print "Executing action: %s" % action
 
   if action == "command":
-    cmd = " ".join(args[1:])
+    cmd = " ".join(args[2:])
     execute_command(frontends, backends, opts, cmd)
   elif action == "deploy":
     deploy_cluster(frontends, backends, opts)
