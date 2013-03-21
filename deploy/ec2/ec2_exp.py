@@ -11,7 +11,7 @@ from optparse import OptionParser
 
 
 def parse_args(force_action=True):
-  parser = OptionParser(usage="sparrow-exp <action> [options]" +
+  parser = OptionParser(usage="sparrow-exp <action> <cluster> [options]" +
     "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-tpch, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-tpch-tables, start-shark-tpch")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
@@ -74,7 +74,7 @@ def parse_args(force_action=True):
       help="Number of partitions for shark tables.")
 
   (opts, args) = parser.parse_args()
-  if len(args) < 1 and force_action:
+  if len(args) < 2 and force_action:
     parser.print_help()
     sys.exit(1)
   if os.getenv('AWS_ACCESS_KEY_ID') == None:
@@ -157,9 +157,9 @@ def ssh_all(hosts, opts, command):
   parallel_commands(commands, 0)
 
 # Launch a cluster and return instances launched
-def launch_cluster(conn, opts):
-  backend_group = get_or_make_group(conn, "sparrow-backends")
-  frontend_group = get_or_make_group(conn, "sparrow-frontends")
+def launch_cluster(conn, opts, cluster_name):
+  backend_group = get_or_make_group(conn, "%s-backends" % cluster_name)
+  frontend_group = get_or_make_group(conn, "%s-frontends" % cluster_name)
   groups = [backend_group, frontend_group]
 
   for group in groups:
@@ -180,7 +180,7 @@ def launch_cluster(conn, opts):
       # Launch spot instances with the requested price.
       # The launch group ensures that the instances will be launched and
       # terminated as a set.
-      launch_group_name = "launch-group-sparrow"
+      launch_group_name = "launch-group-%s" % cluster_name
       req_ids = []
       if opts.frontends > 0:
         print ("Requesting %d frontends as spot instances with price $%.3f" %
@@ -228,7 +228,7 @@ def launch_cluster(conn, opts):
       except:
         print "Canceling spot instance requests"
         conn.cancel_spot_instance_requests(req_ids)
-        (frontends, backends) = find_existing_cluster(conn, opts)
+        (frontends, backends) = find_existing_cluster(conn, opts, cluster_name)
         running = len(frontends) + len(backends)
         if running:
           print >> sys.stderr, ("WARNING: %d instances are still running" % running)
@@ -269,7 +269,7 @@ def is_active(instance):
   return (instance.state in ['pending', 'running', 'stopping', 'stopped'])
 
 
-def find_existing_cluster(conn, opts):
+def find_existing_cluster(conn, opts, cluster_name):
   print "Searching for existing Sparrow cluster..."
   reservations = conn.get_all_instances()
   frontend_nodes = []
@@ -278,9 +278,9 @@ def find_existing_cluster(conn, opts):
     active = [i for i in res.instances if is_active(i)]
     if len(active) > 0:
       group_names = [g.name for g in res.groups]
-      if group_names == ["sparrow-frontends"]:
+      if group_names == ["%s-frontends" % cluster_name]:
         frontend_nodes += res.instances
-      elif group_names == ["sparrow-backends"]:
+      elif group_names == ["%s-backends" % cluster_name]:
         backend_nodes += res.instances
   if frontend_nodes != [] and backend_nodes != []:
     print ("Found %d frontend and %s backend nodes" %
@@ -569,10 +569,10 @@ def login_backend(frontends, backends, opts):
 def main():
   (opts, args) = parse_args()
   conn = boto.connect_ec2()
-  action = args[0]
+  (action, cluster) = args
 
   if action == "launch":
-    launch_cluster(conn, opts)
+    launch_cluster(conn, opts, cluster)
     return
 
   if action == "command" and len(args) < 2:
@@ -580,7 +580,7 @@ def main():
 
   # Wait until ec2 says the cluster is started, then possibly wait more time
   # to make sure all nodes have booted.
-  (frontends, backends) = find_existing_cluster(conn, opts)
+  (frontends, backends) = find_existing_cluster(conn, opts, cluster)
   print "Waiting for instances to start up"
   wait_for_instances(conn, frontends)
   wait_for_instances(conn, backends)
