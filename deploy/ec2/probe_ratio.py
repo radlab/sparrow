@@ -30,6 +30,7 @@ def main(argv):
     trial_length = 500
     num_preferred_nodes = 1
     num_users = 1
+    cluster = "probe_ratio"
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
                                (task_duration_ms * tasks_per_job * num_frontends))
@@ -41,8 +42,8 @@ def main(argv):
 
     if launch_instances:
         print "********Launching instances..."
-        run_cmd("./ec2-exp.sh launch -f %s -b %s -i %s" %
-                (num_frontends, num_backends, private_ssh_key))
+        run_cmd("./ec2-exp.sh launch %s -f %s -b %s -i %s --spot_price %s" %
+                (cluster, num_frontends, num_backends, private_ssh_key, 0.3))
         time.sleep(10)
 
     for sample_ratio in sample_ratios:
@@ -58,9 +59,11 @@ def main(argv):
             opts.sample_ratio_constrained = sample_ratio_constrained
             opts.tasks_per_job = tasks_per_job
             opts.num_preferred_nodes = num_preferred_nodes
+            opts.ami = "ami-a658c0cf"
+            opts.instance_type = "cc2.8xlarge"
 
             conn = boto.connect_ec2()
-            frontends, backends = ec2_exp.find_existing_cluster(conn, opts)
+            frontends, backends = ec2_exp.find_existing_cluster(conn, opts, cluster)
 
             print ("********Launching experiment at utilization %s with sample ratio %s..." %
                    (utilization, sample_ratio))
