@@ -3,8 +3,6 @@ import re
 import time
 import datetime
 
-START_SEC = 250
-END_SEC = 300
 id_counter = 0
 min_date_seen = datetime.datetime(2030, 1, 1)
 
@@ -70,9 +68,15 @@ class Task:
 trials_per_file = {}
 skipped_trials = 0
 
+
+global start_time
+start_time = int(sys.argv[1])
+global end_time
+end_time = int(sys.argv[2])
+
 # Get minimum date
 print "Finding min date:"
-for f in sys.argv[1:]:
+for f in sys.argv[3:]:
   for line in open(f):
     if "QUERY" in line:
       str_date = line.split(" INFO")[0].replace("OK", "")
@@ -83,7 +87,7 @@ print "Min date: %s" % min_date_seen
 
 
 delta_buckets = {} # Queries per ten-second window
-for f in sys.argv[1:]:
+for f in sys.argv[3:]:
   curr_phase_per_thread = {} 
   curr_trial_per_thread = {}
   trials = {}
@@ -156,7 +160,7 @@ for f in sys.argv[1:]:
     delta = (trial.start_date - min_date_seen).seconds
     adjusted = delta - delta % 30
     delta_buckets[adjusted] = delta_buckets.get(adjusted, 0) + 1
-    if delta < START_SEC or delta > END_SEC:
+    if delta < start_time or delta > end_time:
       del trials[tid]
       skipped_trials = skipped_trials + 1
     elif not trial.is_complete():
