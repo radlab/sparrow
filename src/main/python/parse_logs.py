@@ -482,7 +482,8 @@ class LogParser:
                 request.add_node_monitor_get_task_completion(time, audit_event_params[2])
             elif audit_event_params[0] == "node_monitor_get_task_no_task":
                 previous_request = self.__get_request(audit_event_params[2])
-                previous_request.add_subsequent_task_launch_failure(audit_event_params[3])            else:
+                previous_request.add_subsequent_task_launch_failure(audit_event_params[3])            
+            else:
                 self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
 
         for request in self.__requests.values():
