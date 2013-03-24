@@ -18,6 +18,8 @@ INVALID_QUEUE_LENGTH = -1
 START_SEC = 200
 END_SEC = 250
 
+REQUEST_COUNT_GRANUL = 30
+
 """ from http://code.activestate.com/
          recipes/511478-finding-the-percentile-of-the-values/ """
 def get_percentile(N, percent, key=lambda x:x):
@@ -695,6 +697,14 @@ class LogParser:
                                      k.complete(), requests.values())
         print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(requests.values()) - len(considered_requests))
+        print "Requests per second:"
+        per_sec_requests = {}
+        for r in requests.values():
+          seconds_since_start = (r._Request__arrival_time - self.__earliest_time) / 1000
+          group = seconds_since_start - (seconds_since_start % REQUEST_COUNT_GRANUL)
+          per_sec_requests[group] = per_sec_requests.get(group, 0) + 1
+        for (group, g_requests) in sorted(per_sec_requests.items()):
+          print "%s\t%s" % (group, g_requests)
 
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
