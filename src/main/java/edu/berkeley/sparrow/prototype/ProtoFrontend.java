@@ -277,16 +277,16 @@ public class ProtoFrontend implements FrontendService.Iface {
      * scheduled launch time, but we will not systematically "fall behind" due to
      * compounding time lost during sleep()'s;
      */
-    Random r = new Random();
-    long mostRecentLaunch = System.currentTimeMillis();
+    //Random r = new Random();
+    double mostRecentLaunch = System.currentTimeMillis();
     long end = System.currentTimeMillis() + launch_duration_s * 1000;
     int userIndex = 0; // Used to determine which user's task to run next.
     while (System.currentTimeMillis() < end) {
       // Lambda is the arrival rate in S, so we need to multiply the result here by
       // 1000 to convert to ms.
-      long delay = (long) (generateInterarrivalDelay(r, lambda) * 1000);
-      long curLaunch = mostRecentLaunch + delay;
-      long toWait = Math.max(0,  curLaunch - System.currentTimeMillis());
+      double delay = 1000 / lambda;
+      double curLaunch = mostRecentLaunch + delay;
+      long toWait = Math.max(0,  (long) curLaunch - System.currentTimeMillis());
       mostRecentLaunch = curLaunch;
       if (toWait == 0) {
         LOG.warn("Lanching task after start time in generated workload.");
