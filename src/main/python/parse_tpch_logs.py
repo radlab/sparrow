@@ -5,6 +5,7 @@ import datetime
 
 id_counter = 0
 min_date_seen = datetime.datetime(2030, 1, 1)
+QUANTA = 1
 
 def match_or_die(regex, line):
   match = re.match(regex, line)
@@ -158,7 +159,7 @@ for f in sys.argv[3:]:
 
   for (tid, trial) in trials.items():
     delta = (trial.start_date - min_date_seen).seconds
-    adjusted = delta - delta % 30
+    adjusted = delta - delta % QUANTA
     delta_buckets[adjusted] = delta_buckets.get(adjusted, 0) + 1
     if delta < start_time or delta > end_time:
       del trials[tid]
