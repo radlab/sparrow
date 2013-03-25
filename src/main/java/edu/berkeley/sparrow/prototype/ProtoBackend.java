@@ -67,9 +67,11 @@ public class ProtoBackend implements BackendService.Iface {
    * from the node monitor.  Each node monitor client gets a dedicated thread, so this
    * should be no less than the expected number of clients. Each task is launched in a
    * new thread.
+   *
+   * TODO: This should be configurable.  Will break if we use >16 core machines.
    */
   private static final int THRIFT_WORKER_THREADS = 16;
-  private static final int TASK_WORKER_THREADS = 4;
+  private static final int TASK_WORKER_THREADS = 16;
   private static final String APP_ID = "testApp";
 
   /** We assume we are speaking to local Node Manager. */
