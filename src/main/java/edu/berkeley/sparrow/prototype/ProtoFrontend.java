@@ -221,6 +221,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       List<UserInfo> users = new ArrayList<UserInfo>();
       if (conf.containsKey(USERS)) {
         for (String userSpecification : conf.getStringArray(USERS)) {
+          LOG.debug("Reading user specification: " + userSpecification);
           String[] parts = userSpecification.split(":");
           if (parts.length != 3) {
             LOG.error("Unexpected user specification string: " + userSpecification +
@@ -279,6 +280,7 @@ public class ProtoFrontend implements FrontendService.Iface {
     Random r = new Random();
     long mostRecentLaunch = System.currentTimeMillis();
     long end = System.currentTimeMillis() + launch_duration_s * 1000;
+    int userIndex = 0; // Used to determine which user's task to run next.
     while (System.currentTimeMillis() < end) {
       // Lambda is the arrival rate in S, so we need to multiply the result here by
       // 1000 to convert to ms.
@@ -291,16 +293,16 @@ public class ProtoFrontend implements FrontendService.Iface {
       }
       Thread.sleep(toWait);
 
-      // Randomly select which user's task to run, according to weight.
-      int userIndex = r.nextInt(UserInfo.totalWeight);
+      // Deterministically select which user's task to run, according to weight.
       UserInfo user = null;
       for (UserInfo potentialUser : users) {
-        if (userIndex < potentialUser.cumulativeWeight) {
+        if (userIndex % UserInfo.totalWeight < potentialUser.cumulativeWeight) {
           user = potentialUser;
           break;
         }
       }
       assert(user != null);
+      ++userIndex;
       ++user.totalTasksLaunched;
       LOG.debug("Launching task for user " + user.user + " (" + user.totalTasksLaunched +
           " total tasks launched for this user)");
