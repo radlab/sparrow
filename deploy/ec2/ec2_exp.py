@@ -434,19 +434,19 @@ def stop_spark(frontends, backends, opts):
 def start_hdfs(frontends, backends, opts):
   print "Starting name node"
   ssh(frontends[0].public_dns_name, opts,
-      "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh start namenode")
+      'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh start namenode"')
   print "Starting data nodes"
   ssh_all([be.public_dns_name for be in backends], opts,
-      "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh start datanode")
+      'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh start datanode"')
 
 def stop_hdfs(frontends, backends,opts):
   print "Stopping data nodes"
   ssh_all([be.public_dns_name for be in backends], opts,
-    "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh stop datanode")
+    'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh stop datanode"')
 
   print "Stopping name node"
   ssh(frontends[0].public_dns_name, opts,
-      "sudo -u hdfs /opt/hadoop/bin/hadoop-daemon.sh stop namenode")
+      'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh stop namenode"')
 
 # Start the prototype backends/frontends
 def start_proto(frontends, backends, opts):
