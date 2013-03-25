@@ -66,9 +66,9 @@ public class ProtoBackend implements BackendService.Iface {
    * This indicates how many threads can concurrently be answering function calls
    * from the node monitor.  Each node monitor client gets a dedicated thread, so this
    * should be no less than the expected number of clients. Each task is launched in a
-   * new thread..
+   * new thread.
    */
-  private static final int THRIFT_WORKER_THREADS = 4;
+  private static final int THRIFT_WORKER_THREADS = 16;
   private static final int TASK_WORKER_THREADS = 4;
   private static final String APP_ID = "testApp";
 

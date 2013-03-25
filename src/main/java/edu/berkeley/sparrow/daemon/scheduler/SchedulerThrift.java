@@ -30,7 +30,7 @@ public class SchedulerThrift implements SchedulerService.Iface, GetTaskService.I
    * dedicated thread until the client closes its connection, so this number should be no less
    * than the expected number of concurrent clients!
    */
-  private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 8;
+  private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 16;
   /**
    * Number of threads to use for the getTask() server. Each client has a
    * dedicated thread until the client closes its connection, so this number should be no less

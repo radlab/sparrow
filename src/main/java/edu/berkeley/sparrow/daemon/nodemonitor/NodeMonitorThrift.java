@@ -38,7 +38,7 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
    * Number of threads to use for the scheduler-facing node monitor service. Each client has a
    * dedicated thread, so this should be set to no fewer than the maximum number of clients.
    */
-  public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 40;
+  public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 160;
 
   private NodeMonitor nodeMonitor = new NodeMonitor();
   // The socket addr (ip:port) where we listen for requests from other Sparrow daemons.

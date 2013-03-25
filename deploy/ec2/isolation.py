@@ -27,7 +27,7 @@ def main(argv):
 
     # Amount of time it takes each task to run in isolation
     task_duration_ms = 100
-    tasks_per_job = 2
+    tasks_per_job = 1
     private_ssh_key = "patkey.pem"
     sparrow_branch = "debugging"
     num_backends = 5
@@ -36,7 +36,8 @@ def main(argv):
     # Run each trial for 5 minutes.
     trial_length = 500
     num_preferred_nodes = 0
-    nm_task_scheduler = "round_robin"
+    nm_task_scheduler = "priority"
+    cluster_name = "isolation"
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
                                (task_duration_ms * tasks_per_job * num_frontends))
@@ -48,8 +49,9 @@ def main(argv):
 
     if launch_instances:
         print "********Launching instances..."
-        run_cmd("./ec2-exp.sh launch -f %s -b %s -i %s" %
-                (num_frontends, num_backends, private_ssh_key))
+        run_cmd(("./ec2-exp.sh launch %s --ami ami-a658c0cf " +
+                 "--instance-type cr1.8xlarge --spot-price %s -f %s -b %s -i %s") %
+                (cluster_name, 0.5, num_frontends, num_backends, private_ssh_key))
         time.sleep(10)
 
     for sample_ratio in sample_ratios:
@@ -65,9 +67,10 @@ def main(argv):
             opts.sample_ratio_constrained = sample_ratio_constrained
             opts.tasks_per_job = tasks_per_job
             opts.num_preferred_nodes = num_preferred_nodes
+            opts.cpus = cores_per_backend
 
             conn = boto.connect_ec2()
-            frontends, backends = ec2_exp.find_existing_cluster(conn, opts)
+            frontends, backends = ec2_exp.find_existing_cluster(conn, opts, cluster_name)
 
             print ("********Launching experiment at utilization %s with sample ratio %s..." %
                    (utilization, sample_ratio))
