@@ -296,7 +296,7 @@ public class ProtoFrontend implements FrontendService.Iface {
       // Deterministically select which user's task to run, according to weight.
       UserInfo user = null;
       for (UserInfo potentialUser : users) {
-        if (userIndex % UserInfo.totalWeight < potentialUser.cumulativeWeight) {
+        if ((userIndex % UserInfo.totalWeight) < potentialUser.cumulativeWeight) {
           user = potentialUser;
           break;
         }
