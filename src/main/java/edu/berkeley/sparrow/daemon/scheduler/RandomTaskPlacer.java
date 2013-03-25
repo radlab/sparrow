@@ -13,7 +13,6 @@ import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
-import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /***
@@ -25,8 +24,7 @@ public class RandomTaskPlacer implements TaskPlacer {
   private RandomAssignmentPolicy policy = new RandomAssignmentPolicy();
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
-      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks,
-      TSchedulingPref schedulingPref)
+      String requestId, Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks)
           throws IOException {
     Map<InetSocketAddress, TResourceUsage> nodeUsage = Maps.newHashMap();
     for (InetSocketAddress socket : nodes) {

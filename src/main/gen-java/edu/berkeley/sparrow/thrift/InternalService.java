@@ -1031,7 +1031,7 @@ public class InternalService {
                   for (int _i17 = 0; _i17 < _map16.size; ++_i17)
                   {
                     String _key18; // required
-                    edu.berkeley.sparrow.thrift.TResourceUsage _val19; // required
+                    edu.berkeley.sparrow.thrift.TResourceUsage _val19; // optional
                     _key18 = iprot.readString();
                     _val19 = new edu.berkeley.sparrow.thrift.TResourceUsage();
                     _val19.read(iprot);
@@ -1117,7 +1117,7 @@ public class InternalService {
             for (int _i23 = 0; _i23 < _map22.size; ++_i23)
             {
               String _key24; // required
-              edu.berkeley.sparrow.thrift.TResourceUsage _val25; // required
+              edu.berkeley.sparrow.thrift.TResourceUsage _val25; // optional
               _key24 = iprot.readString();
               _val25 = new edu.berkeley.sparrow.thrift.TResourceUsage();
               _val25.read(iprot);

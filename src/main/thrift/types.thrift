@@ -12,7 +12,7 @@ struct TResourceVector {
 }
 
 // Conveys both a quantity of resources in use and a task queue length
-struct TResourceUsage { 
+struct TResourceUsage {
   1: TResourceVector resources; // Current resource usage
   2: i32 queueLength;           // Number of queued tasks
 }
@@ -29,27 +29,24 @@ struct TFullTaskId {
 struct TUserGroupInfo {
   1: string user;
   2: string group;
+  // Priority of the user. If the node monitor is using the priority task scheduler,
+  // it will place the tasks with the smallest numbered priority first.
+  3: i32 priority;
 }
 
 struct TTaskSpec {
-  1: string taskID;
+  1: string taskId;
   2: TPlacementPreference preference;
   3: TResourceVector estimatedResources;
   4: optional binary message;
-}
-
-// This temporarily lets us specify the probe ratio for certain
-// types of requests. This is a hack.
-struct TSchedulingPref {
-  1: i32 probeRatio;
 }
 
 struct TSchedulingRequest {
   1: string app;
   2: list<TTaskSpec> tasks;
   3: TUserGroupInfo user;
-  4: optional bool reserve;
-  5: optional TSchedulingPref schedulingPref; 
+  # Hack to allow us to specify the probe ratio for certain types of requests.
+  4: optional double probeRatio;
 }
 
 struct TTaskPlacement {

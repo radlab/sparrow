@@ -483,7 +483,7 @@ public class SchedulerStateStoreService {
                   for (int _i27 = 0; _i27 < _map26.size; ++_i27)
                   {
                     String _key28; // required
-                    edu.berkeley.sparrow.thrift.TNodeState _val29; // required
+                    edu.berkeley.sparrow.thrift.TNodeState _val29; // optional
                     _key28 = iprot.readString();
                     _val29 = new edu.berkeley.sparrow.thrift.TNodeState();
                     _val29.read(iprot);
@@ -569,7 +569,7 @@ public class SchedulerStateStoreService {
             for (int _i33 = 0; _i33 < _map32.size; ++_i33)
             {
               String _key34; // required
-              edu.berkeley.sparrow.thrift.TNodeState _val35; // required
+              edu.berkeley.sparrow.thrift.TNodeState _val35; // optional
               _key34 = iprot.readString();
               _val35 = new edu.berkeley.sparrow.thrift.TNodeState();
               _val35.read(iprot);

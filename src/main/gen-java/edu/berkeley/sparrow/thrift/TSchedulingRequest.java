@@ -33,8 +33,7 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
   private static final org.apache.thrift.protocol.TField APP_FIELD_DESC = new org.apache.thrift.protocol.TField("app", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField TASKS_FIELD_DESC = new org.apache.thrift.protocol.TField("tasks", org.apache.thrift.protocol.TType.LIST, (short)2);
   private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)3);
-  private static final org.apache.thrift.protocol.TField RESERVE_FIELD_DESC = new org.apache.thrift.protocol.TField("reserve", org.apache.thrift.protocol.TType.BOOL, (short)4);
-  private static final org.apache.thrift.protocol.TField SCHEDULING_PREF_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulingPref", org.apache.thrift.protocol.TType.STRUCT, (short)5);
+  private static final org.apache.thrift.protocol.TField PROBE_RATIO_FIELD_DESC = new org.apache.thrift.protocol.TField("probeRatio", org.apache.thrift.protocol.TType.DOUBLE, (short)4);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -45,16 +44,14 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
   public String app; // required
   public List<TTaskSpec> tasks; // required
   public TUserGroupInfo user; // required
-  public boolean reserve; // optional
-  public TSchedulingPref schedulingPref; // optional
+  public double probeRatio; // optional
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements org.apache.thrift.TFieldIdEnum {
     APP((short)1, "app"),
     TASKS((short)2, "tasks"),
     USER((short)3, "user"),
-    RESERVE((short)4, "reserve"),
-    SCHEDULING_PREF((short)5, "schedulingPref");
+    PROBE_RATIO((short)4, "probeRatio");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -75,10 +72,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
           return TASKS;
         case 3: // USER
           return USER;
-        case 4: // RESERVE
-          return RESERVE;
-        case 5: // SCHEDULING_PREF
-          return SCHEDULING_PREF;
+        case 4: // PROBE_RATIO
+          return PROBE_RATIO;
         default:
           return null;
       }
@@ -119,9 +114,9 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
   }
 
   // isset id assignments
-  private static final int __RESERVE_ISSET_ID = 0;
+  private static final int __PROBERATIO_ISSET_ID = 0;
   private BitSet __isset_bit_vector = new BitSet(1);
-  private _Fields optionals[] = {_Fields.RESERVE,_Fields.SCHEDULING_PREF};
+  private _Fields optionals[] = {_Fields.PROBE_RATIO};
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
@@ -132,10 +127,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
             new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TTaskSpec.class))));
     tmpMap.put(_Fields.USER, new org.apache.thrift.meta_data.FieldMetaData("user", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TUserGroupInfo.class)));
-    tmpMap.put(_Fields.RESERVE, new org.apache.thrift.meta_data.FieldMetaData("reserve", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
-    tmpMap.put(_Fields.SCHEDULING_PREF, new org.apache.thrift.meta_data.FieldMetaData("schedulingPref", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
-        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TSchedulingPref.class)));
+    tmpMap.put(_Fields.PROBE_RATIO, new org.apache.thrift.meta_data.FieldMetaData("probeRatio", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
+        new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.DOUBLE)));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TSchedulingRequest.class, metaDataMap);
   }
@@ -173,10 +166,7 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     if (other.isSetUser()) {
       this.user = new TUserGroupInfo(other.user);
     }
-    this.reserve = other.reserve;
-    if (other.isSetSchedulingPref()) {
-      this.schedulingPref = new TSchedulingPref(other.schedulingPref);
-    }
+    this.probeRatio = other.probeRatio;
   }
 
   public TSchedulingRequest deepCopy() {
@@ -187,9 +177,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     this.app = null;
     this.tasks = null;
     this.user = null;
-    setReserveIsSet(false);
-    this.reserve = false;
-    this.schedulingPref = null;
+    setProbeRatioIsSet(false);
+    this.probeRatio = 0.0;
   }
 
   public String getApp() {
@@ -279,51 +268,27 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     }
   }
 
-  public boolean isReserve() {
-    return this.reserve;
+  public double getProbeRatio() {
+    return this.probeRatio;
   }
 
-  public TSchedulingRequest setReserve(boolean reserve) {
-    this.reserve = reserve;
-    setReserveIsSet(true);
+  public TSchedulingRequest setProbeRatio(double probeRatio) {
+    this.probeRatio = probeRatio;
+    setProbeRatioIsSet(true);
     return this;
   }
 
-  public void unsetReserve() {
-    __isset_bit_vector.clear(__RESERVE_ISSET_ID);
+  public void unsetProbeRatio() {
+    __isset_bit_vector.clear(__PROBERATIO_ISSET_ID);
   }
 
-  /** Returns true if field reserve is set (has been assigned a value) and false otherwise */
-  public boolean isSetReserve() {
-    return __isset_bit_vector.get(__RESERVE_ISSET_ID);
+  /** Returns true if field probeRatio is set (has been assigned a value) and false otherwise */
+  public boolean isSetProbeRatio() {
+    return __isset_bit_vector.get(__PROBERATIO_ISSET_ID);
   }
 
-  public void setReserveIsSet(boolean value) {
-    __isset_bit_vector.set(__RESERVE_ISSET_ID, value);
-  }
-
-  public TSchedulingPref getSchedulingPref() {
-    return this.schedulingPref;
-  }
-
-  public TSchedulingRequest setSchedulingPref(TSchedulingPref schedulingPref) {
-    this.schedulingPref = schedulingPref;
-    return this;
-  }
-
-  public void unsetSchedulingPref() {
-    this.schedulingPref = null;
-  }
-
-  /** Returns true if field schedulingPref is set (has been assigned a value) and false otherwise */
-  public boolean isSetSchedulingPref() {
-    return this.schedulingPref != null;
-  }
-
-  public void setSchedulingPrefIsSet(boolean value) {
-    if (!value) {
-      this.schedulingPref = null;
-    }
+  public void setProbeRatioIsSet(boolean value) {
+    __isset_bit_vector.set(__PROBERATIO_ISSET_ID, value);
   }
 
   public void setFieldValue(_Fields field, Object value) {
@@ -352,19 +317,11 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       }
       break;
 
-    case RESERVE:
+    case PROBE_RATIO:
       if (value == null) {
-        unsetReserve();
+        unsetProbeRatio();
       } else {
-        setReserve((Boolean)value);
-      }
-      break;
-
-    case SCHEDULING_PREF:
-      if (value == null) {
-        unsetSchedulingPref();
-      } else {
-        setSchedulingPref((TSchedulingPref)value);
+        setProbeRatio((Double)value);
       }
       break;
 
@@ -382,11 +339,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
     case USER:
       return getUser();
 
-    case RESERVE:
-      return Boolean.valueOf(isReserve());
-
-    case SCHEDULING_PREF:
-      return getSchedulingPref();
+    case PROBE_RATIO:
+      return Double.valueOf(getProbeRatio());
 
     }
     throw new IllegalStateException();
@@ -405,10 +359,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       return isSetTasks();
     case USER:
       return isSetUser();
-    case RESERVE:
-      return isSetReserve();
-    case SCHEDULING_PREF:
-      return isSetSchedulingPref();
+    case PROBE_RATIO:
+      return isSetProbeRatio();
     }
     throw new IllegalStateException();
   }
@@ -453,21 +405,12 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
         return false;
     }
 
-    boolean this_present_reserve = true && this.isSetReserve();
-    boolean that_present_reserve = true && that.isSetReserve();
-    if (this_present_reserve || that_present_reserve) {
-      if (!(this_present_reserve && that_present_reserve))
+    boolean this_present_probeRatio = true && this.isSetProbeRatio();
+    boolean that_present_probeRatio = true && that.isSetProbeRatio();
+    if (this_present_probeRatio || that_present_probeRatio) {
+      if (!(this_present_probeRatio && that_present_probeRatio))
         return false;
-      if (this.reserve != that.reserve)
-        return false;
-    }
-
-    boolean this_present_schedulingPref = true && this.isSetSchedulingPref();
-    boolean that_present_schedulingPref = true && that.isSetSchedulingPref();
-    if (this_present_schedulingPref || that_present_schedulingPref) {
-      if (!(this_present_schedulingPref && that_present_schedulingPref))
-        return false;
-      if (!this.schedulingPref.equals(that.schedulingPref))
+      if (this.probeRatio != that.probeRatio)
         return false;
     }
 
@@ -517,22 +460,12 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetReserve()).compareTo(typedOther.isSetReserve());
+    lastComparison = Boolean.valueOf(isSetProbeRatio()).compareTo(typedOther.isSetProbeRatio());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    if (isSetReserve()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.reserve, typedOther.reserve);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
-    lastComparison = Boolean.valueOf(isSetSchedulingPref()).compareTo(typedOther.isSetSchedulingPref());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetSchedulingPref()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.schedulingPref, typedOther.schedulingPref);
+    if (isSetProbeRatio()) {
+      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.probeRatio, typedOther.probeRatio);
       if (lastComparison != 0) {
         return lastComparison;
       }
@@ -580,20 +513,10 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       sb.append(this.user);
     }
     first = false;
-    if (isSetReserve()) {
+    if (isSetProbeRatio()) {
       if (!first) sb.append(", ");
-      sb.append("reserve:");
-      sb.append(this.reserve);
-      first = false;
-    }
-    if (isSetSchedulingPref()) {
-      if (!first) sb.append(", ");
-      sb.append("schedulingPref:");
-      if (this.schedulingPref == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.schedulingPref);
-      }
+      sb.append("probeRatio:");
+      sb.append(this.probeRatio);
       first = false;
     }
     sb.append(")");
@@ -676,19 +599,10 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 4: // RESERVE
-            if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
-              struct.reserve = iprot.readBool();
-              struct.setReserveIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 5: // SCHEDULING_PREF
-            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-              struct.schedulingPref = new TSchedulingPref();
-              struct.schedulingPref.read(iprot);
-              struct.setSchedulingPrefIsSet(true);
+          case 4: // PROBE_RATIO
+            if (schemeField.type == org.apache.thrift.protocol.TType.DOUBLE) {
+              struct.probeRatio = iprot.readDouble();
+              struct.setProbeRatioIsSet(true);
             } else { 
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
@@ -730,17 +644,10 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
         struct.user.write(oprot);
         oprot.writeFieldEnd();
       }
-      if (struct.isSetReserve()) {
-        oprot.writeFieldBegin(RESERVE_FIELD_DESC);
-        oprot.writeBool(struct.reserve);
+      if (struct.isSetProbeRatio()) {
+        oprot.writeFieldBegin(PROBE_RATIO_FIELD_DESC);
+        oprot.writeDouble(struct.probeRatio);
         oprot.writeFieldEnd();
-      }
-      if (struct.schedulingPref != null) {
-        if (struct.isSetSchedulingPref()) {
-          oprot.writeFieldBegin(SCHEDULING_PREF_FIELD_DESC);
-          struct.schedulingPref.write(oprot);
-          oprot.writeFieldEnd();
-        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -769,13 +676,10 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       if (struct.isSetUser()) {
         optionals.set(2);
       }
-      if (struct.isSetReserve()) {
+      if (struct.isSetProbeRatio()) {
         optionals.set(3);
       }
-      if (struct.isSetSchedulingPref()) {
-        optionals.set(4);
-      }
-      oprot.writeBitSet(optionals, 5);
+      oprot.writeBitSet(optionals, 4);
       if (struct.isSetApp()) {
         oprot.writeString(struct.app);
       }
@@ -791,18 +695,15 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
       if (struct.isSetUser()) {
         struct.user.write(oprot);
       }
-      if (struct.isSetReserve()) {
-        oprot.writeBool(struct.reserve);
-      }
-      if (struct.isSetSchedulingPref()) {
-        struct.schedulingPref.write(oprot);
+      if (struct.isSetProbeRatio()) {
+        oprot.writeDouble(struct.probeRatio);
       }
     }
 
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TSchedulingRequest struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(5);
+      BitSet incoming = iprot.readBitSet(4);
       if (incoming.get(0)) {
         struct.app = iprot.readString();
         struct.setAppIsSet(true);
@@ -827,13 +728,8 @@ public class TSchedulingRequest implements org.apache.thrift.TBase<TSchedulingRe
         struct.setUserIsSet(true);
       }
       if (incoming.get(3)) {
-        struct.reserve = iprot.readBool();
-        struct.setReserveIsSet(true);
-      }
-      if (incoming.get(4)) {
-        struct.schedulingPref = new TSchedulingPref();
-        struct.schedulingPref.read(iprot);
-        struct.setSchedulingPrefIsSet(true);
+        struct.probeRatio = iprot.readDouble();
+        struct.setProbeRatioIsSet(true);
       }
     }
   }

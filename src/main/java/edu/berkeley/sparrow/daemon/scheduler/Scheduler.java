@@ -169,7 +169,7 @@ public class Scheduler {
     // Launch tasks.
     CountDownLatch latch = new CountDownLatch(placement.size());
     for (TaskPlacementResponse response : placement) {
-      LOG.debug("Attempting to launch task " + response.getTaskSpec().getTaskID()
+      LOG.debug("Attempting to launch task " + response.getTaskSpec().getTaskId()
           + " on " + response.getNodeAddr());
 
       InternalService.AsyncClient client;
@@ -185,7 +185,7 @@ public class Scheduler {
         LOG.error(e);
         return false;
       }
-      String taskId = response.getTaskSpec().taskID;
+      String taskId = response.getTaskSpec().taskId;
 
       AUDIT_LOG.info(Logging.auditEventString("scheduler_launch", requestId, taskId));
       TFullTaskId id = new TFullTaskId();
@@ -224,7 +224,7 @@ public class Scheduler {
     for (TaskPlacementResponse placement : placements) {
       TTaskPlacement tPlacement = new TTaskPlacement();
       tPlacement.node = placement.getNodeAddr().toString();
-      tPlacement.taskID = placement.getTaskSpec().getTaskID();
+      tPlacement.taskID = placement.getTaskSpec().getTaskId();
       out.add(tPlacement);
     }
     LOG.debug("Returning task placement: " + out);
@@ -284,11 +284,9 @@ public class Scheduler {
       }
     }*/
     if (constrained) {
-      return constrainedPlacer.placeTasks(
-          app, requestId, backendList, tasks, req.schedulingPref);
+      return constrainedPlacer.placeTasks(app, requestId, backendList, tasks);
     } else {
-      return unconstrainedPlacer.placeTasks(
-          app, requestId, backendList, tasks, req.schedulingPref);
+      return unconstrainedPlacer.placeTasks(app, requestId, backendList, tasks);
     }
   }
 

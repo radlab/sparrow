@@ -27,28 +27,27 @@ import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient;
 import edu.berkeley.sparrow.thrift.TResourceUsage;
-import edu.berkeley.sparrow.thrift.TSchedulingPref;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
   public static int MAXIMUM_PROBE_WAIT_MS = 5; // Longest time we wait to sample
-  
+
   public int probesPerTask;
-  
-  private final static Logger LOG = 
+
+  private final static Logger LOG =
       Logger.getLogger(ConstraintObservingProbingTaskPlacer.class);
-  
+
   private ThriftClientPool<AsyncClient> clientPool;
   private AssignmentPolicy waterLevelPolicy = new ConstrainedTaskAssignmentPolicy(
       new WaterLevelAssignmentPolicy());
   private AssignmentPolicy randomPolicy = new ConstrainedTaskAssignmentPolicy(
       new RandomAssignmentPolicy());
-  
+
   @Override
   public void initialize(Configuration conf,
       ThriftClientPool<AsyncClient> clientPool) {
-    this.clientPool = clientPool; 
-    probesPerTask = conf.getInt(SparrowConf.SAMPLE_RATIO_CONSTRAINED, 
+    this.clientPool = clientPool;
+    probesPerTask = conf.getInt(SparrowConf.SAMPLE_RATIO_CONSTRAINED,
         SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
     super.initialize(conf, clientPool);
   }
@@ -56,21 +55,19 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
   @Override
   public Collection<TaskPlacementResponse> placeTasks(String appId,
       String requestId, Collection<InetSocketAddress> nodes,
-      Collection<TTaskSpec> tasks, TSchedulingPref schedulingPref) throws IOException {
-    int probeRatio = Math.max(schedulingPref.probeRatio, probesPerTask);
+      Collection<TTaskSpec> tasks) throws IOException {
+    LOG.debug("Placing constrained tasks with probe ratio: " + probesPerTask);
 
-    LOG.debug("Placing constrained tasks with probe ratio: " + probeRatio); 
-    
     // This approximates a "randomized over constraints" approach if we get a trivial
     // probe ratio.
-    if (probeRatio < 1.0) {
+    if (probesPerTask < 1.0) {
       Set<TaskPlacementResponse> responses = Sets.newHashSet();
       for (TTaskSpec task: tasks) {
         List<TTaskSpec> taskList = Lists.newArrayList(task);
         // Should return three neighbors
         Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(
             nodes, taskList, 3);
-        
+
         // Resource info is ignored by random policy
         Map<InetSocketAddress, TResourceUsage> mockedResources = Maps.newHashMap();
         for (InetSocketAddress socket : machinesToProbe) {
@@ -84,9 +81,9 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       }
       return responses;
     }
-    
-    Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks, 
-        probeRatio);
+
+    Collection<InetSocketAddress> machinesToProbe = getMachinesToProbe(nodes, tasks,
+        probesPerTask);
     CountDownLatch latch = new CountDownLatch(machinesToProbe.size());
     Map<InetSocketAddress, TResourceUsage> loads = Maps.newConcurrentMap();
     for (InetSocketAddress machine: machinesToProbe) {
@@ -99,7 +96,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       try {
         AUDIT_LOG.info(Logging.auditEventString("probe_launch", requestId,
             machine.getAddress().getHostAddress()));
-        client.getLoad(appId, requestId, 
+        client.getLoad(appId, requestId,
             new ProbeCallback(machine, loads, latch, appId, requestId, client));
       } catch (TException e) {
         LOG.fatal(e);
@@ -114,7 +111,7 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       if (!loads.containsKey(machine)) {
         // TODO maybe use stale data here?
         // Assume this machine is really heavily loaded
-        loads.put(machine, 
+        loads.put(machine,
             TResources.createResourceUsage(
                 TResources.createResourceVector(1000, 4), 100));
       }
@@ -122,18 +119,18 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
     return waterLevelPolicy.assignTasks(tasks, loads);
   }
 
-  
+
   /** Return the set of machines which we want to probe for a given job. */
   private Collection<InetSocketAddress> getMachinesToProbe(
       Collection<InetSocketAddress> nodes, Collection<TTaskSpec> tasks, int sampleRatio) {
     HashMap<InetAddress, InetSocketAddress> addrToSocket = Maps.newHashMap();
     Set<InetSocketAddress> probeSet = Sets.newHashSet();
-    
+
     for (InetSocketAddress node: nodes) {
       addrToSocket.put(node.getAddress(), node);
     }
     List<TTaskSpec> unconstrainedTasks = Lists.newLinkedList();
-    
+
     List<TTaskSpec> taskList = Lists.newArrayList(tasks);
     Collections.shuffle(taskList);
     for (TTaskSpec task : taskList) {
@@ -163,8 +160,8 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
       if (interests.size() > 0) {
         int myProbes = 0;
         for (InetSocketAddress addr: interests) {
-          if (!probeSet.contains(addr)) { 
-            probeSet.add(addr); 
+          if (!probeSet.contains(addr)) {
+            probeSet.add(addr);
             myProbes++;
           }
           if (myProbes >= sampleRatio) break;
@@ -173,11 +170,11 @@ public class ConstraintObservingProbingTaskPlacer extends ProbingTaskPlacer {
         unconstrainedTasks.add(task);
       }
     }
-    
+
     List<InetSocketAddress> nodesLeft = Lists.newArrayList(
         Sets.difference(Sets.newHashSet(nodes), probeSet));
     Collections.shuffle(nodesLeft);
-    int numAdditionalNodes = Math.min(unconstrainedTasks.size() * sampleRatio, 
+    int numAdditionalNodes = Math.min(unconstrainedTasks.size() * sampleRatio,
         nodesLeft.size());
     probeSet.addAll(nodesLeft.subList(0, numAdditionalNodes));
     return probeSet;

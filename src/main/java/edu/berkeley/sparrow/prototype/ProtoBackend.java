@@ -3,7 +3,6 @@ package edu.berkeley.sparrow.prototype;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,11 +18,11 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
-import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
@@ -64,11 +63,10 @@ public class ProtoBackend implements BackendService.Iface {
   private static final int DEFAULT_LISTEN_PORT = 20101;
 
   /**
-   * This is just how many threads can concurrently be answering function calls
-   * from the NM. Each task is launched in its own from one of these threads. If tasks
-   * launches arrive fast enough that all worker threads are concurrently executing
-   * a task, this will queue. We currently launch new threads for each task to prevent
-   * this from happening.
+   * This indicates how many threads can concurrently be answering function calls
+   * from the node monitor.  Each node monitor client gets a dedicated thread, so this
+   * should be no less than the expected number of clients. Each task is launched in a
+   * new thread..
    */
   private static final int THRIFT_WORKER_THREADS = 4;
   private static final int TASK_WORKER_THREADS = 4;
@@ -124,7 +122,10 @@ public class ProtoBackend implements BackendService.Iface {
       LOG.debug("Aggregate task rate: " + taskRate);
 
       Random r = new Random();
+
+      long benchmarkStart = System.currentTimeMillis();
       runBenchmark(benchmarkId, benchmarkIterations, r);
+      LOG.debug("Benchmark runtime: " + (System.currentTimeMillis() - benchmarkStart));
 
       // Update bookkeeping for task finish
       synchronized(resourceUsage) {
@@ -142,7 +143,7 @@ public class ProtoBackend implements BackendService.Iface {
       }
       client.getInputProtocol().getTransport().close();
       client.getOutputProtocol().getTransport().close();
-      System.out.println(System.currentTimeMillis() - taskStart);
+      LOG.debug("Task running for " + (System.currentTimeMillis() - taskStart) + " ms");
     }
   }
 
@@ -153,8 +154,10 @@ public class ProtoBackend implements BackendService.Iface {
    */
   public static boolean runBenchmark(int benchmarkId, int iterations, Random r) {
     if (benchmarkId == BENCHMARK_TYPE_RANDOM_MEMACCESS) {
+      LOG.debug("Running random access benchmark for " + iterations + " iterations.");
       runRandomMemAcessBenchmark(iterations, r);
     } else if (benchmarkId == BENCHMARK_TYPE_FP_CPU) {
+      LOG.debug("Running CPU benchmark for " + iterations + " iterations.");
      runFloatingPointBenchmark(iterations, r);
     } else {
       LOG.error("Received unrecognized benchmark type");
@@ -163,18 +166,24 @@ public class ProtoBackend implements BackendService.Iface {
     return true;
   }
 
-  /** Benchmark which, on each iteration, runs 1 million random floating point
-   *  multiplications.*/
+  /**
+   * Benchmark that runs random floating point multiplications for the specified amount of
+   * "iterations", where each iteration is one millisecond.
+   */
   public static void runFloatingPointBenchmark(int iterations, Random r) {
-    int opsPerIteration = 1000 * 1000;
-    // We keep a running result here and print it out so that the JVM doesn't
-    // optimize all this computation away.
+    int runtimeMillis = iterations;
+    long startTime = System.nanoTime();
+    int opsPerIteration = 1000;
+    /* We keep a running result here and print it out so that the JVM doesn't
+     * optimize all this computation away. */
     float result = r.nextFloat();
-    for (int i = 0; i < iterations * opsPerIteration; i++) {
-      // On each iteration, perform a floating point mulitplication
-      float x = r.nextFloat();
-      float y = r.nextFloat();
-      result += (x * y);
+    while (System.nanoTime() - startTime < runtimeMillis * 1000 * 1000) {
+      for (int j = 0; j < opsPerIteration; j++) {
+        // On each iteration, perform a floating point multiplication
+        float x = r.nextFloat();
+        float y = r.nextFloat();
+        result += (x * y);
+      }
     }
     LOG.debug("Benchmark result " + result);
   }
@@ -205,6 +214,7 @@ public class ProtoBackend implements BackendService.Iface {
   private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
 
   public ProtoBackend() {
+    LOG.debug("Created");
     this.user = new TUserGroupInfo();
     user.setUser("*");
     user.setGroup("*");
@@ -213,6 +223,7 @@ public class ProtoBackend implements BackendService.Iface {
   @Override
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
+    LOG.info("Submitting task " + taskId.getTaskId() + "at " + System.currentTimeMillis());
     // We want to add accounting for task start here, even though the task is actually
     // queued. Note that this won't be propagated to the node monitor until another task
     // finishes.
@@ -223,9 +234,6 @@ public class ProtoBackend implements BackendService.Iface {
     // Note we ignore user here
     executor.submit(new TaskRunnable(
         taskId.requestId, taskId, message, estimatedResources));
-    synchronized (client) {
-      client.sendFrontendMessage(APP_ID, taskId, 1, ByteBuffer.wrap("Started".getBytes()));
-    }
   }
 
   public static void main(String[] args) throws IOException, TException {
@@ -243,6 +251,7 @@ public class ProtoBackend implements BackendService.Iface {
     // Logger configuration: log to the console
     BasicConfigurator.configure();
     LOG.setLevel(Level.DEBUG);
+    LOG.debug("debug logging on");
 
     Configuration conf = new PropertiesConfiguration();
 
@@ -252,13 +261,6 @@ public class ProtoBackend implements BackendService.Iface {
         conf = new PropertiesConfiguration(configFile);
       } catch (ConfigurationException e) {}
     }
-
-    // Logger configuration: log to the console
-    BasicConfigurator.configure();
-    LOG.setLevel(Level.DEBUG);
-
-    Logging.configureAuditLogging();
-
     // Start backend server
     BackendService.Processor<BackendService.Iface> processor =
         new BackendService.Processor<BackendService.Iface>(new ProtoBackend());
@@ -269,6 +271,12 @@ public class ProtoBackend implements BackendService.Iface {
 
     // Register server
     client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
-    client.registerBackend(APP_ID, "localhost:" + listenPort);
+
+    try {
+      client.registerBackend(APP_ID, "localhost:" + listenPort);
+      LOG.debug("Client successfullly registered");
+    } catch (TTransportException e) {
+      LOG.debug("Error while registering backend: " + e.getMessage());
+    }
   }
 }
