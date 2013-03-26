@@ -84,7 +84,6 @@ public class ProbingTaskPlacer implements TaskPlacer {
                                               socket.getAddress().getHostAddress(),
                                               queueLength, cores));
       try {
-        clientPool.returnClient(socket, client);
         Map<String, TResourceUsage> resp = response.getResult();
         if (!resp.containsKey(appId)) {
           LOG.warn("Probe returned no load information for " + appId);
@@ -94,6 +93,7 @@ public class ProbingTaskPlacer implements TaskPlacer {
           loads.put(socket,result);
           latch.countDown();
         }
+        clientPool.returnClient(socket, client);
       } catch (Exception e) {
         LOG.error("Error getting resources from response data", e);
       }
