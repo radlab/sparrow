@@ -15,7 +15,6 @@ import os
 import sys
 import stats
 import time
-import subprocess
 
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
@@ -87,9 +86,16 @@ class Probe:
 
     def complete(self):
         """ Returns whether there's complete log information for this probe."""
-        return (self.launch_time != INVALID_TIME and
-                self.received_time != INVALID_TIME and
-                self.completion_time != INVALID_TIME)
+	if self.launch_time == INVALID_TIME:
+	  print "Missing probe launch time"
+          return False
+        if self.received_time == INVALID_TIME:
+          print "Missing probe received time"
+          return False
+        if self.completion_time == INVALID_TIME:
+          print "Missing probe completion time"
+          return False
+        return True
 
     def round_trip_time(self):
         """ Returns the delay experienced by the probing machine. """
@@ -178,10 +184,19 @@ class Task:
 
     def complete(self):
         """ Returns whether we have complete information on this task. """
-        return (self.scheduler_launch_time != INVALID_TIME and
-                self.node_monitor_launch_time != INVALID_TIME and
-                self.completion_time != INVALID_TIME and
-                self.clock_skew != INVALID_TIME_DELTA)
+        if self.scheduler_launch_time == INVALID_TIME:
+          print "Missing task scheduler launch time"
+          return False
+        if self.node_monitor_launch_time == INVALID_TIME:
+	  print "Missing task node monitor launch time"
+	  return False
+	if self.completion_time == INVALID_TIME:
+	  print "Missing task completion time"
+	  return False
+	if self.clock_skew == INVALID_TIME_DELTA:
+          print "Missing task clock skew"
+	  return False
+	return True
 
 class Request:
     def __init__(self, id):
@@ -284,13 +299,13 @@ class Request:
             if task.complete():
                 network_delays.append(task.network_delay())
                 if task.network_delay() > 20:
-                  print "Long launch %s" % self.__id
-                  print task.node_monitor_submit_time
-                  print task.scheduler_launch_time
-                  print task.clock_skew
-                  print task.id
-                  print task.address
-                  print
+                  print "Network delay over 20ms for %s" % self.__id
+                  #print task.node_monitor_submit_time
+                  #print task.scheduler_launch_time
+                  #print task.clock_skew
+                  #print task.id
+                  #print task.address
+                  #print
         return network_delays
 
     def service_times(self):
@@ -422,6 +437,8 @@ class Request:
         if (self.__num_tasks == 0 or
             self.__arrival_time == 0 or
             self.__num_tasks != len(self.__tasks)):
+            print ("Expected to find %s tasks; found %s" %
+                   (self.__num_tasks, len(self.__tasks)))
             return False
         for task in self.__tasks.values():
             if not task.complete():
@@ -534,10 +551,14 @@ class LogParser:
         for request in self.__requests.values():
           request.set_clock_skews()
 
+	complete_requests = filter(lambda k: k.complete(),
+                                   self.__requests.values())
+        print "%s complete requests" % len(complete_requests)
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
                                      k.complete(),
                                      self.__requests.values())
+	print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
@@ -637,7 +658,7 @@ class LogParser:
         # Queue length vs response time
         files = [] # (file name, queue length, # items)
         for (queue_len, waits) in wait_times_per_queue_len.items():
-          fname = "data/queue_waits_%s.txt" % queue_len
+          fname = "queue_waits_%s.txt" % queue_len
           files.append((fname, queue_len, len(waits)))
           f = open(fname, 'w')
           waits.sort()
@@ -654,8 +675,6 @@ class LogParser:
         plot = "plot " + ",\\\n".join(parts)
         plot_file.write(plot + "\n")
         plot_file.close()
-        subprocess.check_call("gnuplot %s" % plot_fname, shell=True)
-        #subprocess.check_call("rm queue_waits*.txt", shell=True)
 
     def plot_skew_cdf(self, skew_filenames, file_prefix):
         gnuplot_file = open("%s_skew_cdf.gp" % file_prefix, "w")
