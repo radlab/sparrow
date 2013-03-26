@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.configuration.Configuration;
@@ -25,7 +23,6 @@ import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Resources;
 import edu.berkeley.sparrow.daemon.util.Serialization;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
 import edu.berkeley.sparrow.thrift.SchedulerService;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
@@ -44,7 +41,6 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
-  private static int reservationMs;
 
   private static NodeMonitorState state;
   private HashMap<String, InetSocketAddress> appSockets =
@@ -58,17 +54,10 @@ public class NodeMonitor {
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
 
-  private Map<String, ConcurrentLinkedQueue<ProbeWithTime>> pastProbes =
-      Maps.newConcurrentMap();
   private TResourceVector capacity;
   private String ipAddress;
   private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
-
-  private class ProbeWithTime {
-    public long time;
-    public String requestId;
-  }
 
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
@@ -98,9 +87,6 @@ public class NodeMonitor {
     scheduler.initialize(capacity, conf);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler);
-
-    reservationMs = conf.getInt(SparrowConf.RESERVATION_MS,
-        SparrowConf.DEFAULT_RESERVATION_MS);
   }
 
   /**
@@ -128,29 +114,6 @@ public class NodeMonitor {
   public Map<String, TResourceUsage> getLoad(String appId, String requestId) {
     LOG.debug(Logging.functionCall(appId));
 
-    if (!pastProbes.containsKey(appId)) {
-      pastProbes.put(appId, new ConcurrentLinkedQueue<ProbeWithTime>());
-    }
-
-    // Return probes relating to all applications
-    int numToAccountFor = 0;
-    for (Entry<String, ConcurrentLinkedQueue<ProbeWithTime>> e : pastProbes.entrySet()) {
-      for (ProbeWithTime probe : e.getValue()) {
-        if (probe.time < System.currentTimeMillis() - reservationMs) {
-          e.getValue().remove(probe);
-        }
-        else {
-          numToAccountFor++;
-        }
-      }
-    }
-
-    // Account for this guy
-    ProbeWithTime record = new ProbeWithTime();
-    record.time = System.currentTimeMillis();
-    record.requestId = requestId;
-    pastProbes.get(appId).add(record);
-
     if (!requestId.equals("*")) { // Don't log state store request
       AUDIT_LOG.info(Logging.auditEventString("probe_received", requestId,
                                               ipAddress));
@@ -162,12 +125,6 @@ public class NodeMonitor {
       }
     }
     else {
-      TResourceUsage usage = scheduler.getResourceUsage(appId);
-      if (numToAccountFor > 0) {
-        LOG.debug("Accounting for " + numToAccountFor + " probes in flight." );
-        TResources.addTo(usage.getResources(),
-            TResources.createResourceVector(0, numToAccountFor));
-      }
       out.put(appId, scheduler.getResourceUsage(appId));
     }
     LOG.debug("Returning " + out);
@@ -190,13 +147,6 @@ public class NodeMonitor {
       TUserGroupInfo user, TResourceVector estimatedResources)
           throws TException {
     LOG.debug(Logging.functionCall(message, taskId, user, estimatedResources));
-    if (pastProbes.containsKey(taskId)) {
-      for (ProbeWithTime probe : pastProbes.get(taskId.appId)) {
-        if (probe.requestId.equals(taskId.requestId)) {
-          pastProbes.remove(probe);
-        }
-      }
-    }
 
     Optional<InetSocketAddress> schedAddr = Serialization.strToSocket(
         taskId.frontendSocket);
