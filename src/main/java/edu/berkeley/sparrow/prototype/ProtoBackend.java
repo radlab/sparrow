@@ -2,7 +2,6 @@ package edu.berkeley.sparrow.prototype;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,7 +23,6 @@ import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.util.TClients;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
@@ -90,14 +88,11 @@ public class ProtoBackend implements BackendService.Iface {
   private class TaskRunnable implements Runnable {
     private int benchmarkId;
     private int benchmarkIterations;
-    private TResourceVector taskResources;
     private TFullTaskId taskId;
 
-    public TaskRunnable(String requestId, TFullTaskId taskId, ByteBuffer message,
-        TResourceVector taskResources) {
+    public TaskRunnable(String requestId, TFullTaskId taskId, ByteBuffer message) {
       this.benchmarkId = message.getInt();
       this.benchmarkIterations = message.getInt();
-      this.taskResources = taskResources;
       this.taskId = taskId;
     }
 
@@ -127,15 +122,6 @@ public class ProtoBackend implements BackendService.Iface {
       runBenchmark(benchmarkId, benchmarkIterations, r);
       LOG.debug("Benchmark runtime: " + (System.currentTimeMillis() - benchmarkStart));
 
-      // Update bookkeeping for task finish
-      synchronized(resourceUsage) {
-        TResources.subtractFrom(resourceUsage, taskResources);
-      }
-
-      HashMap<TUserGroupInfo, TResourceVector> out =
-          new HashMap<TUserGroupInfo, TResourceVector>();
-      // Inform NM of resource usage
-      out.put(user, resourceUsage);
       try {
         client.tasksFinished(Lists.newArrayList(taskId));
       } catch (TException e) {
@@ -211,7 +197,6 @@ public class ProtoBackend implements BackendService.Iface {
   }
 
   private TUserGroupInfo user; // We force all tasks to be run by same user
-  private TResourceVector resourceUsage = TResources.createResourceVector(0, 0);
 
   public ProtoBackend() {
     LOG.debug("Created");
@@ -224,16 +209,10 @@ public class ProtoBackend implements BackendService.Iface {
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user, TResourceVector estimatedResources) throws TException {
     LOG.info("Submitting task " + taskId.getTaskId() + "at " + System.currentTimeMillis());
-    // We want to add accounting for task start here, even though the task is actually
-    // queued. Note that this won't be propagated to the node monitor until another task
-    // finishes.
-    synchronized(resourceUsage) {
-      TResources.addTo(resourceUsage, estimatedResources);
-    }
 
     // Note we ignore user here
     executor.submit(new TaskRunnable(
-        taskId.requestId, taskId, message, estimatedResources));
+        taskId.requestId, taskId, message));
   }
 
   public static void main(String[] args) throws IOException, TException {

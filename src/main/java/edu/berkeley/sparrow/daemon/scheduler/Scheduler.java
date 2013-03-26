@@ -112,16 +112,8 @@ public class Scheduler {
     address = socket;
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
     this.conf = conf;
-    if (mode.equals("standalone")) {
-      state = new StandaloneSchedulerState();
-      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
-      unconstrainedPlacer = new ProbingTaskPlacer();
-    } else if (mode.equals("configbased")) {
+    if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
-      constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
-      unconstrainedPlacer = new ProbingTaskPlacer();
-    } else if (mode.equals("production")) {
-      state = new StateStoreSchedulerState();
       constrainedPlacer = new ConstraintObservingProbingTaskPlacer();
       unconstrainedPlacer = new ProbingTaskPlacer();
     } else {
@@ -239,7 +231,7 @@ public class Scheduler {
     LOG.debug(Logging.functionCall(req));
     String app = req.getApp();
     List<TTaskSpec> tasks = req.getTasks();
-    Set<InetSocketAddress> backends = state.getBackends(app).keySet();
+    Set<InetSocketAddress> backends = state.getBackends(app);
     List<InetSocketAddress> backendList = new ArrayList<InetSocketAddress>(backends.size());
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);

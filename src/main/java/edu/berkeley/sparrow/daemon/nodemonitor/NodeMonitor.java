@@ -44,8 +44,6 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 public class NodeMonitor {
   private final static Logger LOG = Logger.getLogger(NodeMonitor.class);
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(NodeMonitor.class);
-  private final static int DEFAULT_MEMORY_MB = 1024; // Default memory capacity
-  private final static int DEFAULT_CORES = 8;        // Default CPU capacity
   private static int reservationMs;
 
   private static NodeMonitorState state;
@@ -63,7 +61,6 @@ public class NodeMonitor {
   private Map<String, ConcurrentLinkedQueue<ProbeWithTime>> pastProbes =
       Maps.newConcurrentMap();
   private TResourceVector capacity;
-  private Configuration conf;
   private String ipAddress;
   private FifoTaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
@@ -75,13 +72,9 @@ public class NodeMonitor {
 
   public void initialize(Configuration conf) throws UnknownHostException {
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
-    if (mode.equals("standalone")) {
-      state = new StandaloneNodeMonitorState();
-    } else if (mode.equals("configbased")) {
+    if (mode.equals("configbased")) {
       state = new ConfigNodeMonitorState();
-    } else if (mode.equals("production")) {
-      state = new StateStoreNodeMonitorState();
-    } else {
+    }else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }
     try {
@@ -90,7 +83,6 @@ public class NodeMonitor {
       LOG.fatal("Error initializing node monitor state.", e);
     }
     capacity = new TResourceVector();
-    this.conf = conf;
     ipAddress = Hostname.getIPAddress(conf);
 
     int mem = Resources.getSystemMemoryMb(conf);

@@ -116,7 +116,7 @@ public abstract class TaskScheduler {
             taskId.taskId));
     TResourceVector res = resourcesPerTask.get(taskId);
     if (res == null) {
-      LOG.error("Missing resources for task :" + taskId);
+      LOG.debug("Missing resources for task :" + taskId);
       res = TResources.createResourceVector(0, 1);
     }
     resourcesPerTask.remove(taskId);
@@ -127,7 +127,8 @@ public abstract class TaskScheduler {
    void submitTask(TaskDescription task, String appId) {
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_task_submitted", ipAddress,
         task.taskId.requestId, task.taskId.taskId));
-    resourcesPerTask.put(task.taskId, task.estimatedResources);
+    TResourceVector singleCoreResourceUsage = new TResourceVector(0, 1);
+    resourcesPerTask.put(task.taskId, singleCoreResourceUsage);
     handleSubmitTask(task, appId);
   }
 
