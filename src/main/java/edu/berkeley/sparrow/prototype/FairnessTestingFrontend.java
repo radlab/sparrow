@@ -235,29 +235,29 @@ public class FairnessTestingFrontend implements FrontendService.Iface {
       List<SubExperiment> experiments = new ArrayList<SubExperiment>();
       double fullyUtilizedArrivalRate = lambda;
 
-      // For the first two minutes, the first user submits at a rate to fully utilize the cluster.
+      // For the first twenty seconds, the first user submits at a rate to fully utilize the cluster.
       List<UserInfo> onlyUser0 = new ArrayList<UserInfo>();
       onlyUser0.add(new UserInfo("user0", 1, 0));
-      experiments.add(new SubExperiment(onlyUser0, 10, fullyUtilizedArrivalRate));
+      experiments.add(new SubExperiment(onlyUser0, 20, fullyUtilizedArrivalRate));
 
-      // For the next minute, user1 increases her rate to 25% of the cluster.
+      // For the next 10 seconds, user1 increases her rate to 25% of the cluster.
       List<UserInfo> user1QuarterDemand = new ArrayList<UserInfo>();
       user1QuarterDemand.add(new UserInfo("user0", 4, 0));
       user1QuarterDemand.add(new UserInfo("user1", 5, 0));
-      experiments.add(new SubExperiment(user1QuarterDemand, 60, 1.25 * fullyUtilizedArrivalRate));
+      experiments.add(new SubExperiment(user1QuarterDemand, 10, 1.25 * fullyUtilizedArrivalRate));
 
-      // For the next minute, user 1 increases her rate to 50% of the cluster (using exactly
+      // For the next 10 seconds, user 1 increases her rate to 50% of the cluster (using exactly
       // her share, but no more).
       List<UserInfo> user1HalfDemand = new ArrayList<UserInfo>();
       user1HalfDemand.add(new UserInfo("user0", 2, 0));
       user1HalfDemand.add(new UserInfo("user1", 3, 0));
-      experiments.add(new SubExperiment(user1HalfDemand, 60, 1.5 * fullyUtilizedArrivalRate));
+      experiments.add(new SubExperiment(user1HalfDemand, 10, 1.5 * fullyUtilizedArrivalRate));
 
       // Next user 1 goes back down to 25%.
-      experiments.add(new SubExperiment(user1QuarterDemand, 60, 1.25 * fullyUtilizedArrivalRate));
+      experiments.add(new SubExperiment(user1QuarterDemand, 10, 1.25 * fullyUtilizedArrivalRate));
 
       // Finally user 1 goes back to 0.
-      experiments.add(new SubExperiment(onlyUser0, 120, fullyUtilizedArrivalRate));
+      experiments.add(new SubExperiment(onlyUser0, 20, fullyUtilizedArrivalRate));
 
       SparrowFrontendClient client = new SparrowFrontendClient();
       int schedulerPort = conf.getInt("scheduler_port",
