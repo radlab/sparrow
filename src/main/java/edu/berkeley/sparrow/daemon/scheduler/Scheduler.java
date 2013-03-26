@@ -30,6 +30,7 @@ import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_c
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
+import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskPlacement;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -242,6 +243,13 @@ public class Scheduler {
           task.preference != null &&
           task.preference.nodes != null &&
           !task.preference.nodes.isEmpty());
+    }
+
+    // Fill in the resources in all tasks (if it's missing).
+    for (TTaskSpec task : tasks) {
+      if (task.estimatedResources == null) {
+        task.estimatedResources = new TResourceVector(0, 1);
+      }
     }
 
     /* This is a hack to force Spark to cache data on multiple machines. We

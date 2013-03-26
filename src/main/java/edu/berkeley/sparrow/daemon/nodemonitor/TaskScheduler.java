@@ -80,8 +80,7 @@ public abstract class TaskScheduler {
     } catch (InterruptedException e) {
       LOG.fatal(e);
     }
-    TResourceVector singleCoreResourceUsage = new TResourceVector(0, 1);
-    addResourceInUse(singleCoreResourceUsage);
+    addResourceInUse(task.estimatedResources);
     return task;
   }
 
@@ -127,8 +126,7 @@ public abstract class TaskScheduler {
    void submitTask(TaskDescription task, String appId) {
     AUDIT_LOG.info(Logging.auditEventString("nodemonitor_task_submitted", ipAddress,
         task.taskId.requestId, task.taskId.taskId));
-    TResourceVector singleCoreResourceUsage = new TResourceVector(0, 1);
-    resourcesPerTask.put(task.taskId, singleCoreResourceUsage);
+    resourcesPerTask.put(task.taskId, task.estimatedResources);
     handleSubmitTask(task, appId);
   }
 
