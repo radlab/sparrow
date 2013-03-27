@@ -3,14 +3,12 @@ package edu.berkeley.sparrow.daemon.scheduler;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.collect.Lists;
+import edu.berkeley.sparrow.thrift.*;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
@@ -24,16 +22,9 @@ import edu.berkeley.sparrow.daemon.util.Hostname;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.ThriftClientPool;
-import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient;
 import edu.berkeley.sparrow.thrift.FrontendService.AsyncClient.frontendMessage_call;
-import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.InternalService.AsyncClient.launchTask_call;
-import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.TResourceVector;
-import edu.berkeley.sparrow.thrift.TSchedulingRequest;
-import edu.berkeley.sparrow.thrift.TTaskPlacement;
-import edu.berkeley.sparrow.thrift.TTaskSpec;
 
 /**
  * This class implements the Sparrow scheduler functionality.
@@ -69,6 +60,13 @@ public class Scheduler {
   TaskPlacer constrainedPlacer;
   TaskPlacer unconstrainedPlacer;
 
+
+  /** A special case scheduling parameter for Spark RDD layouts. */
+  private int specialTaskSetSize;
+
+  /** How many times the special case has been triggered. */
+  private AtomicInteger specialCaseCounter = new AtomicInteger(0);
+
   private Configuration conf;
 
   /**
@@ -90,7 +88,6 @@ public class Scheduler {
       this.socket = socket;
     }
 
-    @Override
     public void onComplete(launchTask_call response) {
       try {
         nodeMonitorClientPool.returnClient(socket, client);
@@ -100,7 +97,6 @@ public class Scheduler {
       latch.countDown();
     }
 
-    @Override
     public void onError(Exception exception) {
       LOG.error("Error launching task: " + exception);
       // TODO We need to have a story here, regarding the failure model when the
@@ -112,6 +108,10 @@ public class Scheduler {
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
     address = socket;
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
+
+    specialTaskSetSize = conf.getInt(SparrowConf.SPECIAL_TASK_SET_SIZE,
+      SparrowConf.DEFAULT_SPECIAL_TASK_SET_SIZE);
+
     this.conf = conf;
     if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
@@ -137,7 +137,15 @@ public class Scheduler {
     return state.watchApplication(appId);
   }
 
-  public boolean submitJob(TSchedulingRequest req) throws TException {
+  public boolean submitJob(TSchedulingRequest request) throws TException {
+    if (isSpecialCase(request)) {
+      return submitJobWithoutCheck(handleSpecialCase(request));
+    } else {
+      return submitJobWithoutCheck(request);
+    }
+  }
+
+  public boolean submitJobWithoutCheck(TSchedulingRequest req) throws TException {
     LOG.debug(Logging.functionCall(req));
     long start = System.currentTimeMillis();
 
@@ -205,6 +213,69 @@ public class Scheduler {
     return true;
   }
 
+  /** This is a special case where we want to ensure a very specific scheduling allocation for
+   * Spark partitions.*/
+  private boolean isSpecialCase(TSchedulingRequest req) {
+      if (req.getTasks().size() != specialTaskSetSize) {
+          return false;
+      }
+      for (TTaskSpec t: req.getTasks()) {
+          if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
+                  (t.getPreference().getNodes().size() == 3)) {
+              return false;
+          }
+      }
+      return true;
+  }
+
+  /** Handles special case. */
+  private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
+    LOG.info("Handling special case request: " + req);
+    int specialCaseIndex = specialCaseCounter.incrementAndGet();
+    if (specialCaseIndex < 1 || specialCaseIndex > 3) {
+      LOG.error("Invalid special case index: " + specialCaseIndex);
+    }
+
+    // No tasks have preferences and we have the magic number of tasks
+    TSchedulingRequest newReq = new TSchedulingRequest();
+    newReq.user = req.user;
+    newReq.app = req.app;
+    newReq.probeRatio = req.probeRatio;
+
+    List<InetSocketAddress> allBackends = Lists.newArrayList();
+    List<InetSocketAddress> backends = Lists.newArrayList();
+    // We assume the below always returns the same order (invalid assumption?)
+    for (InetSocketAddress backend : state.getBackends(req.app)) {
+      allBackends.add(backend);
+    }
+
+    // Each time this is called, we restrict to 1/3 of the nodes in the cluster
+    for (int i = 0; i < allBackends.size(); i++) {
+      if (i % 3 == specialCaseIndex - 1) {
+        backends.add(allBackends.get(i));
+      }
+    }
+    Collections.shuffle(backends);
+
+    if (!(allBackends.size() >= (specialTaskSetSize * 3))) {
+      LOG.error("Special case expects at least three times as many machines as tasks.");
+      return null;
+    }
+    LOG.info(backends);
+    for (int i = 0; i < req.getTasksSize(); i++) {
+      TTaskSpec task = req.getTasks().get(i);
+      TTaskSpec newTask = new TTaskSpec();
+      newTask.estimatedResources = task.estimatedResources;
+      newTask.message = task.message;
+      newTask.taskId = task.taskId;
+      newTask.preference = new TPlacementPreference();
+      newTask.preference.addToNodes(backends.get(i).getHostName());
+      newReq.addToTasks(newTask);
+    }
+    LOG.info("New request: " + newReq);
+    return newReq;
+  }
+
   public Collection<TTaskPlacement> getJobPlacement(TSchedulingRequest req)
       throws IOException {
     LOG.debug(Logging.functionCall(req));
@@ -252,37 +323,6 @@ public class Scheduler {
       }
     }
 
-    /* This is a hack to force Spark to cache data on multiple machines. We
-     * use a probe ratio of three to signal that the scheduler should perform
-     * this hack rather than trying to do a "good" job scheduling.
-     *
-     * This makes several assumptions, including the fact that after all preferences
-     * are excluded, there are still nodes left in the cluster. This works only under
-     * a very limited set of circumstances that correspond to our large scale tests.*/
-    /*
-    if (req.getSchedulingPref() != null && req.getSchedulingPref().getProbeRatio() == 3) {
-      if (tasks.get(0).preference.nodes != null &&
-          (tasks.get(0).preference.nodes.size() == 1 ||
-          tasks.get(0).preference.nodes.size() == 2)) {
-
-        // Explicitly avoid nodes with preferences, because those are nodes where
-        // the data is already cached, and we're trying to force the data to be
-        // cached on other nodes.
-        List<InetSocketAddress> subBackends = Lists.newArrayList(backends);
-        List<InetSocketAddress> toRemove = Lists.newArrayList();
-        for (TTaskSpec task : tasks) {
-          for (String node : task.preference.nodes) {
-           InetAddress addr = InetAddress.getByName(node);
-           for (InetSocketAddress backend : subBackends) {
-             if (backend.getAddress().equals(addr)) { toRemove.add(backend); }
-           }
-          }
-        }
-       subBackends.removeAll(toRemove);
-       return new RandomTaskPlacer().placeTasks(
-           app, requestId, subBackends, tasks, req.schedulingPref);
-      }
-    }*/
     if (constrained) {
       return constrainedPlacer.placeTasks(app, requestId, backendList, tasks);
     } else {
