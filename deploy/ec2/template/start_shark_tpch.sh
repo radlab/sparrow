@@ -11,6 +11,7 @@ public_hostname=`ec2metadata  | grep public-hostname  | cut -d " " -f 2`
 fe_num=`cat sparrow.conf  |grep frontend | tr "," "\n" | grep -n $public_hostname | cut -d ":" -f 1`
 
 cd /disk1/sparrow/
+sleep .0$[ ( $RANDOM % 10 ) + 1 ]s # Helps avoid synchronization
 /root/shark/run shark.sparrow.SparrowTPCHRunner /root/tpch/tpch_workload_$fe_num {{inter_query_delay}} > $log 2>&1 &
 
 PID=$!
