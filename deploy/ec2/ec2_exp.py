@@ -70,6 +70,8 @@ def parse_args(force_action=True):
   parser.add_option("-u", "--num_partitions", type="int", default=-1,
       help="Number of partitions for shark tables. Also used to determine"
            " when to use the Sparrow 'special case' code.")
+  parser.add_option("--reduce-tasks", type="int", default=5,
+      help="Number of reduce tasks to use for Shark queries.")
   parser.add_option("--spark-backend-mem", default="2g",
       help="Amount of memory to give spark backends.")
 
@@ -333,7 +335,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "post_warmup_s": "%s" % post_warmup_s,
     "node_monitor_task_scheduler": "%s" % nm_task_scheduler,
     "num_partitions": "%s" % opts.num_partitions,
-    "num_partitions_minus_one": "%s" % (opts.num_partitions - 1),
+    "num_partitions_minus_one": "%s" % (opts.reduce_tasks),
     "inter_query_delay": "%s" % opts.inter_query_delay,
     "users": users,
     "frontend_type": opts.frontend_type,
