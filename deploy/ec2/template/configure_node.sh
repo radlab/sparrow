@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# TODO put this in image
-#apt-get install -y ntp
-#/etc/init.d/ntp start 
+/etc/init.d/ntp stop
+ntpdate ntp.ubuntu.com
 
 rm -rf /tmp/spark-local*
 
