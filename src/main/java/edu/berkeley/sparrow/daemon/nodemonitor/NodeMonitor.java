@@ -48,7 +48,7 @@ public class NodeMonitor {
   private HashMap<String, List<TFullTaskId>> appTasks =
       new HashMap<String, List<TFullTaskId>>();
   // Map to scheduler socket address for each request id.
-  private ConcurrentMap<TFullTaskId, InetSocketAddress> requestSchedulers =
+  private ConcurrentMap<String, InetSocketAddress> requestSchedulers =
       Maps.newConcurrentMap();
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
       new ThriftClientPool<SchedulerService.AsyncClient>(
@@ -155,7 +155,11 @@ public class NodeMonitor {
           taskId.frontendSocket);
       return false;
     }
-    requestSchedulers.put(taskId, schedAddr.get());
+    if (!requestSchedulers.containsKey(taskId.getRequestId())) {
+      requestSchedulers.put(taskId.getRequestId(), schedAddr.get());
+    } else if (!requestSchedulers.get(taskId.getRequestId()).equals(schedAddr.get())) {
+      LOG.error("Mismatch between stored scheduler address and the current one!");
+    }
 
     InetSocketAddress socket = appSockets.get(taskId.appId);
     if (socket == null) {
@@ -192,11 +196,11 @@ public class NodeMonitor {
   public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, taskId, message));
-    if (!requestSchedulers.containsKey(taskId)) {
+    if (!requestSchedulers.containsKey(taskId.getRequestId())) {
       LOG.error("Missing scheduler info for request: " + taskId);
       return;
     }
-    InetSocketAddress scheduler = requestSchedulers.get(taskId);
+    InetSocketAddress scheduler = requestSchedulers.get(taskId.getRequestId());
     if (scheduler == null) {
       LOG.error("null scheduler info for request: " + taskId);
       return;
