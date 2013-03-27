@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/etc/init.d/ntp stop
+/etc/init.d/ntpd stop
 ntpdate ntp.ubuntu.com
 
 rm -rf /tmp/spark-local*
