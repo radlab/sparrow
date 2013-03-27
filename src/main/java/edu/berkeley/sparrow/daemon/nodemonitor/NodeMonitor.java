@@ -192,9 +192,13 @@ public class NodeMonitor {
   public void sendFrontendMessage(String app, TFullTaskId taskId,
       int status, ByteBuffer message) {
     LOG.debug(Logging.functionCall(app, taskId, message));
+    if (!requestSchedulers.containsKey(taskId)) {
+      LOG.error("Missing scheduler info for request: " + taskId);
+      return;
+    }
     InetSocketAddress scheduler = requestSchedulers.get(taskId);
     if (scheduler == null) {
-      LOG.error("Did not find any scheduler info for request: " + taskId);
+      LOG.error("null scheduler info for request: " + taskId);
       return;
     }
 
