@@ -179,7 +179,7 @@ public class ProtoBackend implements BackendService.Iface {
     /* We keep a running result here and print it out so that the JVM doesn't
      * optimize all this computation away. */
     float result = r.nextFloat();
-    while (System.nanoTime() - startTime < runtimeMillis * 1000 * 1000) {
+    while ((System.nanoTime() - startTime) / (1000.0 * 1000.0) < runtimeMillis) {
       for (int j = 0; j < opsPerIteration; j++) {
         // On each iteration, perform a floating point multiplication
         float x = r.nextFloat();
