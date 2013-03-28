@@ -25,6 +25,8 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  * can be used safely from multiple threads.
  */
 public class SparrowFrontendClient {
+  public static boolean launchedServerAlready = false;
+
   private final static Logger LOG = Logger.getLogger(SparrowFrontendClient.class);
   private final static int NUM_CLIENTS = 8; // Number of concurrent requests we support
   private final static int DEFAULT_LISTEN_PORT = 50201;
@@ -63,10 +65,14 @@ public class SparrowFrontendClient {
 
     FrontendService.Processor<FrontendService.Iface> processor =
         new FrontendService.Processor<FrontendService.Iface>(frontendServer);
-    try {
-      TServers.launchThreadedThriftServer(listenPort, 8, processor);
-    } catch (IOException e) {
-      LOG.fatal("Couldn't launch server side of frontend", e);
+
+    if (!launchedServerAlready) {
+      try {
+        TServers.launchThreadedThriftServer(listenPort, 8, processor);
+      } catch (IOException e) {
+        LOG.fatal("Couldn't launch server side of frontend", e);
+      }
+      launchedServerAlready = true;
     }
 
     for (int i = 0; i < NUM_CLIENTS; i++) {
