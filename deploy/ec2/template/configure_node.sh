@@ -29,6 +29,7 @@ cat /etc/hosts | grep -v internal > tmp && mv tmp /etc/hosts
 
 cp ~/hdfs-site.xml /opt/hadoop/conf/
 cp ~/hive-default.xml /opt/hive/conf/
+cp ~/shark-env.sh /root/shark/conf/shark-env.sh
 
 cd /opt/hive/conf
 bash -c "sed -i 's/HOST_IP/`hostname -i`/g' hive-default.xml"
