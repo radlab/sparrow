@@ -2,14 +2,16 @@ import os
 import subprocess
 import time
 
-num_nodes = 20
+num_nodes = 100
 wait_delay = 20 * 60
 results_dirname = "results"
-partitions = 6
-ratios = [(0, 0), (2, 2)] #-p, -q
-rates = [500]
+partitions = 30
+reducers = 8
+ratios = [(2, 2)] #-p, -q
+rates = [275]
 backend_mem = "5g"
-cluster_name = "small"
+cluster_name = "sparrow"
+sparrow_branch = "per_task_old_code"
 
 def run_cmd(cmd):
   subprocess.check_call(cmd, shell=True)
@@ -19,8 +21,8 @@ start_cmd = "./ec2-exp.sh -i ~/.ssh/patkey.pem start-shark-tpch %s" % cluster_na
 
 for rate in rates:
   for (p, q) in ratios:
-    dep_cmd = "./ec2-exp.sh deploy %s -g patrick-sosp -s dev-sparrow-newcode -i ~/.ssh/patkey.pem -p %s -q %s -u %s -v %s --spark-backend-mem=%s" % (
-      cluster_name, p, q, partitions, rate, backend_mem)
+    dep_cmd = "./ec2-exp.sh deploy %s -g %s -s dev-sparrow-newcode -i ~/.ssh/patkey.pem --reduce-tasks=%s -p %s -q %s -u %s -v %s --spark-backend-mem=%s" % (
+      cluster_name, sparrow_branch, reducers, p, q, partitions, rate, backend_mem)
     run_cmd(dep_cmd)
     run_cmd(restart_cmd)
     run_cmd(start_cmd)
