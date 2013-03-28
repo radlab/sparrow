@@ -224,6 +224,8 @@ public class Scheduler {
   }
 
   public void submitJob(TSchedulingRequest request) throws TException {
+    // Short-circuit case that is used for liveness checking
+    if (request.tasks.size() == 0) { return; }
     if (isSpecialCase(request)) {
       submitJobWithoutCheck(handleSpecialCase(request));
     } else {
