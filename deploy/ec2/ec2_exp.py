@@ -313,7 +313,9 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
 
   template_vars = {
     "frontend_list": "\n".join(["%s" % i.public_dns_name \
-                                 for i in frontends]),
+                                 for i in frontends]), \
+    "sparrow_schedulers": "\n".join(["sparrow@%s:20503" % i.private_ip_address \
+                                      for i in frontends]), \
     "static_backends": ",".join(["%s:20502" % i.public_dns_name \
                                  for i in backends]),
     "name_node": frontends[0].public_dns_name,
