@@ -124,8 +124,7 @@ public class Scheduler {
   }
 
   /**
-   * Callback for enqueueTaskReservations() that does nothing (needed because Thrift can't handle
-   * null callbacks).
+   * Callback for enqueueTaskReservations() that returns the client to the client pool.
    */
   private class EnqueueTaskReservationsCallback
   implements AsyncMethodCallback<enqueueTaskReservations_call> {
@@ -346,7 +345,7 @@ public class Scheduler {
    * identifier if called a second time).
    *
    * TODO: Include the port number, so this works when there are multiple schedulers
-   * running on a single machine (as there will be when we do large scale testing).
+   * running on a single machine.
    */
   private String getRequestId() {
     /* The request id is a string that includes the IP address of this scheduler followed

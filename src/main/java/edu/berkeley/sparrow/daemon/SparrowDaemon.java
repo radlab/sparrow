@@ -15,14 +15,13 @@ import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Logging;
 
 /**
- * Class representing the Sparrow daemon. This stores state about the frontends
- * and backends running on the particular node and global cluster state,
- * such as the backends running on other nodes.
+ * A Sparrow Daemon includes both a scheduler and a node monitor.
+ * The main() method launches a Sparrow daemon.
  */
 public class SparrowDaemon {
   // Eventually, we'll want to change this to something higher than debug.
   public final static Level DEFAULT_LOG_LEVEL = Level.DEBUG;
-  
+
   public void initialize(Configuration conf) throws Exception {
     Level logLevel = Level.toLevel(conf.getString(SparrowConf.LOG_LEVEL, ""),
         DEFAULT_LOG_LEVEL);
@@ -31,49 +30,49 @@ public class SparrowDaemon {
     // Start as many node monitors as specified in config
     String[] nmPorts = conf.getStringArray(SparrowConf.NM_THRIFT_PORTS);
     String[] inPorts = conf.getStringArray(SparrowConf.INTERNAL_THRIFT_PORTS);
-    
+
     if (nmPorts.length != inPorts.length) {
       throw new ConfigurationException(SparrowConf.NM_THRIFT_PORTS + " and " +
         SparrowConf.INTERNAL_THRIFT_PORTS + " not of equal length");
     }
-    if (nmPorts.length > 1 && 
+    if (nmPorts.length > 1 &&
         (!conf.getString(SparrowConf.DEPLYOMENT_MODE, "").equals("standalone"))) {
       throw new ConfigurationException("Mutliple NodeMonitors only allowed " +
       		"in standalone deployment");
     }
-    if (nmPorts.length == 0) { 
-      (new NodeMonitorThrift()).initialize(conf, 
-          NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT, 
+    if (nmPorts.length == 0) {
+      (new NodeMonitorThrift()).initialize(conf,
+          NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT,
           NodeMonitorThrift.DEFAULT_INTERNAL_THRIFT_PORT);
     }
     else {
       for (int i = 0; i < nmPorts.length; i++) {
-        (new NodeMonitorThrift()).initialize(conf, 
+        (new NodeMonitorThrift()).initialize(conf,
             Integer.parseInt(nmPorts[i]), Integer.parseInt(inPorts[i]));
       }
     }
-    
+
     SchedulerThrift scheduler = new SchedulerThrift();
     scheduler.initialize(conf);
   }
-  
+
   public static void main(String[] args) throws Exception {
     OptionParser parser = new OptionParser();
     parser.accepts("c", "configuration file (required)").
       withRequiredArg().ofType(String.class);
     parser.accepts("help", "print help statement");
     OptionSet options = parser.parse(args);
-    
+
     if (options.has("help") || !options.has("c")) {
       parser.printHelpOn(System.out);
       System.exit(-1);
     }
-    
+
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
-    
+
     Logging.configureAuditLogging();
-        
+
     String configFile = (String) options.valueOf("c");
     Configuration conf = new PropertiesConfiguration(configFile);
     SparrowDaemon sparrowDaemon = new SparrowDaemon();

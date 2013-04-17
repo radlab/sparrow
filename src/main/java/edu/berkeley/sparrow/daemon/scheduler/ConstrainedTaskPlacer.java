@@ -53,7 +53,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   String requestId;
 
   /**
-   * Tasks that are unconstrained, so can be placed on any nodemonitor, that have not yet been
+   * Tasks that are unconstrained, so can be placed on any node monitor, that have not yet been
    * launched.
    */
   List<TTaskLaunchSpec> unlaunchedUnconstrainedTasks;
