@@ -11,8 +11,6 @@ Code Layout
 
 `/deploy/`     (contains ec2 deployment scripts)
 
-`/simulation/` (large scale simulation scripts)
-
 Building Sparrow
 -------------------------
 
