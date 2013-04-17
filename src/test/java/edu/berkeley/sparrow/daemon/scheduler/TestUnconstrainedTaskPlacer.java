@@ -31,6 +31,7 @@ public class TestUnconstrainedTaskPlacer {
   private static final String APP_ID = "test app";
   private static final String USER = "user";
   private static final String GROUP = "group";
+  private static final int PRIORITY = 0;
   private static final String REQUEST_ID = "request id";
   private static final int MEMORY = 10;
   private static final int CORES = 1;
@@ -49,7 +50,7 @@ public class TestUnconstrainedTaskPlacer {
   @Test
   public void sanityCheckEnqueueTaskReservations() {
     final double PROBE_RATIO = 1.5;
-    
+
     final int NUM_TASKS = 2;
     List<TTaskSpec> tasks = Lists.newArrayList();
     ByteBuffer message = ByteBuffer.allocate(1);
@@ -61,10 +62,10 @@ public class TestUnconstrainedTaskPlacer {
       taskIds.add(id);
       tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
     }
-    
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
-    
+
     List<InetSocketAddress> backendNodes = Lists.newArrayList();
     backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
     backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
@@ -72,11 +73,11 @@ public class TestUnconstrainedTaskPlacer {
     backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
     backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
     backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
-    
+
     final int NUM_ITERATIONS = 100;
     for (int i = 0; i < NUM_ITERATIONS; ++i) {
       UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, PROBE_RATIO);
-      
+
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
                                                         SCHEDULER_ADDRESS);
@@ -98,7 +99,7 @@ public class TestUnconstrainedTaskPlacer {
     }
   }
 
-  /** 
+  /**
    * First, calls getEnqueueTaskReservationsRequests() for a job with two tasks.  Then, calls
    * assignTasks() for the backends returned by getEnqueueTaskReservationsRequests() and ensures
    * that the tasks returned are consistent with the original scheduling request.
@@ -106,7 +107,7 @@ public class TestUnconstrainedTaskPlacer {
   @Test
   public void testAssignTask() {
     final double probeRatio = 1.5;
-    
+
     final int numTasks = 2;
     List<TTaskSpec> tasks = Lists.newArrayList();
     ByteBuffer message = ByteBuffer.allocate(1);
@@ -118,10 +119,10 @@ public class TestUnconstrainedTaskPlacer {
       taskIds.add(id);
       tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
     }
-    
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
-    
+
     List<InetSocketAddress> backendNodes = Lists.newArrayList();
     backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
     backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
@@ -129,12 +130,12 @@ public class TestUnconstrainedTaskPlacer {
     backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
     backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
     backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
-    
+
     final int numIterations = 100;
     final int expectedReservations = 3;
     for (int i = 0; i < numIterations; ++i) {
       UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, probeRatio);
-      
+
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
                                                         SCHEDULER_ADDRESS);
@@ -160,10 +161,10 @@ public class TestUnconstrainedTaskPlacer {
           assertEquals(specs.size(), 0);
         }
       }
-    } 
+    }
   }
 
-  /** 
+  /**
    * Verifies that allResonsesReceived() works correctly by first calling
    * getEnqueueTaskReservationsRequests() for a job with two tasks. Then, dovetails calls to
    * assignTasks() to calls of allResponsesReceived() to ensure that allResponsesReceived() returns
@@ -172,7 +173,7 @@ public class TestUnconstrainedTaskPlacer {
   @Test
   public void testAllResponsesReceived() {
     final double probeRatio = 1.5;
-    
+
     final int numTasks = 2;
     List<TTaskSpec> tasks = Lists.newArrayList();
     ByteBuffer message = ByteBuffer.allocate(1);
@@ -184,10 +185,10 @@ public class TestUnconstrainedTaskPlacer {
       taskIds.add(id);
       tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
     }
-    
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
-    
+
     List<InetSocketAddress> backendNodes = Lists.newArrayList();
     backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
     backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
@@ -195,12 +196,12 @@ public class TestUnconstrainedTaskPlacer {
     backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
     backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
     backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
-    
+
     final int numIterations = 100;
     final int expectedReservations = 3;
     for (int i = 0; i < numIterations; ++i) {
       UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, probeRatio);
-      
+
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
                                                         SCHEDULER_ADDRESS);
@@ -228,6 +229,6 @@ public class TestUnconstrainedTaskPlacer {
         }
       }
       assertTrue(taskPlacer.allResponsesReceived());
-    } 
+    }
   }
 }

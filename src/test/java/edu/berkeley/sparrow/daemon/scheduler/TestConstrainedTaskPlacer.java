@@ -29,6 +29,7 @@ public class TestConstrainedTaskPlacer {
   private static final String APP_ID = "test app";
   private static final String USER = "user";
   private static final String GROUP = "group";
+  private static final int PRIORITY = 0;
   private static final String REQUEST_ID = "request id";
   private static final int MEMORY = 10;
   private static final int CORES = 1;
@@ -66,7 +67,7 @@ public class TestConstrainedTaskPlacer {
     // Create the scheduling request.
     List<TTaskSpec> tasks = new ArrayList<TTaskSpec>();
     tasks.add(task);
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
 
     // Create a set of backends, with all of the preferred nodes and some extra nodes too.
@@ -133,7 +134,7 @@ public class TestConstrainedTaskPlacer {
       tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
     }
 
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
 
     // Create list of available backend nodes, with some additional nodes in additional to the
@@ -235,7 +236,7 @@ public class TestConstrainedTaskPlacer {
     String unconstrainedTaskId = "unconstrained test task";
     tasks.add(new TTaskSpec(unconstrainedTaskId, null, estimatedResources, message));
 
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP);
+    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
 
     // Create list of available backend nodes, with some additional nodes in additional to the
