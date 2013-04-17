@@ -211,7 +211,6 @@ public class Scheduler {
     for (int i = 0; i < req.getTasksSize(); i++) {
       TTaskSpec task = req.getTasks().get(i);
       TTaskSpec newTask = new TTaskSpec();
-      newTask.estimatedResources = task.estimatedResources;
       newTask.message = task.message;
       newTask.taskId = task.taskId;
       newTask.preference = new TPlacementPreference();

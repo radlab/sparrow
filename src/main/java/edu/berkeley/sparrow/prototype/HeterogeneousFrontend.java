@@ -21,11 +21,9 @@ import org.apache.thrift.TException;
 import edu.berkeley.sparrow.api.SparrowFrontendClient;
 import edu.berkeley.sparrow.daemon.scheduler.SchedulerThrift;
 import edu.berkeley.sparrow.daemon.util.Serialization;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.FrontendService;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TPlacementPreference;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -129,8 +127,6 @@ public class HeterogeneousFrontend implements FrontendService.Iface {
 
   public List<TTaskSpec> generateJob(int numTasks, int numPreferredNodes, List<String> backends,
                                      int benchmarkId, int benchmarkIterations) {
-    TResourceVector resources = TResources.createResourceVector(300, 1);
-
     // Pack task parameters
     ByteBuffer message = ByteBuffer.allocate(8);
     message.putInt(benchmarkId);
@@ -141,7 +137,6 @@ public class HeterogeneousFrontend implements FrontendService.Iface {
       TTaskSpec spec = new TTaskSpec();
       spec.setTaskId(Integer.toString((new Random().nextInt())));
       spec.setMessage(message.array());
-      spec.setEstimatedResources(resources);
       if (numPreferredNodes > 0) {
         Collections.shuffle(backends);
         TPlacementPreference preference = new TPlacementPreference();

@@ -21,12 +21,6 @@ struct TResourceVector {
   2: i32 cores;       // # Cores
 }
 
-// Conveys both a quantity of resources in use and a task queue length
-struct TResourceUsage {
-  1: TResourceVector resources; // Current resource usage
-  2: i32 queueLength;           // Number of queued tasks
-}
-
 
 // A fully-specified Sparrow task has four identifiers
 // neeed?
@@ -48,8 +42,7 @@ struct TUserGroupInfo {
 struct TTaskSpec {
   1: string taskId;
   2: TPlacementPreference preference;
-  3: TResourceVector estimatedResources;
-  4: binary message;
+  3: binary message;
 }
 
 struct TSchedulingRequest {
@@ -64,9 +57,8 @@ struct TEnqueueTaskReservationsRequest {
   1: string appId;
   2: TUserGroupInfo user;
   3: string requestId;
-  4: TResourceVector estimatedResources;
-  5: THostPort schedulerAddress;
-  6: i32 numTasks;
+  4: THostPort schedulerAddress;
+  5: i32 numTasks;
 }
 
 # Information needed to launch a task.  The application and user information are not needed

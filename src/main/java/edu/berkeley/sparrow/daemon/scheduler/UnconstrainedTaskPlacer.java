@@ -17,7 +17,6 @@ import com.google.common.collect.Maps;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.THostPort;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -80,13 +79,7 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
       debugString.append(";");
     }
 
-    TResourceVector estimatedResources = null;
-
     for (TTaskSpec task : schedulingRequest.getTasks()) {
-      if (estimatedResources == null) {
-        // Assume estimated resources for all tasks in the job is the same.
-        estimatedResources = task.getEstimatedResources();
-      }
       TTaskLaunchSpec taskLaunchSpec = new TTaskLaunchSpec(task.getTaskId(),
                                                            task.bufferForMessage());
       unlaunchedTasks.add(taskLaunchSpec);
@@ -96,8 +89,7 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
 
     for (InetSocketAddress node : nodeList) {
       TEnqueueTaskReservationsRequest request = new TEnqueueTaskReservationsRequest(
-          schedulingRequest.getApp(), schedulingRequest.getUser(), requestId, estimatedResources,
-          schedulerAddress, 1);
+          schedulingRequest.getApp(), schedulingRequest.getUser(), requestId, schedulerAddress, 1);
       requests.put(node, request);
     }
 

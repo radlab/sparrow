@@ -12,11 +12,9 @@ import org.junit.Test;
 import com.google.common.collect.Lists;
 
 import edu.berkeley.sparrow.daemon.nodemonitor.TaskScheduler.TaskSpec;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.THostPort;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
 public class TestTaskScheduler {
@@ -38,10 +36,9 @@ public class TestTaskScheduler {
       int numTasks, TaskScheduler scheduler, String userId, int priority) {
     String idStr = Integer.toString(requestId++);
     TUserGroupInfo user = new TUserGroupInfo(userId, "group", priority);
-    TResourceVector estimatedResources = new TResourceVector(0, 1);
     THostPort schedulerAddress = new THostPort("1.2.3.4", 52);
     return new TEnqueueTaskReservationsRequest(
-        "appId", user, idStr, estimatedResources, schedulerAddress, numTasks);
+        "appId", user, idStr, schedulerAddress, numTasks);
   }
 
   /**
@@ -50,8 +47,7 @@ public class TestTaskScheduler {
   @Test
   public void testFifo() {
     TaskScheduler scheduler = new FifoTaskScheduler(4);
-    TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
+    scheduler.initialize(new PropertiesConfiguration(), 12345);
 
     final String testApp = "test app";
     final InetSocketAddress backendAddress = new InetSocketAddress("123.4.5.6", 2);
@@ -108,8 +104,7 @@ public class TestTaskScheduler {
   @Test
   public void testBasicRoundRobin() {
     TaskScheduler scheduler = new RoundRobinTaskScheduler(4);
-    TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
+    scheduler.initialize(new PropertiesConfiguration(), 12345);
 
     final String user1 = "user1";
     final InetSocketAddress address1 = new InetSocketAddress("localhost", 1);
@@ -234,8 +229,7 @@ public class TestTaskScheduler {
   @Test
   public void testRoundRobinDoesNotGiveUpUserSpotWhenGetTaskFails() {
     TaskScheduler scheduler = new RoundRobinTaskScheduler(4);
-    TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
+    scheduler.initialize(new PropertiesConfiguration(), 12345);
 
     final String user1 = "user1";
     final InetSocketAddress address1 = new InetSocketAddress("localhost", 1);
@@ -339,8 +333,7 @@ public class TestTaskScheduler {
      * run soonest.
      */
     TaskScheduler scheduler = new PriorityTaskScheduler(4);
-    TResourceVector capacity = TResources.createResourceVector(0, 4);
-    scheduler.initialize(capacity, new PropertiesConfiguration(), 12345);
+    scheduler.initialize(new PropertiesConfiguration(), 12345);
 
     final InetSocketAddress appBackendAddress = new InetSocketAddress("localhost", 1);
     final String user = "user";

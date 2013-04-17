@@ -1,7 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -9,11 +8,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Maps;
-
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
-import edu.berkeley.sparrow.daemon.util.TResources;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TResourceVector;
@@ -43,7 +39,6 @@ public abstract class TaskScheduler {
     public String previousRequestId;
     public String previousTaskId;
 
-    public TResourceVector estimatedResources;
     public InetSocketAddress schedulerAddress;
     public InetSocketAddress appBackendAddress;
 
@@ -53,7 +48,6 @@ public abstract class TaskScheduler {
       appId = request.getAppId();
       user = request.getUser();
       requestId = request.getRequestId();
-      estimatedResources = request.getEstimatedResources();
       schedulerAddress = new InetSocketAddress(request.getSchedulerAddress().getHost(),
                                                request.getSchedulerAddress().getPort());
       this.appBackendAddress = appBackendAddress;
@@ -79,17 +73,13 @@ public abstract class TaskScheduler {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(TaskScheduler.class);
   private String ipAddress;
 
-  protected TResourceVector capacity;
   protected Configuration conf;
-  protected TResourceVector inUse = TResources.clone(TResources.none());
   private final BlockingQueue<TaskSpec> runnableTaskQueue =
       new LinkedBlockingQueue<TaskSpec>();
-  private HashMap<String, ResourceInfo> resourcesPerRequest = Maps.newHashMap();
 
   /** Initialize the task scheduler, passing it the current available resources
    *  on the machine. */
-  void initialize(TResourceVector capacity, Configuration conf, int nodeMonitorPort) {
-    this.capacity = capacity;
+  void initialize(Configuration conf, int nodeMonitorPort) {
     this.conf = conf;
     this.ipAddress = Network.getIPAddress(conf);
   }
@@ -104,7 +94,6 @@ public abstract class TaskScheduler {
     } catch (InterruptedException e) {
       LOG.fatal(e);
     }
-    addResourceInUse(task.estimatedResources);
     return task;
   }
 
@@ -118,7 +107,6 @@ public abstract class TaskScheduler {
   void tasksFinished(List<TFullTaskId> finishedTasks) {
     for (TFullTaskId t : finishedTasks) {
       AUDIT_LOG.info(Logging.auditEventString("task_completed", t.getRequestId(), t.getTaskId()));
-      releaseResources(t.getRequestId());
       handleTaskFinished(t.getRequestId(), t.getTaskId());
     }
   }
@@ -128,26 +116,7 @@ public abstract class TaskScheduler {
                                             taskReservation.requestId,
                                             taskReservation.previousRequestId,
                                             taskReservation.previousTaskId));
-    releaseResources(taskReservation.requestId);
     handleNoTaskForReservation(taskReservation);
-  }
-
-  /**
-   * Releases the resources associated with the given request.
-   */
-  private synchronized void releaseResources(String requestId) {
-    LOG.debug(Logging.functionCall(requestId));
-    ResourceInfo resourceInfo = resourcesPerRequest.get(requestId);
-    if (resourceInfo == null) {
-      LOG.error("Missing resources for request: " + requestId);
-      resourceInfo = new ResourceInfo(1, TResources.createResourceVector(0, 1));
-    }
-    resourceInfo.remainingTasks--;
-    if (resourceInfo.remainingTasks == 0) {
-      LOG.debug("Deleting resources for request " + requestId);
-      resourcesPerRequest.remove(requestId);
-    }
-    freeResourceInUse(resourceInfo.resources);
   }
 
   protected void makeTaskRunnable(TaskSpec task) {
@@ -161,11 +130,6 @@ public abstract class TaskScheduler {
 
   public synchronized void submitTaskReservations(TEnqueueTaskReservationsRequest request,
                                                   InetSocketAddress appBackendAddress) {
-    ResourceInfo resourceInfo = new ResourceInfo(request.getNumTasks(),
-                                                 request.getEstimatedResources());
-    resourcesPerRequest.put(request.getRequestId(), resourceInfo);
-    LOG.debug("Added resource info for request " + request.getRequestId() + " with " +
-              resourceInfo.remainingTasks + " tasks.");
     for (int i = 0; i < request.getNumTasks(); ++i) {
       LOG.debug("Creating reservation " + i + " for request " + request.getRequestId());
       TaskSpec reservation = new TaskSpec(request, appBackendAddress);
@@ -173,14 +137,6 @@ public abstract class TaskScheduler {
       AUDIT_LOG.info(Logging.auditEventString("reservation_enqueued", ipAddress, request.requestId,
                                               queuedReservations));
     }
-  }
-
-  protected synchronized void addResourceInUse(TResourceVector nowInUse) {
-    TResources.addTo(inUse, nowInUse);
-  }
-
-  protected synchronized void freeResourceInUse(TResourceVector nowFreed) {
-    TResources.subtractFrom(inUse, nowFreed);
   }
 
   // TASK SCHEDULERS MUST IMPLEMENT THE FOLLOWING

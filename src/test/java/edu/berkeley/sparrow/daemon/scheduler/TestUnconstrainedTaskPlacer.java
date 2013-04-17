@@ -21,7 +21,6 @@ import com.google.common.collect.Sets;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TPlacementPreference;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -33,8 +32,6 @@ public class TestUnconstrainedTaskPlacer {
   private static final String GROUP = "group";
   private static final int PRIORITY = 0;
   private static final String REQUEST_ID = "request id";
-  private static final int MEMORY = 10;
-  private static final int CORES = 1;
   private static final THostPort SCHEDULER_ADDRESS = new THostPort("localhost", 12345);
 
   @Before
@@ -55,12 +52,11 @@ public class TestUnconstrainedTaskPlacer {
     List<TTaskSpec> tasks = Lists.newArrayList();
     ByteBuffer message = ByteBuffer.allocate(1);
     TPlacementPreference placementPreference = new TPlacementPreference();
-    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
     Set<String> taskIds = Sets.newHashSet();
     for (int i = 0; i < NUM_TASKS; ++i) {
       String id = "test task " + i;
       taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
+      tasks.add(new TTaskSpec(id, placementPreference, message));
     }
 
     TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
@@ -92,7 +88,6 @@ public class TestUnconstrainedTaskPlacer {
         assertEquals(request.getAppId(), APP_ID);
         assertEquals(request.getUser(), user);
         assertEquals(request.getRequestId(), REQUEST_ID);
-        assertEquals(request.getEstimatedResources(), estimatedResources);
         assertEquals(request.getSchedulerAddress(), SCHEDULER_ADDRESS);
         assertEquals(1, request.getNumTasks());
       }
@@ -112,12 +107,11 @@ public class TestUnconstrainedTaskPlacer {
     List<TTaskSpec> tasks = Lists.newArrayList();
     ByteBuffer message = ByteBuffer.allocate(1);
     TPlacementPreference placementPreference = new TPlacementPreference();
-    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
     Set<String> taskIds = Sets.newHashSet();
     for (int i = 0; i < numTasks; ++i) {
       String id = "test task " + i;
       taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
+      tasks.add(new TTaskSpec(id, placementPreference,  message));
     }
 
     TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
@@ -178,12 +172,11 @@ public class TestUnconstrainedTaskPlacer {
     List<TTaskSpec> tasks = Lists.newArrayList();
     ByteBuffer message = ByteBuffer.allocate(1);
     TPlacementPreference placementPreference = new TPlacementPreference();
-    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
     Set<String> taskIds = Sets.newHashSet();
     for (int i = 0; i < numTasks; ++i) {
       String id = "test task " + i;
       taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
+      tasks.add(new TTaskSpec(id, placementPreference, message));
     }
 
     TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);

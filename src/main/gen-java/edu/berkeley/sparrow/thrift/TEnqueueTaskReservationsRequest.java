@@ -33,9 +33,8 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
   private static final org.apache.thrift.protocol.TField APP_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("appId", org.apache.thrift.protocol.TType.STRING, (short)1);
   private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)2);
   private static final org.apache.thrift.protocol.TField REQUEST_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("requestId", org.apache.thrift.protocol.TType.STRING, (short)3);
-  private static final org.apache.thrift.protocol.TField ESTIMATED_RESOURCES_FIELD_DESC = new org.apache.thrift.protocol.TField("estimatedResources", org.apache.thrift.protocol.TType.STRUCT, (short)4);
-  private static final org.apache.thrift.protocol.TField SCHEDULER_ADDRESS_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulerAddress", org.apache.thrift.protocol.TType.STRUCT, (short)5);
-  private static final org.apache.thrift.protocol.TField NUM_TASKS_FIELD_DESC = new org.apache.thrift.protocol.TField("numTasks", org.apache.thrift.protocol.TType.I32, (short)6);
+  private static final org.apache.thrift.protocol.TField SCHEDULER_ADDRESS_FIELD_DESC = new org.apache.thrift.protocol.TField("schedulerAddress", org.apache.thrift.protocol.TType.STRUCT, (short)4);
+  private static final org.apache.thrift.protocol.TField NUM_TASKS_FIELD_DESC = new org.apache.thrift.protocol.TField("numTasks", org.apache.thrift.protocol.TType.I32, (short)5);
 
   private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
   static {
@@ -46,7 +45,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
   public String appId; // required
   public TUserGroupInfo user; // required
   public String requestId; // required
-  public TResourceVector estimatedResources; // required
   public THostPort schedulerAddress; // required
   public int numTasks; // required
 
@@ -55,9 +53,8 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     APP_ID((short)1, "appId"),
     USER((short)2, "user"),
     REQUEST_ID((short)3, "requestId"),
-    ESTIMATED_RESOURCES((short)4, "estimatedResources"),
-    SCHEDULER_ADDRESS((short)5, "schedulerAddress"),
-    NUM_TASKS((short)6, "numTasks");
+    SCHEDULER_ADDRESS((short)4, "schedulerAddress"),
+    NUM_TASKS((short)5, "numTasks");
 
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -78,11 +75,9 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
           return USER;
         case 3: // REQUEST_ID
           return REQUEST_ID;
-        case 4: // ESTIMATED_RESOURCES
-          return ESTIMATED_RESOURCES;
-        case 5: // SCHEDULER_ADDRESS
+        case 4: // SCHEDULER_ADDRESS
           return SCHEDULER_ADDRESS;
-        case 6: // NUM_TASKS
+        case 5: // NUM_TASKS
           return NUM_TASKS;
         default:
           return null;
@@ -135,8 +130,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TUserGroupInfo.class)));
     tmpMap.put(_Fields.REQUEST_ID, new org.apache.thrift.meta_data.FieldMetaData("requestId", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
-    tmpMap.put(_Fields.ESTIMATED_RESOURCES, new org.apache.thrift.meta_data.FieldMetaData("estimatedResources", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-        new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, TResourceVector.class)));
     tmpMap.put(_Fields.SCHEDULER_ADDRESS, new org.apache.thrift.meta_data.FieldMetaData("schedulerAddress", org.apache.thrift.TFieldRequirementType.DEFAULT, 
         new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, THostPort.class)));
     tmpMap.put(_Fields.NUM_TASKS, new org.apache.thrift.meta_data.FieldMetaData("numTasks", org.apache.thrift.TFieldRequirementType.DEFAULT, 
@@ -152,7 +145,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     String appId,
     TUserGroupInfo user,
     String requestId,
-    TResourceVector estimatedResources,
     THostPort schedulerAddress,
     int numTasks)
   {
@@ -160,7 +152,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     this.appId = appId;
     this.user = user;
     this.requestId = requestId;
-    this.estimatedResources = estimatedResources;
     this.schedulerAddress = schedulerAddress;
     this.numTasks = numTasks;
     setNumTasksIsSet(true);
@@ -181,9 +172,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     if (other.isSetRequestId()) {
       this.requestId = other.requestId;
     }
-    if (other.isSetEstimatedResources()) {
-      this.estimatedResources = new TResourceVector(other.estimatedResources);
-    }
     if (other.isSetSchedulerAddress()) {
       this.schedulerAddress = new THostPort(other.schedulerAddress);
     }
@@ -198,7 +186,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     this.appId = null;
     this.user = null;
     this.requestId = null;
-    this.estimatedResources = null;
     this.schedulerAddress = null;
     setNumTasksIsSet(false);
     this.numTasks = 0;
@@ -276,30 +263,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     }
   }
 
-  public TResourceVector getEstimatedResources() {
-    return this.estimatedResources;
-  }
-
-  public TEnqueueTaskReservationsRequest setEstimatedResources(TResourceVector estimatedResources) {
-    this.estimatedResources = estimatedResources;
-    return this;
-  }
-
-  public void unsetEstimatedResources() {
-    this.estimatedResources = null;
-  }
-
-  /** Returns true if field estimatedResources is set (has been assigned a value) and false otherwise */
-  public boolean isSetEstimatedResources() {
-    return this.estimatedResources != null;
-  }
-
-  public void setEstimatedResourcesIsSet(boolean value) {
-    if (!value) {
-      this.estimatedResources = null;
-    }
-  }
-
   public THostPort getSchedulerAddress() {
     return this.schedulerAddress;
   }
@@ -373,14 +336,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
       }
       break;
 
-    case ESTIMATED_RESOURCES:
-      if (value == null) {
-        unsetEstimatedResources();
-      } else {
-        setEstimatedResources((TResourceVector)value);
-      }
-      break;
-
     case SCHEDULER_ADDRESS:
       if (value == null) {
         unsetSchedulerAddress();
@@ -411,9 +366,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     case REQUEST_ID:
       return getRequestId();
 
-    case ESTIMATED_RESOURCES:
-      return getEstimatedResources();
-
     case SCHEDULER_ADDRESS:
       return getSchedulerAddress();
 
@@ -437,8 +389,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
       return isSetUser();
     case REQUEST_ID:
       return isSetRequestId();
-    case ESTIMATED_RESOURCES:
-      return isSetEstimatedResources();
     case SCHEDULER_ADDRESS:
       return isSetSchedulerAddress();
     case NUM_TASKS:
@@ -484,15 +434,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
       if (!(this_present_requestId && that_present_requestId))
         return false;
       if (!this.requestId.equals(that.requestId))
-        return false;
-    }
-
-    boolean this_present_estimatedResources = true && this.isSetEstimatedResources();
-    boolean that_present_estimatedResources = true && that.isSetEstimatedResources();
-    if (this_present_estimatedResources || that_present_estimatedResources) {
-      if (!(this_present_estimatedResources && that_present_estimatedResources))
-        return false;
-      if (!this.estimatedResources.equals(that.estimatedResources))
         return false;
     }
 
@@ -560,16 +501,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
         return lastComparison;
       }
     }
-    lastComparison = Boolean.valueOf(isSetEstimatedResources()).compareTo(typedOther.isSetEstimatedResources());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    if (isSetEstimatedResources()) {
-      lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.estimatedResources, typedOther.estimatedResources);
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-    }
     lastComparison = Boolean.valueOf(isSetSchedulerAddress()).compareTo(typedOther.isSetSchedulerAddress());
     if (lastComparison != 0) {
       return lastComparison;
@@ -631,14 +562,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
       sb.append("null");
     } else {
       sb.append(this.requestId);
-    }
-    first = false;
-    if (!first) sb.append(", ");
-    sb.append("estimatedResources:");
-    if (this.estimatedResources == null) {
-      sb.append("null");
-    } else {
-      sb.append(this.estimatedResources);
     }
     first = false;
     if (!first) sb.append(", ");
@@ -722,16 +645,7 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 4: // ESTIMATED_RESOURCES
-            if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-              struct.estimatedResources = new TResourceVector();
-              struct.estimatedResources.read(iprot);
-              struct.setEstimatedResourcesIsSet(true);
-            } else { 
-              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-            }
-            break;
-          case 5: // SCHEDULER_ADDRESS
+          case 4: // SCHEDULER_ADDRESS
             if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
               struct.schedulerAddress = new THostPort();
               struct.schedulerAddress.read(iprot);
@@ -740,7 +654,7 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 6: // NUM_TASKS
+          case 5: // NUM_TASKS
             if (schemeField.type == org.apache.thrift.protocol.TType.I32) {
               struct.numTasks = iprot.readI32();
               struct.setNumTasksIsSet(true);
@@ -778,11 +692,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
         oprot.writeString(struct.requestId);
         oprot.writeFieldEnd();
       }
-      if (struct.estimatedResources != null) {
-        oprot.writeFieldBegin(ESTIMATED_RESOURCES_FIELD_DESC);
-        struct.estimatedResources.write(oprot);
-        oprot.writeFieldEnd();
-      }
       if (struct.schedulerAddress != null) {
         oprot.writeFieldBegin(SCHEDULER_ADDRESS_FIELD_DESC);
         struct.schedulerAddress.write(oprot);
@@ -818,16 +727,13 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
       if (struct.isSetRequestId()) {
         optionals.set(2);
       }
-      if (struct.isSetEstimatedResources()) {
+      if (struct.isSetSchedulerAddress()) {
         optionals.set(3);
       }
-      if (struct.isSetSchedulerAddress()) {
+      if (struct.isSetNumTasks()) {
         optionals.set(4);
       }
-      if (struct.isSetNumTasks()) {
-        optionals.set(5);
-      }
-      oprot.writeBitSet(optionals, 6);
+      oprot.writeBitSet(optionals, 5);
       if (struct.isSetAppId()) {
         oprot.writeString(struct.appId);
       }
@@ -836,9 +742,6 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
       }
       if (struct.isSetRequestId()) {
         oprot.writeString(struct.requestId);
-      }
-      if (struct.isSetEstimatedResources()) {
-        struct.estimatedResources.write(oprot);
       }
       if (struct.isSetSchedulerAddress()) {
         struct.schedulerAddress.write(oprot);
@@ -851,7 +754,7 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
     @Override
     public void read(org.apache.thrift.protocol.TProtocol prot, TEnqueueTaskReservationsRequest struct) throws org.apache.thrift.TException {
       TTupleProtocol iprot = (TTupleProtocol) prot;
-      BitSet incoming = iprot.readBitSet(6);
+      BitSet incoming = iprot.readBitSet(5);
       if (incoming.get(0)) {
         struct.appId = iprot.readString();
         struct.setAppIdIsSet(true);
@@ -866,16 +769,11 @@ public class TEnqueueTaskReservationsRequest implements org.apache.thrift.TBase<
         struct.setRequestIdIsSet(true);
       }
       if (incoming.get(3)) {
-        struct.estimatedResources = new TResourceVector();
-        struct.estimatedResources.read(iprot);
-        struct.setEstimatedResourcesIsSet(true);
-      }
-      if (incoming.get(4)) {
         struct.schedulerAddress = new THostPort();
         struct.schedulerAddress.read(iprot);
         struct.setSchedulerAddressIsSet(true);
       }
-      if (incoming.get(5)) {
+      if (incoming.get(4)) {
         struct.numTasks = iprot.readI32();
         struct.setNumTasksIsSet(true);
       }

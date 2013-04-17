@@ -20,7 +20,6 @@ import com.google.common.collect.Maps;
 import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.THostPort;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -98,9 +97,6 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
 
     List<TTaskSpec> unconstrainedTasks = Lists.newArrayList();
 
-    // We assume all tasks in a job have the same resource usage requirements.
-    TResourceVector estimatedResources = taskList.get(0).getEstimatedResources();
-
     for (TTaskSpec task : taskList) {
       if (task.preference == null || task.preference.nodes == null ||
           task.preference.nodes.size() == 0) {
@@ -126,7 +122,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           if (!requests.containsKey(addr)) {
             TEnqueueTaskReservationsRequest request = new TEnqueueTaskReservationsRequest(
                 schedulingRequest.getApp(), schedulingRequest.getUser(), requestId,
-                estimatedResources, schedulerAddress, 1);
+                schedulerAddress, 1);
             requests.put(addr, request);
           } else {
             // IsSetNumTasks should already be true, because it was set when the request was
@@ -163,7 +159,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
     if (unconstrainedTasks.size() > 0) {
       addRequestsForUnconstrainedTasks(
           unconstrainedTasks, requestId, schedulingRequest.getApp(), schedulingRequest.getUser(),
-          estimatedResources, schedulerAddress, nodes, requests);
+          schedulerAddress, nodes, requests);
     }
 
     return requests;
@@ -176,8 +172,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
    */
   private void addRequestsForUnconstrainedTasks(
       List<TTaskSpec> unconstrainedTasks, String requestId, String appId, TUserGroupInfo user,
-      TResourceVector estimatedResources, THostPort schedulerAddress,
-      Collection<InetSocketAddress> nodeMonitors,
+      THostPort schedulerAddress, Collection<InetSocketAddress> nodeMonitors,
       HashMap<InetSocketAddress, TEnqueueTaskReservationsRequest> requests) {
     /* Identify the node monitors that aren't already being used for the constrained tasks, and
      * place all of reservations on those nodes (to try to spread the reservations evenly
@@ -203,7 +198,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       }
 
       TEnqueueTaskReservationsRequest request = new TEnqueueTaskReservationsRequest(
-          appId, user, requestId, estimatedResources, schedulerAddress, 1);
+          appId, user, requestId, schedulerAddress, 1);
       requests.put(nodeMonitor, request);
       reservationsCreated++;
       numOutstandingReservations += 1;

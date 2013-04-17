@@ -19,7 +19,6 @@ import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.THostPort;
 import edu.berkeley.sparrow.thrift.TPlacementPreference;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TSchedulingRequest;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TTaskSpec;
@@ -31,8 +30,6 @@ public class TestConstrainedTaskPlacer {
   private static final String GROUP = "group";
   private static final int PRIORITY = 0;
   private static final String REQUEST_ID = "request id";
-  private static final int MEMORY = 10;
-  private static final int CORES = 1;
   private static final THostPort SCHEDULER_ADDRESS = new THostPort("localhost", 12345);
 
   @Before
@@ -61,8 +58,7 @@ public class TestConstrainedTaskPlacer {
     for (InetSocketAddress address : preferredNodes) {
       placementPreference.addToNodes(address.getAddress().getHostAddress());
     }
-    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
-    TTaskSpec task = new TTaskSpec("test task", placementPreference, estimatedResources, message);
+    TTaskSpec task = new TTaskSpec("test task", placementPreference, message);
 
     // Create the scheduling request.
     List<TTaskSpec> tasks = new ArrayList<TTaskSpec>();
@@ -95,7 +91,6 @@ public class TestConstrainedTaskPlacer {
         assertEquals(request.getAppId(), APP_ID);
         assertEquals(request.getUser(), user);
         assertEquals(request.getRequestId(), REQUEST_ID);
-        assertEquals(request.getEstimatedResources(), estimatedResources);
         assertEquals(request.getSchedulerAddress(), SCHEDULER_ADDRESS);
         assertTrue(request.getNumTasks() > 0);
         totalEnqueuedTasks += request.getNumTasks();
@@ -120,7 +115,6 @@ public class TestConstrainedTaskPlacer {
     // Create 3 tasks with overlapping placement preferences (all tasks include nodes[2] in their
     // placement preferences).
     ByteBuffer message = ByteBuffer.allocate(1);
-    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
     List<TTaskSpec> tasks = new ArrayList<TTaskSpec>();
     final int NUM_TASKS = 3;
     Set<String> taskIds = new HashSet<String>();
@@ -131,7 +125,7 @@ public class TestConstrainedTaskPlacer {
       }
       String id = "test task " + i;
       taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
+      tasks.add(new TTaskSpec(id, placementPreference, message));
     }
 
     TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
@@ -160,7 +154,6 @@ public class TestConstrainedTaskPlacer {
         assertEquals(request.getAppId(), APP_ID);
         assertEquals(request.getUser(), user);
         assertEquals(request.getRequestId(), REQUEST_ID);
-        assertEquals(request.getEstimatedResources(), estimatedResources);
         assertEquals(request.getSchedulerAddress(), SCHEDULER_ADDRESS);
         assertTrue(request.getNumTasks() > 0);
         totalEnqueuedTasks += request.getNumTasks();
@@ -219,7 +212,6 @@ public class TestConstrainedTaskPlacer {
     // Create 3 tasks with overlapping placement preferences (all tasks include nodes[2] in their
     // placement preferences).
     ByteBuffer message = ByteBuffer.allocate(1);
-    TResourceVector estimatedResources = new TResourceVector(MEMORY, CORES);
     List<TTaskSpec> tasks = new ArrayList<TTaskSpec>();
     final int NUM_TASKS = 3;
     Set<String> constrainedTaskIds = new HashSet<String>();
@@ -230,11 +222,11 @@ public class TestConstrainedTaskPlacer {
       }
       String id = "constrained test task " + i;
       constrainedTaskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, estimatedResources, message));
+      tasks.add(new TTaskSpec(id, placementPreference, message));
     }
 
     String unconstrainedTaskId = "unconstrained test task";
-    tasks.add(new TTaskSpec(unconstrainedTaskId, null, estimatedResources, message));
+    tasks.add(new TTaskSpec(unconstrainedTaskId, null, message));
 
     TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
@@ -268,7 +260,6 @@ public class TestConstrainedTaskPlacer {
         assertEquals(request.getAppId(), APP_ID);
         assertEquals(request.getUser(), user);
         assertEquals(request.getRequestId(), REQUEST_ID);
-        assertEquals(request.getEstimatedResources(), estimatedResources);
         assertEquals(request.getSchedulerAddress(), SCHEDULER_ADDRESS);
         assertTrue(request.getNumTasks() > 0);
         totalEnqueuedTasks += request.getNumTasks();

@@ -31,13 +31,13 @@ public class BackendService {
 
   public interface Iface {
 
-    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException;
+    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user) throws org.apache.thrift.TException;
 
   }
 
   public interface AsyncIface {
 
-    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.launchTask_call> resultHandler) throws org.apache.thrift.TException;
+    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, org.apache.thrift.async.AsyncMethodCallback<AsyncClient.launchTask_call> resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -61,19 +61,18 @@ public class BackendService {
       super(iprot, oprot);
     }
 
-    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException
+    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user) throws org.apache.thrift.TException
     {
-      send_launchTask(message, taskId, user, estimatedResources);
+      send_launchTask(message, taskId, user);
       recv_launchTask();
     }
 
-    public void send_launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) throws org.apache.thrift.TException
+    public void send_launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user) throws org.apache.thrift.TException
     {
       launchTask_args args = new launchTask_args();
       args.setMessage(message);
       args.setTaskId(taskId);
       args.setUser(user);
-      args.setEstimatedResources(estimatedResources);
       sendBase("launchTask", args);
     }
 
@@ -102,9 +101,9 @@ public class BackendService {
       super(protocolFactory, clientManager, transport);
     }
 
-    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler) throws org.apache.thrift.TException {
+    public void launchTask(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler) throws org.apache.thrift.TException {
       checkReady();
-      launchTask_call method_call = new launchTask_call(message, taskId, user, estimatedResources, resultHandler, this, ___protocolFactory, ___transport);
+      launchTask_call method_call = new launchTask_call(message, taskId, user, resultHandler, this, ___protocolFactory, ___transport);
       this.___currentMethod = method_call;
       ___manager.call(method_call);
     }
@@ -113,13 +112,11 @@ public class BackendService {
       private ByteBuffer message;
       private edu.berkeley.sparrow.thrift.TFullTaskId taskId;
       private edu.berkeley.sparrow.thrift.TUserGroupInfo user;
-      private edu.berkeley.sparrow.thrift.TResourceVector estimatedResources;
-      public launchTask_call(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, edu.berkeley.sparrow.thrift.TResourceVector estimatedResources, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+      public launchTask_call(ByteBuffer message, edu.berkeley.sparrow.thrift.TFullTaskId taskId, edu.berkeley.sparrow.thrift.TUserGroupInfo user, org.apache.thrift.async.AsyncMethodCallback<launchTask_call> resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
         super(client, protocolFactory, transport, resultHandler, false);
         this.message = message;
         this.taskId = taskId;
         this.user = user;
-        this.estimatedResources = estimatedResources;
       }
 
       public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
@@ -128,7 +125,6 @@ public class BackendService {
         args.setMessage(message);
         args.setTaskId(taskId);
         args.setUser(user);
-        args.setEstimatedResources(estimatedResources);
         args.write(prot);
         prot.writeMessageEnd();
       }
@@ -171,7 +167,7 @@ public class BackendService {
 
       protected launchTask_result getResult(I iface, launchTask_args args) throws org.apache.thrift.TException {
         launchTask_result result = new launchTask_result();
-        iface.launchTask(args.message, args.taskId, args.user, args.estimatedResources);
+        iface.launchTask(args.message, args.taskId, args.user);
         return result;
       }
     }
@@ -184,7 +180,6 @@ public class BackendService {
     private static final org.apache.thrift.protocol.TField MESSAGE_FIELD_DESC = new org.apache.thrift.protocol.TField("message", org.apache.thrift.protocol.TType.STRING, (short)1);
     private static final org.apache.thrift.protocol.TField TASK_ID_FIELD_DESC = new org.apache.thrift.protocol.TField("taskId", org.apache.thrift.protocol.TType.STRUCT, (short)2);
     private static final org.apache.thrift.protocol.TField USER_FIELD_DESC = new org.apache.thrift.protocol.TField("user", org.apache.thrift.protocol.TType.STRUCT, (short)3);
-    private static final org.apache.thrift.protocol.TField ESTIMATED_RESOURCES_FIELD_DESC = new org.apache.thrift.protocol.TField("estimatedResources", org.apache.thrift.protocol.TType.STRUCT, (short)4);
 
     private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
     static {
@@ -195,14 +190,12 @@ public class BackendService {
     public ByteBuffer message; // required
     public edu.berkeley.sparrow.thrift.TFullTaskId taskId; // required
     public edu.berkeley.sparrow.thrift.TUserGroupInfo user; // required
-    public edu.berkeley.sparrow.thrift.TResourceVector estimatedResources; // required
 
     /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
     public enum _Fields implements org.apache.thrift.TFieldIdEnum {
       MESSAGE((short)1, "message"),
       TASK_ID((short)2, "taskId"),
-      USER((short)3, "user"),
-      ESTIMATED_RESOURCES((short)4, "estimatedResources");
+      USER((short)3, "user");
 
       private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
@@ -223,8 +216,6 @@ public class BackendService {
             return TASK_ID;
           case 3: // USER
             return USER;
-          case 4: // ESTIMATED_RESOURCES
-            return ESTIMATED_RESOURCES;
           default:
             return null;
         }
@@ -274,8 +265,6 @@ public class BackendService {
           new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TFullTaskId.class)));
       tmpMap.put(_Fields.USER, new org.apache.thrift.meta_data.FieldMetaData("user", org.apache.thrift.TFieldRequirementType.DEFAULT, 
           new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TUserGroupInfo.class)));
-      tmpMap.put(_Fields.ESTIMATED_RESOURCES, new org.apache.thrift.meta_data.FieldMetaData("estimatedResources", org.apache.thrift.TFieldRequirementType.DEFAULT, 
-          new org.apache.thrift.meta_data.StructMetaData(org.apache.thrift.protocol.TType.STRUCT, edu.berkeley.sparrow.thrift.TResourceVector.class)));
       metaDataMap = Collections.unmodifiableMap(tmpMap);
       org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(launchTask_args.class, metaDataMap);
     }
@@ -286,14 +275,12 @@ public class BackendService {
     public launchTask_args(
       ByteBuffer message,
       edu.berkeley.sparrow.thrift.TFullTaskId taskId,
-      edu.berkeley.sparrow.thrift.TUserGroupInfo user,
-      edu.berkeley.sparrow.thrift.TResourceVector estimatedResources)
+      edu.berkeley.sparrow.thrift.TUserGroupInfo user)
     {
       this();
       this.message = message;
       this.taskId = taskId;
       this.user = user;
-      this.estimatedResources = estimatedResources;
     }
 
     /**
@@ -310,9 +297,6 @@ public class BackendService {
       if (other.isSetUser()) {
         this.user = new edu.berkeley.sparrow.thrift.TUserGroupInfo(other.user);
       }
-      if (other.isSetEstimatedResources()) {
-        this.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector(other.estimatedResources);
-      }
     }
 
     public launchTask_args deepCopy() {
@@ -323,7 +307,6 @@ public class BackendService {
       this.message = null;
       this.taskId = null;
       this.user = null;
-      this.estimatedResources = null;
     }
 
     public byte[] getMessage() {
@@ -408,30 +391,6 @@ public class BackendService {
       }
     }
 
-    public edu.berkeley.sparrow.thrift.TResourceVector getEstimatedResources() {
-      return this.estimatedResources;
-    }
-
-    public launchTask_args setEstimatedResources(edu.berkeley.sparrow.thrift.TResourceVector estimatedResources) {
-      this.estimatedResources = estimatedResources;
-      return this;
-    }
-
-    public void unsetEstimatedResources() {
-      this.estimatedResources = null;
-    }
-
-    /** Returns true if field estimatedResources is set (has been assigned a value) and false otherwise */
-    public boolean isSetEstimatedResources() {
-      return this.estimatedResources != null;
-    }
-
-    public void setEstimatedResourcesIsSet(boolean value) {
-      if (!value) {
-        this.estimatedResources = null;
-      }
-    }
-
     public void setFieldValue(_Fields field, Object value) {
       switch (field) {
       case MESSAGE:
@@ -458,14 +417,6 @@ public class BackendService {
         }
         break;
 
-      case ESTIMATED_RESOURCES:
-        if (value == null) {
-          unsetEstimatedResources();
-        } else {
-          setEstimatedResources((edu.berkeley.sparrow.thrift.TResourceVector)value);
-        }
-        break;
-
       }
     }
 
@@ -479,9 +430,6 @@ public class BackendService {
 
       case USER:
         return getUser();
-
-      case ESTIMATED_RESOURCES:
-        return getEstimatedResources();
 
       }
       throw new IllegalStateException();
@@ -500,8 +448,6 @@ public class BackendService {
         return isSetTaskId();
       case USER:
         return isSetUser();
-      case ESTIMATED_RESOURCES:
-        return isSetEstimatedResources();
       }
       throw new IllegalStateException();
     }
@@ -543,15 +489,6 @@ public class BackendService {
         if (!(this_present_user && that_present_user))
           return false;
         if (!this.user.equals(that.user))
-          return false;
-      }
-
-      boolean this_present_estimatedResources = true && this.isSetEstimatedResources();
-      boolean that_present_estimatedResources = true && that.isSetEstimatedResources();
-      if (this_present_estimatedResources || that_present_estimatedResources) {
-        if (!(this_present_estimatedResources && that_present_estimatedResources))
-          return false;
-        if (!this.estimatedResources.equals(that.estimatedResources))
           return false;
       }
 
@@ -601,16 +538,6 @@ public class BackendService {
           return lastComparison;
         }
       }
-      lastComparison = Boolean.valueOf(isSetEstimatedResources()).compareTo(typedOther.isSetEstimatedResources());
-      if (lastComparison != 0) {
-        return lastComparison;
-      }
-      if (isSetEstimatedResources()) {
-        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.estimatedResources, typedOther.estimatedResources);
-        if (lastComparison != 0) {
-          return lastComparison;
-        }
-      }
       return 0;
     }
 
@@ -652,14 +579,6 @@ public class BackendService {
         sb.append("null");
       } else {
         sb.append(this.user);
-      }
-      first = false;
-      if (!first) sb.append(", ");
-      sb.append("estimatedResources:");
-      if (this.estimatedResources == null) {
-        sb.append("null");
-      } else {
-        sb.append(this.estimatedResources);
       }
       first = false;
       sb.append(")");
@@ -730,15 +649,6 @@ public class BackendService {
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 4: // ESTIMATED_RESOURCES
-              if (schemeField.type == org.apache.thrift.protocol.TType.STRUCT) {
-                struct.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector();
-                struct.estimatedResources.read(iprot);
-                struct.setEstimatedResourcesIsSet(true);
-              } else { 
-                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
-              }
-              break;
             default:
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
           }
@@ -769,11 +679,6 @@ public class BackendService {
           struct.user.write(oprot);
           oprot.writeFieldEnd();
         }
-        if (struct.estimatedResources != null) {
-          oprot.writeFieldBegin(ESTIMATED_RESOURCES_FIELD_DESC);
-          struct.estimatedResources.write(oprot);
-          oprot.writeFieldEnd();
-        }
         oprot.writeFieldStop();
         oprot.writeStructEnd();
       }
@@ -801,10 +706,7 @@ public class BackendService {
         if (struct.isSetUser()) {
           optionals.set(2);
         }
-        if (struct.isSetEstimatedResources()) {
-          optionals.set(3);
-        }
-        oprot.writeBitSet(optionals, 4);
+        oprot.writeBitSet(optionals, 3);
         if (struct.isSetMessage()) {
           oprot.writeBinary(struct.message);
         }
@@ -814,15 +716,12 @@ public class BackendService {
         if (struct.isSetUser()) {
           struct.user.write(oprot);
         }
-        if (struct.isSetEstimatedResources()) {
-          struct.estimatedResources.write(oprot);
-        }
       }
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, launchTask_args struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
-        BitSet incoming = iprot.readBitSet(4);
+        BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           struct.message = iprot.readBinary();
           struct.setMessageIsSet(true);
@@ -836,11 +735,6 @@ public class BackendService {
           struct.user = new edu.berkeley.sparrow.thrift.TUserGroupInfo();
           struct.user.read(iprot);
           struct.setUserIsSet(true);
-        }
-        if (incoming.get(3)) {
-          struct.estimatedResources = new edu.berkeley.sparrow.thrift.TResourceVector();
-          struct.estimatedResources.read(iprot);
-          struct.setEstimatedResourcesIsSet(true);
         }
       }
     }

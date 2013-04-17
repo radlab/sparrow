@@ -26,7 +26,6 @@ import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient;
 import edu.berkeley.sparrow.thrift.SchedulerService.AsyncClient.sendFrontendMessage_call;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 
 /**
  * A Node Monitor which is responsible for communicating with application
@@ -49,8 +48,6 @@ public class NodeMonitor {
   private ThriftClientPool<SchedulerService.AsyncClient> schedulerClientPool =
       new ThriftClientPool<SchedulerService.AsyncClient>(
           new ThriftClientPool.SchedulerServiceMakerFactory());
-
-  private TResourceVector capacity;
   private TaskScheduler scheduler;
   private TaskLauncherService taskLauncherService;
   private String ipAddress;
@@ -72,15 +69,12 @@ public class NodeMonitor {
     } catch (IOException e) {
       LOG.fatal("Error initializing node monitor state.", e);
     }
-    capacity = new TResourceVector();
     int mem = Resources.getSystemMemoryMb(conf);
-    capacity.setMemory(mem);
     LOG.info("Using memory allocation: " + mem);
 
     ipAddress = Network.getIPAddress(conf);
 
     int cores = Resources.getSystemCPUCount(conf);
-    capacity.setCores(cores);
     LOG.info("Using core allocation: " + cores);
 
     String task_scheduler_type = conf.getString(SparrowConf.NM_TASK_SCHEDULER_TYPE, "fifo");
@@ -93,7 +87,7 @@ public class NodeMonitor {
     } else {
       throw new RuntimeException("Unsupported task scheduler type: " + mode);
     }
-    scheduler.initialize(capacity, conf, nodeMonitorInternalPort);
+    scheduler.initialize(conf, nodeMonitorInternalPort);
     taskLauncherService = new TaskLauncherService();
     taskLauncherService.initialize(conf, scheduler, nodeMonitorInternalPort);
   }
