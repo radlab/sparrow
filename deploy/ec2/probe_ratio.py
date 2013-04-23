@@ -14,16 +14,17 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [1.25]
+    utilizations = [0.8]
     sample_ratios = [2.0]
     sample_ratio_constrained = 1
 
     # Amount of time it takes each task to run in isolation
     task_duration_ms = 100
-    tasks_per_job = 3
+    tasks_per_job = 1
     private_ssh_key = "patkey.pem"
     sparrow_branch = "debugging"
-    num_backends = 10
+    nm_task_scheduler = "fifo"
+    num_backends = 4
     num_frontends = 1
     cores_per_backend = 4
     # Run each trial for 5 minutes.
@@ -42,7 +43,7 @@ def main(argv):
 
     if launch_instances:
         print "********Launching instances..."
-        run_cmd("./ec2-exp.sh launch %s -f %s -b %s -i %s --spot_price %s" %
+        run_cmd("./ec2-exp.sh launch %s -f %s -b %s -i %s --spot-price %s" %
                 (cluster, num_frontends, num_backends, private_ssh_key, 0.3))
         time.sleep(10)
 
