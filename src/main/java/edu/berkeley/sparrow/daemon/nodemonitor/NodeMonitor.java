@@ -59,8 +59,6 @@ public class NodeMonitor {
       state = new StandaloneNodeMonitorState();
     } else if (mode.equals("configbased")) {
       state = new ConfigNodeMonitorState();
-    } else if (mode.equals("production")) {
-      state = new StateStoreNodeMonitorState();
     } else {
       throw new RuntimeException("Unsupported deployment mode: " + mode);
     }

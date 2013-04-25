@@ -40,7 +40,7 @@ public class SparrowConf {
   public final static String SYSTEM_CPUS = "system.cpus";
   public final static int DEFAULT_SYSTEM_CPUS = 4;
 
-  // Values: "production", "standalone", "configbased." Only "configbased" works currently.
+  // Values: "standalone", "configbased." Only "configbased" works currently.
   public final static String DEPLYOMENT_MODE = "deployment.mode";
   public final static String DEFAULT_DEPLOYMENT_MODE = "production";
 
