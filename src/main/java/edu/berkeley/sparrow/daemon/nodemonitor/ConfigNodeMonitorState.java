@@ -10,8 +10,7 @@ import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.daemon.util.ConfigUtil;
 
 /***
- * A {@link NodeMonitorState} implementation which is based on a static config
- * file.
+ * A {@link NodeMonitorState} implementation based on a static config file.
  */
 public class ConfigNodeMonitorState implements NodeMonitorState {
   private static final Logger LOG = Logger.getLogger(ConfigNodeMonitorState.class);
@@ -29,7 +28,7 @@ public class ConfigNodeMonitorState implements NodeMonitorState {
   public boolean registerBackend(String appId, InetSocketAddress nodeMonitor) {
     // Verify that the given backend information matches the static configuration.
     if (!appId.equals(staticAppId)) {
-      LOG.warn("Requested to register backend for app " + appId +
+      LOG.error("Requested to register backend for app " + appId +
           " but was expecting app " + staticAppId);
     } else if (!nodeMonitors.contains(nodeMonitor)) {
       StringBuilder errorMessage = new StringBuilder();

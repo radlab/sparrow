@@ -51,8 +51,8 @@ public class ProtoFrontend implements FrontendService.Iface {
   public static final int DEFAULT_BENCHMARK_ITERATIONS = 1000;  // # of benchmark iterations
 
   /**
-   * The default number of preferred nodes for each task. 0 signals that tasks are
-   * unconstrained.
+   * The default number of preferred nodes for each task (this configuration simulates jobs
+   * that have placement constraints). 0 signals that tasks are unconstrained.
    */
   public static final int DEFAULT_NUM_PREFERRED_NODES = 0;
 

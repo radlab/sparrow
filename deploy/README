@@ -1,1 +1,41 @@
-Files related to deploying Sparrow
+Files related to deploying Sparrow.
+
+The ec2 directory contains files for deploying Sparrow on ec2. The Sparrow
+AMI is not yet public, so it is not currently possible for external users to
+use these scripts. Contact us is this is a problem for you.
+
+If you'd like to deploy Sparrow on your own cluster, you'll need to
+do a few things:
+1) Download Sparrow:
+$ git clone git://github.com/radlab/sparrow.git
+2) Build Sparrow:
+$ cd sparrow
+$ mvn package
+3) Write a configuration file and copy the file to all machines. Currently,
+each Sparrow scheduler needs a configuration file that gives a list of where
+all of the Sparrow node monitors (worker machines) are running.
+See sparrow_configuration_example.conf to get started; see
+daemon/SparrowConf.java for a full list of options.
+4) Start Sparrow on all machines (both schedulers and node monitors). Starting
+Sparrow runs both a scheduler and a node monitor on the machine. Using
+the concurrent mark and sweep garbage collector is highly recommended -- the GC
+pauses using other gargabge collectors become significant when running
+sub-second tasks). Change the class path to reflect the location where you
+built Sparrow, and replace "sparrow.conf" with the location of the
+congiguration file you wrote above.
+$ java -XX:+UseConcMarkSweepGC -cp target/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.daemon.SparrowDaemon -c sparrow.conf
+5) Start your application executor on all backends. To use the prototype
+backend, which can run either CPU-intensive or memory-intensive tasks for
+some period of time:
+$ java -cp sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoBackend
+6) Start a frontend that submits scheduling requests to Sparrow. The current
+implementation assumes that there is a scheduler running on the same
+machine where the frontend is started, so frontends should only be started
+on machines where Sparrow is running.
+$ java -cp sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoFrontend
+
+The frontend accepts a configuration file (by adding "-c conf_file" when
+starting the frontend) where you can specify various configuration options to
+submit different types of jobs (e.g., with different numbers of tasks,
+of different duration, etc.), described in prototype/ProtoFrontend.java.
+

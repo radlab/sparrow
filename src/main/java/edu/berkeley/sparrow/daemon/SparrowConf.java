@@ -7,8 +7,6 @@ public class SparrowConf {
   // Values: "debug", "info", "warn", "error", "fatal"
   public final static String LOG_LEVEL = "log_level";
 
-  public final static String ZK_SERVERS = "zk.server.string";
-  public final static String ZK_TIMEOUT = "zk.timeout";
   public final static String SCHEDULER_THRIFT_PORT = "scheduler.thrift.port";
   public final static String SCHEDULER_THRIFT_THREADS =
       "scheduler.thrift.threads";
@@ -42,17 +40,9 @@ public class SparrowConf {
   public final static String SYSTEM_CPUS = "system.cpus";
   public final static int DEFAULT_SYSTEM_CPUS = 4;
 
-  // Values: "production", "standalone", "configbased"
+  // Values: "production", "standalone", "configbased." Only "configbased" works currently.
   public final static String DEPLYOMENT_MODE = "deployment.mode";
   public final static String DEFAULT_DEPLOYMENT_MODE = "production";
-
-  /** Hostname of the state store. */
-  public final static String STATE_STORE_HOST = "state_store.host";
-  public final static String DEFAULT_STATE_STORE_HOST = "localhost";
-
-  /** Port of the state store. */
-  public final static String STATE_STORE_PORT = "state_store.port";
-  public final static int DEFAULT_STATE_STORE_PORT = 20506;
 
   /** The ratio of probes used in a scheduling decision to tasks. */
   // For requests w/o constraints...
@@ -67,14 +57,17 @@ public class SparrowConf {
 
   /** The size of the task set to consider a signal from spark about allocation */
   public final static String SPECIAL_TASK_SET_SIZE = "special.task.set.size";
-  public final static int DEFAULT_SPECIAL_TASK_SET_SIZE = 2;
+  /**
+   * Use an invalid default value, so that the "special task set" is only used by those
+   * who know what they're doing.
+   */
+  public final static int DEFAULT_SPECIAL_TASK_SET_SIZE = -1;
 
-  // Parameters for static operation (least usable system tests).
-  // Expects a comma-separated list of host:port pairs describing the address of the
-  // internal interface of the node monitors.
+  // Parameters for static operation.
+  /** Expects a comma-separated list of host:port pairs describing the address of the
+    * internal interface of the node monitors. */
   public final static String STATIC_NODE_MONITORS = "static.node_monitors";
   public final static String STATIC_APP_NAME = "static.app.name";
-  public final static String STATIC_SCHEDULERS = "static.frontends";
 
   public static final String GET_TASK_PORT = "get_task.port";
 }

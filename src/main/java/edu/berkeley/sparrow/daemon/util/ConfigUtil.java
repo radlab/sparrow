@@ -1,9 +1,7 @@
 package edu.berkeley.sparrow.daemon.util;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.configuration.Configuration;
@@ -44,25 +42,5 @@ public class ConfigUtil {
     }
 
     return backends;
-  }
-
-  /**
-   * Parses a list of schedulers from a {@code Configuration}
-   * @return
-   */
-  public static List<InetSocketAddress> parseSchedulers(Configuration conf) {
-    if (!conf.containsKey(SparrowConf.STATIC_SCHEDULERS)) {
-      throw new RuntimeException("Missing configuration frontend list.");
-    }
-    List<InetSocketAddress> frontends = new ArrayList<InetSocketAddress>();
-    for (String node: conf.getStringArray(SparrowConf.STATIC_SCHEDULERS)) {
-      Optional<InetSocketAddress> addr = Serialization.strToSocket(node);
-      if (!addr.isPresent()) {
-        LOG.warn("Bad scheduler address: " + node);
-        continue;
-      }
-      frontends.add(addr.get());
-    }
-    return frontends;
   }
 }

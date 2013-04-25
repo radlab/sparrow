@@ -2,6 +2,8 @@ Sparrow Scheduler
 ================================
 Sparrow is a high throughput, low latency, distributed cluster scheduler. Sparrow is designed for applications which require resource allocations frequently for very short jobs, such as analytics frameworks. To ensure that scheduling does not bottleneck such applications, we distributed scheduling over several loosely coordinated machines. Each scheduler employs a constant time scheduling algorithm based on mostly consistent information. These techniques let Sparrow perform task scheduling in milliseconds, two orders of magnitude faster than existing approaches.
 
+If you're interested in using Sparrow, we recommend that you join the [Sparrow mailing list](https://groups.google.com/group/sparrow-scheduler-users).
+
 
 Code Layout
 -------------------------
@@ -25,4 +27,4 @@ There are a variety of deployment related files in `sparrow/deploy/ec2`. These m
 
 Research
 -------------------------
-Sparrow is a research project within the [U.C. Berkeley AMPLab](http://amplab.cs.berkeley.edu/). The Sparrow team, listed roughly order of height, consists of Kay Ousterhout, Patrick Wendell, Matei Zaharia, and Ion Stoica. Plese contact us for more information.
+Sparrow is a research project within the [U.C. Berkeley AMPLab](http://amplab.cs.berkeley.edu/). The Sparrow team, listed roughly order of height, consists of Kay Ousterhout, Patrick Wendell, Matei Zaharia, and Ion Stoica. Please contact us for more information.

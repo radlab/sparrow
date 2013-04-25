@@ -315,8 +315,6 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
   tmp_dir = tempfile.mkdtemp()
 
   template_vars = {
-    "static_frontends": ",".join(["%s:12345" % i.public_dns_name \
-                                 for i in frontends]),
     "frontend_list": "\n".join(["%s" % i.public_dns_name \
                                  for i in frontends]),
     "static_backends": ",".join(["%s:20502" % i.public_dns_name \
