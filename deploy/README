@@ -27,12 +27,12 @@ $ java -XX:+UseConcMarkSweepGC -cp target/sparrow-1.0-SNAPSHOT.jar edu.berkeley.
 5) Start your application executor on all backends. To use the prototype
 backend, which can run either CPU-intensive or memory-intensive tasks for
 some period of time:
-$ java -cp sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoBackend
+$ java -cp target/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoBackend
 6) Start a frontend that submits scheduling requests to Sparrow. The current
 implementation assumes that there is a scheduler running on the same
 machine where the frontend is started, so frontends should only be started
 on machines where Sparrow is running.
-$ java -cp sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoFrontend
+$ java -cp target/sparrow-1.0-SNAPSHOT.jar edu.berkeley.sparrow.prototype.ProtoFrontend
 
 The frontend accepts a configuration file (by adding "-c conf_file" when
 starting the frontend) where you can specify various configuration options to
