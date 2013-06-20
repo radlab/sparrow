@@ -1,4 +1,3 @@
-import simulation
 import simulation_random
 import simulation_batch
 import simulation_centralized
@@ -19,19 +18,17 @@ def get_percentile(N, percent, key=lambda x:x):
     return d0 + d1
 
 NUM_JOBS = 10000
-DISTRIBUTION = util.TaskDistributions.EXP_TASKS
+DISTRIBUTION = util.TaskDistributions.EXP_JOBS
 
 loads = [0.1, 0.3, 0.5, 0.7, 0.8, 0.9, 0.95]
 loads.reverse()
 for load in loads:
     print "Running simulations at %s load" % load
-    simulation.UTILIZATION = load
-    simulation_random.UTILIZATION = load
-    simulation_batch.UTILIZATION = load
-    simulation_centralized.UTILIZATION = load
 
     print "Sparrow"
-    s = simulation.Simulation(NUM_JOBS, "sparrow_%s" % load, load, DISTRIBUTION)
+    simulation_cancellation.WORK_STEALING = False
+    simulation_cancellation.CANCELLATION = False
+    s = simulation_cancellation.Simulation(NUM_JOBS, "sparrow_%s" % load, load, DISTRIBUTION)
     s.run()
 
     print "Multi get"
@@ -39,8 +36,26 @@ for load in loads:
     s.run()
 
     print "Cancellation"
+    simulation_cancellation.WORK_STEALING = False
+    simulation_cancellation.CANCELLATION = True
     s = simulation_cancellation.Simulation(NUM_JOBS, "cancellation_%s" % load, load, DISTRIBUTION)
     s.run()
+
+    print "Work Stealing (1000 schedulers)"
+    simulation_cancellation.WORK_STEALING = True
+    simulation_cancellation.NUM_SCHEDULERS = 1000
+    simulation_cancellation.CANCELLATION = False
+    s = simulation_cancellation.Simulation(NUM_JOBS, "stealing_s1000_%s" % load, load, DISTRIBUTION)
+    s.run()
+
+    print "Work Stealing (10000 schedulers)"
+    simulation_cancellation.WORK_STEALING = True
+    simulation_cancellation.NUM_SCHEDULERS = 10000
+    simulation_cancellation.CANCELLATION = False
+    s = simulation_cancellation.Simulation(NUM_JOBS, "stealing_s10000_%s" % load, load, DISTRIBUTION)
+    s.run()
+
+    continue
 
     print "Random"
     s = simulation_random.Simulation(NUM_JOBS, "random_%s" % load, load, DISTRIBUTION)

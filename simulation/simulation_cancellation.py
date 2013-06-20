@@ -11,7 +11,7 @@ TASKS_PER_JOB = 500
 SLOTS_PER_WORKER = 1
 TOTAL_WORKERS = 10000
 PROBE_RATIO = 2
-CANCELLATION = True
+CANCELLATION = False
 WORK_STEALING = True
 NUM_SCHEDULERS = 1
 
@@ -126,7 +126,11 @@ class Worker(object):
         if WORK_STEALING:
             # Choose a random scheduler.
             scheduler = random.randint(0, NUM_SCHEDULERS - 1)
-            return self.simulation.get_any_task(self, scheduler, current_time)
+            new_task_events = self.simulation.get_any_task(self, scheduler, current_time)
+            self.free_slots -= len(new_task_events)
+            return new_task_events
+
+        return []
 
     def maybe_get_task(self, current_time):
         if len(self.queued_probes) > 0 and self.free_slots > 0:
@@ -160,6 +164,9 @@ class Simulation(object):
             self.workers.append(Worker(self, SLOTS_PER_WORKER, len(self.workers)))
         self.worker_indices = range(TOTAL_WORKERS)
         self.task_distribution = task_distribution
+
+        self.tasks_stolen = 0
+        self.attempted_tasks_stolen = 0
 
     def send_probes(self, job, current_time):
         """ Send probes to acquire load information, in order to schedule a job. """
@@ -211,10 +218,12 @@ class Simulation(object):
 
     def get_any_task(self, worker, scheduler, current_time):
         """ Used by an idle worker, to attempt to steal extra work. """
+        self.attempted_tasks_stolen += 1
         unscheduled_jobs = self.unscheduled_jobs[scheduler]
         if len(unscheduled_jobs) == 0:
             return []
 
+        self.tasks_stolen += 1
         response_time = current_time + 2*NETWORK_DELAY
         return self.get_task_for_job(unscheduled_jobs[0], worker, response_time)
 
@@ -240,8 +249,14 @@ class Simulation(object):
             for new_event in new_events:
                 self.event_queue.put(new_event)
 
-        print ("Simulation ended after %s milliseconds (%s jobs started)" %
-               (last_time, len(self.jobs)))
+        print ("Simulation ended after %s milliseconds (%s jobs started, %s tasks stolen)" %
+               (last_time, len(self.jobs), self.tasks_stolen))
+
+        tasks_stolen_file = open("%s_tasks_stolen" % self.file_prefix, "w")
+        tasks_stolen_file.write("Attempts: %s, successes: %s\n" %
+                                (self.attempted_tasks_stolen, self.tasks_stolen))
+        tasks_stolen_file.close()
+
         complete_jobs = [j for j in self.jobs.values() if j.completed_tasks_count == j.num_tasks]
         print "%s complete jobs" % len(complete_jobs)
         response_times = [job.end_time - job.start_time for job in complete_jobs
@@ -256,7 +271,7 @@ class Simulation(object):
 
 def main():
     logging.basicConfig(level=logging.INFO)
-    sim = Simulation(10000, "ws_cancellation", 0.95, TaskDistributions.EXP_TASKS)
+    sim = Simulation(100, "ws_cancellation", 0.95, TaskDistributions.EXP_TASKS)
     sim.run()
 
 if __name__ == "__main__":
