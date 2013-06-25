@@ -1,5 +1,6 @@
 """ Simulates a central scheduler with a complete cluster view. """
 
+import logging
 import math
 import numpy
 import random
@@ -8,9 +9,9 @@ from util import Job, TaskDistributions
 
 MEDIAN_TASK_DURATION = 100
 NETWORK_DELAY = 1
-TASKS_PER_JOB = 500
+TASKS_PER_JOB = 10
 SLOTS_PER_WORKER = 4
-TOTAL_WORKERS = 10000
+TOTAL_WORKERS = 100
 
 def get_percentile(N, percent, key=lambda x:x):
     if not N:
@@ -97,6 +98,8 @@ class Simulation(object):
             job = self.unscheduled_jobs[0]
             task_duration = job.unscheduled_tasks[0]
             job.unscheduled_tasks = job.unscheduled_tasks[1:]
+            if len(job.unscheduled_tasks) == 0:
+                logging.info("Finished scheduling tasks for job %s" % job.id)
             #print ("Launching task for job %s at %s (duration %s); %s remaining slots" %
             #       (job.id, current_time + NETWORK_DELAY, task_duration, self.num_free_slots))
             task_end_time = current_time + task_duration + NETWORK_DELAY
@@ -140,7 +143,8 @@ class Simulation(object):
         return response_times
 
 def main():
-    sim = Simulation(10000, "centralized", 0.95, TaskDistributions.CONSTANT)
+    logging.basicConfig(level=logging.INFO)
+    sim = Simulation(100000, "centralized", 0.95, TaskDistributions.CONSTANT)
     sim.run()
 
 if __name__ == "__main__":

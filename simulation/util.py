@@ -13,6 +13,8 @@ class Job(object):
         self.start_time = start_time
         self.end_time = start_time
         self.unscheduled_tasks = []
+        self.time_all_tasks_scheduled = 0
+        self.last_probe_reply_time= 0
         # Change this line to change to distribution of task durations.
         if task_distribution == TaskDistributions.EXP_TASKS:
             self.exponentially_distributed_tasks(median_task_duration)
@@ -24,6 +26,14 @@ class Job(object):
 
         self.scheduler = scheduler
         self.probed_workers = set()
+
+    def add_probe_response(self, worker, current_time):
+        self.probed_workers.remove(worker.id)
+        assert current_time >= self.last_probe_reply_time
+        self.last_probe_reply_time = current_time
+        if len(self.unscheduled_tasks) > 0:
+            assert current_time >= self.time_all_tasks_scheduled
+            self.time_all_tasks_scheduled = current_time
 
     def task_completed(self, completion_time):
         """ Returns true if the job has completed, and false otherwise. """

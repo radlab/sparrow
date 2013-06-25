@@ -5,6 +5,7 @@ import util
 
 class TestMultiGetSimulation(unittest.TestCase):
     def setUp(self):
+        simulation_cancellation.CANCELLATION = True
         self.simulation = simulation_cancellation.Simulation(5, "", 0.9,
                                                              util.TaskDistributions.CONSTANT)
 

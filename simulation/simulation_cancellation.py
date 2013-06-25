@@ -7,9 +7,9 @@ from util import Job, TaskDistributions
 
 MEDIAN_TASK_DURATION = 100
 NETWORK_DELAY = 1
-TASKS_PER_JOB = 500
-SLOTS_PER_WORKER = 1
-TOTAL_WORKERS = 10000
+TASKS_PER_JOB = 10
+SLOTS_PER_WORKER = 4
+TOTAL_WORKERS = 100
 PROBE_RATIO = 2
 CANCELLATION = False
 WORK_STEALING = True
@@ -101,16 +101,24 @@ class CancellationEvent():
         self.job_id = job_id
 
     def run(self, current_time):
-        self.worker.cancel_probe(self.job_id)
+        self.worker.cancel_probe(self.job_id, current_time)
         return []
 
 class Worker(object):
     def __init__(self, simulation, num_slots, id):
         self.simulation = simulation
-        self.free_slots = num_slots
+
+        # List of times when slots were freed, for each free slot (used to track the time
+        # the worker spends idle).
+        self.free_slots = []
+        while len(self.free_slots) < num_slots:
+            self.free_slots.append(0)
+        self.idle_ms = 0
+
         # Just a list of job ids!
         self.queued_probes = []
         self.id = id
+        self.successful_cancellations = 0
 
     def add_probe(self, job_id, current_time):
         self.queued_probes.append(job_id)
@@ -118,7 +126,7 @@ class Worker(object):
 
     def free_slot(self, current_time):
         """ Frees a slot on the worker and attempts to launch another task in that slot. """
-        self.free_slots += 1
+        self.free_slots.append(current_time)
         get_task_events = self.maybe_get_task(current_time)
         if len(get_task_events) > 0:
             return get_task_events
@@ -126,25 +134,37 @@ class Worker(object):
         if WORK_STEALING:
             # Choose a random scheduler.
             scheduler = random.randint(0, NUM_SCHEDULERS - 1)
+            time_slot_freed = self.free_slots.pop(0)
+            self.idle_ms += current_time - time_slot_freed
             new_task_events = self.simulation.get_any_task(self, scheduler, current_time)
-            self.free_slots -= len(new_task_events)
+            assert len(new_task_events) >= 1
             return new_task_events
 
         return []
 
     def maybe_get_task(self, current_time):
-        if len(self.queued_probes) > 0 and self.free_slots > 0:
+        if len(self.queued_probes) > 0 and len(self.free_slots) > 0:
             # Account for "running" task
-            self.free_slots -= 1
+            time_slot_freed = self.free_slots.pop(0)
+            self.idle_ms += current_time - time_slot_freed
+
             job_id = self.queued_probes[0]
             self.queued_probes = self.queued_probes[1:]
 
             return self.simulation.get_task(job_id, self, current_time)
         return []
 
-    def cancel_probe(self, job_id):
+    def cancel_probe(self, job_id, current_time):
+        logging.debug("Attempting to cancel probe for job %s on worker %s (queue: %s) at %s" %
+                      (job_id, self.id, self.queued_probes, current_time))
         if job_id in self.queued_probes:
             self.queued_probes.remove(job_id)
+            self.successful_cancellations += 1
+
+    def finish_simulation(self, current_time):
+        """ Completes the simulation by adding the idle time at the end. """
+        for time_freed in self.free_slots:
+            self.idle_ms += time_freed - current_time
 
 class Simulation(object):
     def __init__(self, num_jobs, file_prefix, load, task_distribution):
@@ -168,6 +188,11 @@ class Simulation(object):
         self.tasks_stolen = 0
         self.attempted_tasks_stolen = 0
 
+        self.attempted_cancellations = 0
+
+        self.successful_get_tasks = 0
+        self.total_get_tasks = 0
+
     def send_probes(self, job, current_time):
         """ Send probes to acquire load information, in order to schedule a job. """
         self.jobs[job.id] = job
@@ -183,14 +208,12 @@ class Simulation(object):
         return probe_events
 
     def get_task(self, job_id, worker, current_time):
+        self.total_get_tasks += 1
         job = self.jobs[job_id]
-        if worker.id in job.probed_workers:
-            # The worker id might not be in probed_workers if the cancellation was already sent.
-            logging.debug("Attempting to remove %s from probed workers (%s) for job %s" %
-                          (worker.id, job.probed_workers, job_id))
-            job.probed_workers.remove(worker.id)
+        job.add_probe_response(worker, current_time)
         response_time = current_time + 2*NETWORK_DELAY
         if len(job.unscheduled_tasks) > 0:
+            self.successful_get_tasks += 1
             return self.get_task_for_job(job, worker, response_time)
         else:
             return [(response_time, NoopGetTaskResponseEvent(worker))]
@@ -198,8 +221,7 @@ class Simulation(object):
     def get_task_for_job(self, job, worker, response_time):
         assert len(job.unscheduled_tasks) > 0
         events = []
-        task_duration = job.unscheduled_tasks[0]
-        job.unscheduled_tasks = job.unscheduled_tasks[1:]
+        task_duration = job.unscheduled_tasks.pop(0)
 
         task_end_time = task_duration + response_time
         self.add_task_completion_time(job.id, task_end_time)
@@ -208,23 +230,27 @@ class Simulation(object):
         events.append((task_end_time, TaskEndEvent(worker)))
 
         if len(job.unscheduled_tasks) == 0:
+            logging.info("Finished scheduling tasks for job %s" % job.id)
             self.unscheduled_jobs[job.scheduler].remove(job)
             if CANCELLATION:
                 # Cancel remaining outstanding probes.
+                logging.debug("Cancelling probes for job %s (will arrive at %s)" %
+                              (job.id, response_time))
                 for worker_id in job.probed_workers:
-                    events.append((response_time, CancellationEvent(worker, job.id)))
-                job.probed_workers.clear()
+                    self.attempted_cancellations += 1
+                    events.append((response_time,
+                                   CancellationEvent(self.workers[worker_id], job.id)))
         return events
 
     def get_any_task(self, worker, scheduler, current_time):
         """ Used by an idle worker, to attempt to steal extra work. """
         self.attempted_tasks_stolen += 1
+        response_time = current_time + 2*NETWORK_DELAY
         unscheduled_jobs = self.unscheduled_jobs[scheduler]
         if len(unscheduled_jobs) == 0:
-            return []
+            return [(response_time, NoopGetTaskResponseEvent(worker))]
 
         self.tasks_stolen += 1
-        response_time = current_time + 2*NETWORK_DELAY
         return self.get_task_for_job(unscheduled_jobs[0], worker, response_time)
 
     def add_task_completion_time(self, job_id, completion_time):
@@ -239,9 +265,9 @@ class Simulation(object):
         last_time = 0
         last_report = self.remaining_jobs
         while self.remaining_jobs > 0:
-            if self.remaining_jobs != last_report and self.remaining_jobs % 100 == 0:
-                print self.remaining_jobs, "jobs remaining"
-                last_report = self.remaining_jobs
+            #if self.remaining_jobs != last_report and self.remaining_jobs % 100 == 0:
+            #    print self.remaining_jobs, "jobs remaining"
+            #    last_report = self.remaining_jobs
             current_time, event = self.event_queue.get()
             assert current_time >= last_time
             last_time = current_time
@@ -249,8 +275,36 @@ class Simulation(object):
             for new_event in new_events:
                 self.event_queue.put(new_event)
 
+        for worker in self.workers:
+            worker.finish_simulation(last_time)
+        total_slot_ms = len(self.workers) * SLOTS_PER_WORKER * last_time
+        total_idle_ms = sum([x.idle_ms for x in self.workers])
+        fraction_idle = total_idle_ms * 1.0 / total_slot_ms
+
+        rtt = 2 * NETWORK_DELAY
+        total_failed_get_task_ms = (self.total_get_tasks - self.successful_get_tasks) * rtt
+        fraction_failed_get_task = total_failed_get_task_ms * 1.0 / total_slot_ms
+
+        total_failed_stolen_ms = (self.attempted_tasks_stolen - self.tasks_stolen) * rtt
+        fraction_failed_stolen = total_failed_stolen_ms * 1.0 / total_slot_ms
+
+        total_successful_get_task_ms = self.successful_get_tasks * rtt
+        fraction_successful_get_task = total_successful_get_task_ms * 1.0 / total_slot_ms
+        total_successful_stolen_ms = self.tasks_stolen * 2 * NETWORK_DELAY
+        fraction_successful_stolen = total_successful_stolen_ms * 1.0 / total_slot_ms
+        print (("Idle time: %s (%s), failed get task time: %s (%s), failed steals time: %s (%s), "
+                "successful GetTask()s: %s (%s), successful steals: %s (%s), (total: %s)") %
+               (total_idle_ms, fraction_idle, total_failed_get_task_ms, fraction_failed_get_task,
+                total_failed_stolen_ms, fraction_failed_stolen,
+                total_successful_get_task_ms, fraction_successful_get_task,
+                total_successful_stolen_ms, fraction_successful_stolen,
+                fraction_idle + fraction_failed_get_task + fraction_failed_stolen +
+                fraction_successful_get_task + fraction_successful_stolen))
         print ("Simulation ended after %s milliseconds (%s jobs started, %s tasks stolen)" %
                (last_time, len(self.jobs), self.tasks_stolen))
+        total_successful_cancellations = sum([x.successful_cancellations for x in self.workers])
+        print ("%s/%s cancellations successful" %
+               (total_successful_cancellations, self.attempted_cancellations))
 
         tasks_stolen_file = open("%s_tasks_stolen" % self.file_prefix, "w")
         tasks_stolen_file.write("Attempts: %s, successes: %s\n" %
@@ -265,13 +319,17 @@ class Simulation(object):
         plot_cdf(response_times, "%s_response_times.data" % self.file_prefix)
         print "Average response time: ", numpy.mean(response_times)
 
+        cancellation_time_window = [job.last_probe_reply_time - job.time_all_tasks_scheduled
+                                    for job in complete_jobs]
+        plot_cdf(cancellation_time_window, "%s_cancellation_window.data" % self.file_prefix)
+
         longest_tasks = [job.longest_task for job in complete_jobs]
         plot_cdf(longest_tasks, "%s_ideal_response_time.data" % self.file_prefix)
         return response_times
 
 def main():
-    logging.basicConfig(level=logging.INFO)
-    sim = Simulation(100, "ws_cancellation", 0.95, TaskDistributions.EXP_TASKS)
+    logging.basicConfig(level=logging.ERROR)
+    sim = Simulation(100000, "ws_cancellation", 0.95, TaskDistributions.EXP_JOBS)
     sim.run()
 
 if __name__ == "__main__":
