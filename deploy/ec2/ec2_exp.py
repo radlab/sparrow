@@ -18,7 +18,7 @@ def parse_args(force_action=True):
   parser.add_option("-a", "--ami", default="ami-9778cefe",
       help="Amazon Machine Image ID to use")
   parser.add_option("-t", "--instance-type", default="m2.2xlarge",
-      help="Type of instance to launch (default: m1.large). " +
+      help="Type of instance to launch (default: m2.2xlarge). " +
            "WARNING: must be 64 bit, thus small instances won't work")
   parser.add_option("-l", "--arrival-rate", type="float", default=1,
       help = "Arrival rate of jobs in proto frontends (jobs/s)")
@@ -75,8 +75,9 @@ def parse_args(force_action=True):
   """
   parser.add_option("-r", "--parallelism", type="int", default=8,
       help="Level of parallelism for dummy queries.")
-  parser.add_option("-u", "--num_partitions", type="int", default=2,
-      help="Number of partitions for shark tables.")
+  parser.add_option("-u", "--num_partitions", type="int", default=-1,
+      help="Number of partitions for shark tables. Also used to determine"
+           " when to use the Sparrow 'special case' code.")
 
   (opts, args) = parser.parse_args()
   if len(args) < 2 and force_action:
@@ -87,8 +88,8 @@ def parse_args(force_action=True):
                           "must be set")
     sys.exit(1)
   if os.getenv('AWS_SECRET_ACCESS_KEY') == None:
-    print >> sys.stderr ("ERROR: The environment variable " +
-                         "AWS_SECRET_ACCESS_KEY must be set")
+    print >> sys.stderr, ("ERROR: The environment variable " +
+                          "AWS_SECRET_ACCESS_KEY must be set")
     sys.exit(1)
 
   return (opts, args)

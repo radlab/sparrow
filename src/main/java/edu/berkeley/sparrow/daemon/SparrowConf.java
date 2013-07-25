@@ -18,6 +18,13 @@ public class SparrowConf {
   public final static String SCHEDULER_STATE_THRIFT_THREADS =
       "scheduler.state.thrift.threads";
 
+  /**
+   * Whether the scheduler should cancel outstanding reservations when all of a job's tasks have
+   * been scheduled.  Should be set to "true" or "false".
+   */
+  public final static String CANCELLATION = "cancellation";
+  public final static boolean DEFAULT_CANCELLATION = true;
+
   /* List of ports corresponding to node monitors (backend interface) this daemon is
    * supposed to run. In most deployment scenarios this will consist of a single port,
    * or will be left unspecified in favor of the default port. */

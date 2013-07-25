@@ -16,6 +16,7 @@ import edu.berkeley.sparrow.daemon.util.Serialization;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.InternalService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService;
+import edu.berkeley.sparrow.thrift.TCancelTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 
@@ -102,5 +103,11 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
   public boolean enqueueTaskReservations(TEnqueueTaskReservationsRequest request)
       throws TException {
     return nodeMonitor.enqueueTaskReservations(request);
+  }
+
+  @Override
+  public void cancelTaskReservations(TCancelTaskReservationsRequest request)
+      throws TException {
+    nodeMonitor.cancelTaskReservations(request.requestId);
   }
 }

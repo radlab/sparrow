@@ -135,6 +135,12 @@ public class NodeMonitor {
     return true;
   }
 
+  public void cancelTaskReservations(String requestId) {
+    int numReservationsCancelled = scheduler.cancelTaskReservations(requestId);
+    AUDIT_LOG.debug(Logging.auditEventString(
+        "node_monitor_cancellation", ipAddress, requestId, numReservationsCancelled));
+  }
+
   private class sendFrontendMessageCallback implements
   AsyncMethodCallback<sendFrontendMessage_call> {
     private InetSocketAddress frontendSocket;

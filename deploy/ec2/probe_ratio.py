@@ -14,24 +14,24 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [0.8]
+    utilizations = [0.9]
     sample_ratios = [2.0]
     sample_ratio_constrained = 1
 
     # Amount of time it takes each task to run in isolation
     task_duration_ms = 100
-    tasks_per_job = 1
+    tasks_per_job = 2
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "debugging"
+    sparrow_branch = "cancellation"
     nm_task_scheduler = "fifo"
-    num_backends = 4
-    num_frontends = 1
+    num_backends = 20
+    num_frontends = 2
     cores_per_backend = 4
     # Run each trial for 5 minutes.
     trial_length = 500
     num_preferred_nodes = 0
     num_users = 1
-    cluster = "probe_ratio"
+    cluster = "cancel"
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
                                (task_duration_ms * tasks_per_job * num_frontends))
@@ -43,8 +43,8 @@ def main(argv):
 
     if launch_instances:
         print "********Launching instances..."
-        run_cmd("./ec2-exp.sh launch %s -f %s -b %s -i %s --spot-price %s" %
-                (cluster, num_frontends, num_backends, private_ssh_key, 0.3))
+        run_cmd("./ec2-exp.sh launch %s -f %s -b %s -i %s" % # --spot-price %s" %
+                (cluster, num_frontends, num_backends, private_ssh_key))
         time.sleep(10)
 
     for sample_ratio in sample_ratios:
@@ -60,8 +60,6 @@ def main(argv):
             opts.sample_ratio_constrained = sample_ratio_constrained
             opts.tasks_per_job = tasks_per_job
             opts.num_preferred_nodes = num_preferred_nodes
-            opts.ami = "ami-a658c0cf"
-            opts.instance_type = "cc2.8xlarge"
 
             conn = boto.connect_ec2()
             frontends, backends = ec2_exp.find_existing_cluster(conn, opts, cluster)
@@ -81,7 +79,7 @@ def main(argv):
             ec2_exp.start_proto(frontends, backends, opts)
             time.sleep(trial_length)
 
-            log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/030413_%s_%s" % (utilization, sample_ratio)
+            log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/cancellation_%s_%s" % (utilization, sample_ratio)
             while os.path.exists(log_dirname):
                 log_dirname = "%s_a" % log_dirname
             os.mkdir(log_dirname)

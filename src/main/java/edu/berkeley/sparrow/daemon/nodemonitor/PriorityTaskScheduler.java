@@ -1,5 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 import java.util.Queue;
@@ -10,7 +11,7 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Maps;
 
 /**
- * A {@link TaskScheduler} which launches tasks in strict priority order. Priorities are
+ * A {@link TaskScheduler} that launches tasks in strict priority order. Priorities are
  * integral values specified in the scheduling request.
  *
  * TODO: Would be better to pre-configure priorities -- users shouldn't be able to specify
@@ -64,6 +65,22 @@ public class PriorityTaskScheduler extends TaskScheduler {
               " total reservations queued.");
     reservations.add(taskReservation);
     return ++numQueuedReservations;
+  }
+
+  @Override
+  synchronized int cancelTaskReservations(String requestId) {
+    int numReservationsCancelled = 0;
+    for (Queue<TaskSpec> taskSpecs : priorityQueues.values()) {
+      Iterator<TaskSpec> iterator = taskSpecs.iterator();
+      while (iterator.hasNext()) {
+        TaskSpec reservation = iterator.next();
+        if (reservation.requestId == requestId) {
+          ++numReservationsCancelled;
+          iterator.remove();
+        }
+      }
+    }
+    return numReservationsCancelled;
   }
 
   @Override

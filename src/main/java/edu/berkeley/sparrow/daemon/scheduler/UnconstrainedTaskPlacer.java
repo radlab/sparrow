@@ -4,10 +4,11 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -30,11 +31,11 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
   /** Specifications for tasks that have not yet been launched. */
   List<TTaskLaunchSpec> unlaunchedTasks;
 
-  /**
-   * Number of outstanding reservations. Used to determine when all reservations have been
-   * responded to.
-   */
-  AtomicInteger numOutstandingReservations;
+  /** Nodes with outstanding reservations. */
+  Set<THostPort> nodeMonitorsOutstanding;
+
+  /** Whether the remaining reservations have been cancelled. */
+  boolean cancelled;
 
   /**
    * Id of the request associated with this task placer.
@@ -46,8 +47,9 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
   UnconstrainedTaskPlacer(String requestId, double probeRatio) {
     this.requestId = requestId;
     this.probeRatio = probeRatio;
-    unlaunchedTasks = Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>());
-    this.numOutstandingReservations = new AtomicInteger(0);
+    unlaunchedTasks = new LinkedList<TTaskLaunchSpec>();
+    nodeMonitorsOutstanding = new HashSet<THostPort>();
+    cancelled = false;
   }
 
   @Override
@@ -73,12 +75,6 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
     }
     nodeList = nodeList.subList(0, reservationsToLaunch);
 
-    StringBuilder debugString = new StringBuilder();
-    for (InetSocketAddress node : nodeList) {
-      debugString.append(node);
-      debugString.append(";");
-    }
-
     for (TTaskSpec task : schedulingRequest.getTasks()) {
       TTaskLaunchSpec taskLaunchSpec = new TTaskLaunchSpec(task.getTaskId(),
                                                            task.bufferForMessage());
@@ -87,39 +83,49 @@ public class UnconstrainedTaskPlacer implements TaskPlacer {
 
     HashMap<InetSocketAddress, TEnqueueTaskReservationsRequest> requests = Maps.newHashMap();
 
+    StringBuilder debugString = new StringBuilder();
     for (InetSocketAddress node : nodeList) {
+      debugString.append(node);
+      debugString.append(";");
+      nodeMonitorsOutstanding.add(
+          new THostPort(node.getAddress().getHostAddress(), node.getPort()));
       TEnqueueTaskReservationsRequest request = new TEnqueueTaskReservationsRequest(
           schedulingRequest.getApp(), schedulingRequest.getUser(), requestId, schedulerAddress, 1);
       requests.put(node, request);
     }
 
-    numOutstandingReservations.set(requests.size());
     LOG.debug("Request " + requestId + ": Launching enqueueReservation on " +
         nodeList.size() + " node monitors: " + debugString.toString());
-
     return requests;
   }
 
   @Override
   public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
-    numOutstandingReservations.decrementAndGet();
-    synchronized(unlaunchedTasks) {
-      if (unlaunchedTasks.isEmpty()) {
-        LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-                 ": Not assigning a task (no remaining unlaunched tasks).");
-        return Lists.newArrayList();
-      } else {
-        TTaskLaunchSpec launchSpec = unlaunchedTasks.get(0);
-        unlaunchedTasks.remove(0);
-        LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-                  ": Assigning task");
-        return Lists.newArrayList(launchSpec);
-      }
+    nodeMonitorsOutstanding.remove(nodeMonitorAddress);
+    if (unlaunchedTasks.isEmpty()) {
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+               ": Not assigning a task (no remaining unlaunched tasks).");
+      return Lists.newArrayList();
+    } else {
+      TTaskLaunchSpec launchSpec = unlaunchedTasks.get(0);
+      unlaunchedTasks.remove(0);
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+                ": Assigning task");
+      return Lists.newArrayList(launchSpec);
     }
   }
 
   @Override
-  public boolean allResponsesReceived() {
-    return numOutstandingReservations.get() == 0;
+  public boolean allTasksPlaced() {
+    return unlaunchedTasks.isEmpty();
+  }
+
+  @Override
+  public Set<THostPort> getOutstandingNodeMonitorsForCancellation() {
+    if (!cancelled) {
+      cancelled = true;
+      return nodeMonitorsOutstanding;
+    }
+    return new HashSet<THostPort>();
   }
 }

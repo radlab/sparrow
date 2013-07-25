@@ -58,14 +58,15 @@ service FrontendService {
                        3: binary message);
 }
 
-# The InternalService exposes state about application backends to:
-# 1) Other Sparrow daemons
-# 2) The central state store
+# The InternalService exposes state about application backends to other Sparrow daemons.
 service InternalService {
   # Enqueues a reservation to launch the given number of tasks. The NodeMonitor sends
   # a GetTask() RPC to the given schedulerAddress when it is ready to launch a task, for each
   # enqueued task reservation. Returns whether or not the task was successfully enqueued.
   bool enqueueTaskReservations(1: types.TEnqueueTaskReservationsRequest request);
+
+  # Cancels reservations for jobs for which all tasks have already been launched.
+  void cancelTaskReservations(1: types.TCancelTaskReservationsRequest request);
 }
 
 service SchedulerStateStoreService {

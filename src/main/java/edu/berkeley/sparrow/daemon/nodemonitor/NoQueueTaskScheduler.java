@@ -20,6 +20,12 @@ public class NoQueueTaskScheduler extends TaskScheduler {
   }
 
   @Override
+  int cancelTaskReservations(String requestId) {
+    // Do nothing. No reservations cancelled.
+    return 0;
+  }
+
+  @Override
   protected void handleTaskFinished(String requestId, String taskId) {
     // Do nothing.
 

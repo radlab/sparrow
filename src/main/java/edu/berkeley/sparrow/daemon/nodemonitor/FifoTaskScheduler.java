@@ -1,5 +1,6 @@
 package edu.berkeley.sparrow.daemon.nodemonitor;
 
+import java.util.Iterator;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
@@ -24,8 +25,8 @@ public class FifoTaskScheduler extends TaskScheduler {
 
   @Override
   synchronized int handleSubmitTaskReservation(TaskSpec taskReservation) {
-    // This method and handleTaskCompleted() are synchronized to avoid race conditions between
-    // updating activeTasks and taskReservations.
+    // This method, cancelTaskReservations(), and handleTaskCompleted() are synchronized to avoid
+    // race conditions between updating activeTasks and taskReservations.
     if (activeTasks < maxActiveTasks) {
       if (taskReservations.size() > 0) {
         String errorMessage = "activeTasks should be less than maxActiveTasks only " +
@@ -50,6 +51,20 @@ public class FifoTaskScheduler extends TaskScheduler {
       LOG.fatal(e);
     }
     return queuedReservations;
+  }
+
+  @Override
+  synchronized int cancelTaskReservations(String requestId) {
+    int numReservationsCancelled = 0;
+    Iterator<TaskSpec> reservationsIterator = taskReservations.iterator();
+    while (reservationsIterator.hasNext()) {
+      TaskSpec reservation = reservationsIterator.next();
+      if (reservation.requestId == requestId) {
+        reservationsIterator.remove();
+        ++numReservationsCancelled;
+      }
+    }
+    return numReservationsCancelled;
   }
 
   @Override
