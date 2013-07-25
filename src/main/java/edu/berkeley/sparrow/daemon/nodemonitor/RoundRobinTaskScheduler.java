@@ -2,6 +2,7 @@ package edu.berkeley.sparrow.daemon.nodemonitor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -73,6 +74,22 @@ public class RoundRobinTaskScheduler extends TaskScheduler {
               " total reservations queued.");
     reservations.add(taskReservation);
     return ++numQueuedReservations;
+  }
+
+  @Override
+  synchronized int cancelTaskReservations(String requestId) {
+    int numReservationsCancelled = 0;
+    for (Queue<TaskSpec> taskReservations : userQueues.values()) {
+      Iterator<TaskSpec> iterator = taskReservations.iterator();
+      while (iterator.hasNext()) {
+        TaskSpec reservation = iterator.next();
+        if (reservation.requestId == requestId) {
+          iterator.remove();
+          ++numReservationsCancelled;
+        }
+      }
+    }
+    return numReservationsCancelled;
   }
 
   @Override

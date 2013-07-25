@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -36,15 +37,24 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   private Set<TTaskLaunchSpec> launchedConstrainedTasks;
 
   /**
-   * For each backend machine, the constrained tasks that can be launched there. Unconstrained
+   * For each node monitor, the constrained tasks that can be launched there. Unconstrained
    * tasks will never appear in this mapping.  Constrained tasks for which
    * reservations were made on the backend are placed at the beginning of the list; any other
    * constrained tasks that can run on the backend are placed at the end of the list.
    */
   private Map<THostPort, List<TTaskLaunchSpec>> unlaunchedConstrainedTasks;
 
-  /** Total number of outstanding reservations. */
-  private int numOutstandingReservations;
+  /**
+   * For each node monitor where reservations were enqueued, the number of reservations that were
+   * enqueued there.
+   */
+  private Map<THostPort, Integer> outstandingReservations;
+
+  /** Whether the remaining reservations have been cancelled. */
+  boolean cancelled;
+
+  /** Number of tasks that still need to be placed. */
+  private int numRemainingTasks;
 
   private double probeRatio;
 
@@ -60,10 +70,10 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   ConstrainedTaskPlacer(String requestId, double probeRatio){
     this.requestId = requestId;
     this.probeRatio = probeRatio;
-    launchedConstrainedTasks = Collections.synchronizedSet(new HashSet<TTaskLaunchSpec>());
-    unlaunchedConstrainedTasks = Maps.newConcurrentMap();
-    numOutstandingReservations = 0;
+    launchedConstrainedTasks = new HashSet<TTaskLaunchSpec>();
+    unlaunchedConstrainedTasks = new HashMap<THostPort, List<TTaskLaunchSpec>>();
     unlaunchedUnconstrainedTasks = Lists.newArrayList();
+    outstandingReservations = new HashMap<THostPort, Integer>();
   }
 
   @Override
@@ -72,6 +82,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       TSchedulingRequest schedulingRequest, String requestId,
       Collection<InetSocketAddress> nodes, THostPort schedulerAddress) {
     LOG.debug(Logging.functionCall(schedulingRequest, requestId, nodes, schedulerAddress));
+    numRemainingTasks = schedulingRequest.getTasksSize();
 
     // Tracks number of tasks to be enqueued at each node monitor.
     HashMap<InetSocketAddress, TEnqueueTaskReservationsRequest> requests = Maps.newHashMap();
@@ -114,7 +125,7 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
         THostPort hostPort = new THostPort(addr.getAddress().getHostAddress(), addr.getPort());
         if (!unlaunchedConstrainedTasks.containsKey(hostPort)) {
           unlaunchedConstrainedTasks.put(
-              hostPort, Collections.synchronizedList(new LinkedList<TTaskLaunchSpec>()));
+              hostPort, new LinkedList<TTaskLaunchSpec>());
         }
 
         if (numEnqueuedNodes < probeRatio) {
@@ -129,7 +140,6 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
             // created.
             requests.get(addr).numTasks += 1;
           }
-          numOutstandingReservations++;
 
           unlaunchedConstrainedTasks.get(hostPort).add(0, taskLaunchSpec);
           numEnqueuedNodes += 1;
@@ -162,7 +172,18 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           schedulerAddress, nodes, requests);
     }
 
+    populateOutstandingReservations(requests);
+
     return requests;
+  }
+
+  private void populateOutstandingReservations(
+      Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests) {
+    for (Entry<InetSocketAddress, TEnqueueTaskReservationsRequest> entry: requests.entrySet()) {
+      THostPort hostPort = new THostPort(
+          entry.getKey().getAddress().getHostAddress(), entry.getKey().getPort());
+      outstandingReservations.put(hostPort, entry.getValue().numTasks);
+    }
   }
 
   /**
@@ -201,7 +222,6 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
           appId, user, requestId, schedulerAddress, 1);
       requests.put(nodeMonitor, request);
       reservationsCreated++;
-      numOutstandingReservations += 1;
 
       if (reservationsCreated >= reservationsToLaunch) {
         break;
@@ -256,9 +276,39 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   }
 
   @Override
-  public synchronized List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
-    numOutstandingReservations--;
-    if (!unlaunchedConstrainedTasks.containsKey(nodeMonitorAddress)) {
+  public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress) {
+    assert outstandingReservations.containsKey(nodeMonitorAddress);
+    Integer numOutstandingReservations = outstandingReservations.get(nodeMonitorAddress);
+    if (numOutstandingReservations == 1) {
+      outstandingReservations.remove(nodeMonitorAddress);
+    } else {
+      outstandingReservations.put(nodeMonitorAddress, numOutstandingReservations - 1);
+    }
+
+    TTaskLaunchSpec taskSpec = getConstrainedTask(nodeMonitorAddress);
+    if (taskSpec != null) {
+      this.launchedConstrainedTasks.add(taskSpec);
+      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+          ": Assigning task.");
+      --numRemainingTasks;
+      assert numRemainingTasks >= 0;
+      return Lists.newArrayList(taskSpec);
+    } else {
+      List<TTaskLaunchSpec> taskSpecs = getUnconstrainedTask(nodeMonitorAddress);
+      numRemainingTasks -= taskSpecs.size();
+      assert numRemainingTasks >= 0;
+      return taskSpecs;
+    }
+  }
+
+  /**
+   * Returns an unlaunched task that is constrained to run on the given node.
+   *
+   * Returns null if no such task exists.
+   */
+  private TTaskLaunchSpec getConstrainedTask(THostPort nodeMonitorAddress) {
+    List<TTaskLaunchSpec> taskSpecs = unlaunchedConstrainedTasks.get(nodeMonitorAddress);
+    if (taskSpecs == null) {
       StringBuilder nodeMonitors = new StringBuilder();
       for (THostPort nodeMonitor: unlaunchedConstrainedTasks.keySet()) {
         if (nodeMonitors.length() > 0) {
@@ -269,46 +319,23 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
           ": Node monitor not in the set of node monitors where constrained tasks were " +
           "enqueued: " + nodeMonitors.toString() +
-          "; attempting to launch an unconstrainted task).");
+          "; attempting to launch an unconstrained task).");
+      return null;
+    }
 
-      List<TTaskLaunchSpec> unconstrainedTasks = getUnconstrainedTasks(nodeMonitorAddress);
-
-      if (unconstrainedTasks.size() == 0) {
-        LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-            ": no remaining unconstrained tasks).");
-        return Lists.newArrayList();
-      } else {
-        return unconstrainedTasks;
+    while (!taskSpecs.isEmpty()) {
+      TTaskLaunchSpec currentSpec = taskSpecs.remove(0);
+      if (!this.launchedConstrainedTasks.contains(currentSpec)) {
+        return currentSpec;
       }
     }
-    List<TTaskLaunchSpec> taskSpecs = unlaunchedConstrainedTasks.get(nodeMonitorAddress);
-    TTaskLaunchSpec taskSpec = null;
-    synchronized(taskSpecs) {
-      // Try to find a task that hasn't been launched yet.
-      do {
-        if (!taskSpecs.isEmpty()) {
-          taskSpec = taskSpecs.get(0);
-          taskSpecs.remove(0);
-        } else {
-          taskSpec = null;
-        }
-      } while (taskSpec != null && this.launchedConstrainedTasks.contains(taskSpec));
-    }
-
-    if (taskSpec != null) {
-      this.launchedConstrainedTasks.add(taskSpec);
-      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-          ": Assigning task.");
-      return Lists.newArrayList(taskSpec);
-    } else {
-      LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
-          ": Not assigning a constrained task (no remaining unlaunched tasks that prefer " +
-          "this node).");
-      return getUnconstrainedTasks(nodeMonitorAddress);
-    }
+    LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
+        ": Not assigning a constrained task (no remaining unlaunched tasks that prefer " +
+        "this node).");
+    return null;
   }
 
-  private List<TTaskLaunchSpec> getUnconstrainedTasks(THostPort nodeMonitorAddress) {
+  private List<TTaskLaunchSpec> getUnconstrainedTask(THostPort nodeMonitorAddress) {
     if (this.unlaunchedUnconstrainedTasks.size() == 0) {
       LOG.debug("Request " + requestId + ", node monitor " + nodeMonitorAddress.toString() +
                 ": Not assigning a task (no remaining unconstrained unlaunched tasks)");
@@ -322,7 +349,16 @@ public class ConstrainedTaskPlacer implements TaskPlacer {
   }
 
   @Override
-  public synchronized boolean allResponsesReceived() {
-    return numOutstandingReservations == 0;
+  public boolean allTasksPlaced() {
+    return numRemainingTasks == 0;
+  }
+
+  @Override
+  public Set<THostPort> getOutstandingNodeMonitorsForCancellation() {
+    if (!cancelled) {
+      cancelled = true;
+      return outstandingReservations.keySet();
+    }
+    return new HashSet<THostPort>();
   }
 }

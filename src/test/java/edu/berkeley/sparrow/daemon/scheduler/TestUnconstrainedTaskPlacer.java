@@ -33,11 +33,35 @@ public class TestUnconstrainedTaskPlacer {
   private static final int PRIORITY = 0;
   private static final String REQUEST_ID = "request id";
   private static final THostPort SCHEDULER_ADDRESS = new THostPort("localhost", 12345);
+  private static final int NUM_TASKS = 2;
+  private static final double PROBE_RATIO = 1.5;
+  private static TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
+  private static List<TTaskSpec> tasks;
+  Set<String> taskIds;
+  private static List<InetSocketAddress> backendNodes;
 
   @Before
   public void setUp() throws Exception {
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
+
+    tasks = Lists.newArrayList();
+    taskIds = Sets.newHashSet();
+    ByteBuffer message = ByteBuffer.allocate(1);
+    TPlacementPreference placementPreference = new TPlacementPreference();
+    for (int i = 0; i < NUM_TASKS; ++i) {
+      String id = "test task " + i;
+      taskIds.add(id);
+      tasks.add(new TTaskSpec(id, placementPreference, message));
+    }
+
+    backendNodes = Lists.newArrayList();
+    backendNodes.add(new InetSocketAddress("3.4.5.6", 174));
+    backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
+    backendNodes.add(new InetSocketAddress("123.4.5.6", 20000));
+    backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
+    backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
+    backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
   }
 
   /**
@@ -46,29 +70,7 @@ public class TestUnconstrainedTaskPlacer {
    */
   @Test
   public void sanityCheckEnqueueTaskReservations() {
-    final double PROBE_RATIO = 1.5;
-
-    final int NUM_TASKS = 2;
-    List<TTaskSpec> tasks = Lists.newArrayList();
-    ByteBuffer message = ByteBuffer.allocate(1);
-    TPlacementPreference placementPreference = new TPlacementPreference();
-    Set<String> taskIds = Sets.newHashSet();
-    for (int i = 0; i < NUM_TASKS; ++i) {
-      String id = "test task " + i;
-      taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, message));
-    }
-
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
-
-    List<InetSocketAddress> backendNodes = Lists.newArrayList();
-    backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
-    backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
-    backendNodes.add(new InetSocketAddress("123.4.5.6", 20000));
-    backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
-    backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
-    backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
 
     final int NUM_ITERATIONS = 100;
     for (int i = 0; i < NUM_ITERATIONS; ++i) {
@@ -101,34 +103,12 @@ public class TestUnconstrainedTaskPlacer {
    */
   @Test
   public void testAssignTask() {
-    final double probeRatio = 1.5;
-
-    final int numTasks = 2;
-    List<TTaskSpec> tasks = Lists.newArrayList();
-    ByteBuffer message = ByteBuffer.allocate(1);
-    TPlacementPreference placementPreference = new TPlacementPreference();
-    Set<String> taskIds = Sets.newHashSet();
-    for (int i = 0; i < numTasks; ++i) {
-      String id = "test task " + i;
-      taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference,  message));
-    }
-
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
-
-    List<InetSocketAddress> backendNodes = Lists.newArrayList();
-    backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
-    backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
-    backendNodes.add(new InetSocketAddress("123.4.5.6", 20000));
-    backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
-    backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
-    backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
 
     final int numIterations = 100;
     final int expectedReservations = 3;
     for (int i = 0; i < numIterations; ++i) {
-      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, probeRatio);
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, PROBE_RATIO);
 
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
@@ -143,7 +123,7 @@ public class TestUnconstrainedTaskPlacer {
         THostPort hostPort = new THostPort(nodes.get(j).getHostName(), nodes.get(j).getPort());
         List<TTaskLaunchSpec> specs = taskPlacer.assignTask(hostPort);
         assertTrue(specs != null);
-        if (j < numTasks) {
+        if (j < NUM_TASKS) {
           assertEquals(specs.size(), 1);
           TTaskLaunchSpec spec = specs.get(0);
           assertTrue("Expect to receive a task spec for task " + j + " at " +
@@ -159,41 +139,19 @@ public class TestUnconstrainedTaskPlacer {
   }
 
   /**
-   * Verifies that allResonsesReceived() works correctly by first calling
+   * Verifies that allTasksPlaced() works correctly by first calling
    * getEnqueueTaskReservationsRequests() for a job with two tasks. Then, dovetails calls to
-   * assignTasks() to calls of allResponsesReceived() to ensure that allResponsesReceived() returns
+   * assignTasks() to calls of allTasksPlaced() to ensure that allTasksPlaced() returns
    * the correct answer.
    */
   @Test
-  public void testAllResponsesReceived() {
-    final double probeRatio = 1.5;
-
-    final int numTasks = 2;
-    List<TTaskSpec> tasks = Lists.newArrayList();
-    ByteBuffer message = ByteBuffer.allocate(1);
-    TPlacementPreference placementPreference = new TPlacementPreference();
-    Set<String> taskIds = Sets.newHashSet();
-    for (int i = 0; i < numTasks; ++i) {
-      String id = "test task " + i;
-      taskIds.add(id);
-      tasks.add(new TTaskSpec(id, placementPreference, message));
-    }
-
-    TUserGroupInfo user = new TUserGroupInfo(USER, GROUP, PRIORITY);
+  public void testAllTasksPlaced() {
     TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
-
-    List<InetSocketAddress> backendNodes = Lists.newArrayList();
-    backendNodes.add(new InetSocketAddress("3,4,5,6", 174));
-    backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
-    backendNodes.add(new InetSocketAddress("123.4.5.6", 20000));
-    backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
-    backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
-    backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
 
     final int numIterations = 100;
     final int expectedReservations = 3;
     for (int i = 0; i < numIterations; ++i) {
-      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, probeRatio);
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, PROBE_RATIO);
 
       Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
           taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
@@ -205,11 +163,13 @@ public class TestUnconstrainedTaskPlacer {
       Collections.shuffle(nodes);
       Set<String> taskIdsCopy = Sets.newHashSet(taskIds);
       for (int j = 0; j < expectedReservations; ++j) {
-        assertTrue(!taskPlacer.allResponsesReceived());
+        if (j < NUM_TASKS) {
+          assertTrue(!taskPlacer.allTasksPlaced());
+        }
         THostPort hostPort = new THostPort(nodes.get(j).getHostName(), nodes.get(j).getPort());
         List<TTaskLaunchSpec> specs = taskPlacer.assignTask(hostPort);
         assertTrue(specs != null);
-        if (j < numTasks) {
+        if (j < NUM_TASKS) {
           assertEquals(1, specs.size());
           TTaskLaunchSpec spec = specs.get(0);
           assertTrue("Expect to receive a task spec for task " + j + " at " +
@@ -218,10 +178,43 @@ public class TestUnconstrainedTaskPlacer {
                      taskIdsCopy.contains(spec.getTaskId()));
           taskIdsCopy.remove(spec.getTaskId());
         } else {
+          assertTrue(taskPlacer.allTasksPlaced());
           assertEquals(0, specs.size());
         }
       }
-      assertTrue(taskPlacer.allResponsesReceived());
+    }
+  }
+
+  @Test
+  public void testCancellation() {
+    TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
+
+    final int numIterations = 100;
+    for (int i = 0; i < numIterations; ++i) {
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, PROBE_RATIO);
+      Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
+          taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
+              SCHEDULER_ADDRESS);
+
+      List<InetSocketAddress> nodes = Lists.newArrayList(requests.keySet());
+      for (int taskIndex = 0; taskIndex < NUM_TASKS; ++taskIndex) {
+        THostPort hostPort = new THostPort(nodes.get(0).getAddress().getHostAddress(),
+                                           nodes.get(0).getPort());
+        nodes.remove(0);
+        taskPlacer.assignTask(hostPort);
+      }
+
+      // Get the node monitors that should be cancelled.  At this point, the remaining entries in
+      // nodes should be the set of nodes where requests should be cancelled.
+      Set<THostPort> remainingNodeMonitors = taskPlacer.getOutstandingNodeMonitorsForCancellation();
+      assertEquals(nodes.size(), remainingNodeMonitors.size());
+      for (InetSocketAddress node : nodes) {
+        THostPort hostPort = new THostPort(node.getAddress().getHostAddress(), node.getPort());
+        assertTrue(remainingNodeMonitors.contains(hostPort));
+      }
+
+      // Trying to get the outstanding NMs for cancellation again should return an empty set.
+      assertEquals(0, taskPlacer.getOutstandingNodeMonitorsForCancellation().size());
     }
   }
 }

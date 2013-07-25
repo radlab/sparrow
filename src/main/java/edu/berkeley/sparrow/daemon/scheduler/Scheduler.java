@@ -58,6 +58,13 @@ public class Scheduler {
   HashMap<String, InetSocketAddress> frontendSockets =
       new HashMap<String, InetSocketAddress>();
 
+  /**
+   * Service that handles cancelling outstanding reservations for jobs that have already been
+   * scheduled.  Only instantiated if {@code SparrowConf.CANCELLATION} is set to true.
+   */
+  private CancellationService cancellationService;
+  private boolean useCancellation;
+
   /** Thrift client pool for communicating with node monitors */
   ThriftClientPool<InternalService.AsyncClient> nodeMonitorClientPool =
       new ThriftClientPool<InternalService.AsyncClient>(
@@ -108,6 +115,12 @@ public class Scheduler {
         SparrowConf.DEFAULT_SPECIAL_TASK_SET_SIZE);
 
     requestTaskPlacers = Maps.newConcurrentMap();
+
+    useCancellation = conf.getBoolean(SparrowConf.CANCELLATION);
+    if (useCancellation) {
+        cancellationService = new CancellationService(nodeMonitorClientPool);
+        new Thread(cancellationService).start();
+    }
   }
 
   public boolean registerFrontend(String appId, String addr) {
@@ -303,36 +316,44 @@ public class Scheduler {
 
   public List<TTaskLaunchSpec> getTask(
       String requestId, THostPort nodeMonitorAddress) {
-    /* We know this will only be called in a dedicated thread. */
-    Long t0 = System.nanoTime();
+    /* TODO: Consider making this synchronized to avoid the need for synchronization in
+     * the task placers (although then we'd lose the ability to parallelize over task placers). */
     LOG.debug(Logging.functionCall(requestId, nodeMonitorAddress));
-    if (!requestTaskPlacers.containsKey(requestId)) {
-      LOG.error("Received getTask() request for request " + requestId + " which had no more " +
-          "pending reservations");
-      return Lists.newArrayList();
-    }
     TaskPlacer taskPlacer = requestTaskPlacers.get(requestId);
-    List<TTaskLaunchSpec> taskLaunchSpecs = taskPlacer.assignTask(nodeMonitorAddress);
-    if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {
-      LOG.error("Received invalid task placement for request " + requestId + ": " +
-                taskLaunchSpecs.toString());
+    if (taskPlacer == null) {
+      LOG.debug("Received getTask() request for request " + requestId + ", which had no more " +
+          "unplaced tasks");
       return Lists.newArrayList();
-    } else if (taskLaunchSpecs.size() == 1) {
-      AUDIT_LOG.info(Logging.auditEventString("scheduler_assigned_task", requestId,
-          taskLaunchSpecs.get(0).taskId,
-          nodeMonitorAddress.getHost()));
-    } else {
-      AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId,
-                                              nodeMonitorAddress.getHost()));
     }
-    if (taskPlacer.allResponsesReceived()) {
-      LOG.debug("All responses received for request " + requestId);
-      // Remove the entry in requestTaskPlacers once all tasks have been placed, so that
-      // requestTaskPlacers doesn't grow to be unbounded.
-      requestTaskPlacers.remove(requestId);
+
+    synchronized(taskPlacer) {
+      List<TTaskLaunchSpec> taskLaunchSpecs = taskPlacer.assignTask(nodeMonitorAddress);
+      if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {
+        LOG.error("Received invalid task placement for request " + requestId + ": " +
+                  taskLaunchSpecs.toString());
+        return Lists.newArrayList();
+      } else if (taskLaunchSpecs.size() == 1) {
+        AUDIT_LOG.info(Logging.auditEventString("scheduler_assigned_task", requestId,
+            taskLaunchSpecs.get(0).taskId,
+            nodeMonitorAddress.getHost()));
+      } else {
+        AUDIT_LOG.info(Logging.auditEventString("scheduler_get_task_no_task", requestId,
+                                                nodeMonitorAddress.getHost()));
+      }
+
+      if (taskPlacer.allTasksPlaced()) {
+        LOG.debug("All tasks placed for request " + requestId);
+        requestTaskPlacers.remove(requestId);
+        if (useCancellation) {
+          Set<THostPort> outstandingNodeMonitors =
+              taskPlacer.getOutstandingNodeMonitorsForCancellation();
+          for (THostPort nodeMonitorToCancel : outstandingNodeMonitors) {
+            cancellationService.addCancellation(requestId, nodeMonitorToCancel);
+          }
+        }
+      }
+      return taskLaunchSpecs;
     }
-    System.out.println("Took: " + (System.nanoTime() - t0) + " ns");
-    return taskLaunchSpecs;
   }
 
   /**

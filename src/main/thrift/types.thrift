@@ -61,6 +61,10 @@ struct TEnqueueTaskReservationsRequest {
   5: i32 numTasks;
 }
 
+struct TCancelTaskReservationsRequest {
+  1: string requestId;
+}
+
 # Information needed to launch a task.  The application and user information are not needed
 # because they're included when the task is enqueued, so the node monitor already has them at
 # launch time.

@@ -32,17 +32,19 @@ public abstract class TaskScheduler {
     public TUserGroupInfo user;
     public String requestId;
 
+    public InetSocketAddress schedulerAddress;
+    public InetSocketAddress appBackendAddress;
+
     /**
      * ID of the task that previously ran in the slot this task is using. Used
      * to track how long it takes to fill an empty slot on a slave. Empty if this task was launched
-     * immediately, because there were empty slots available on the slave.
+     * immediately, because there were empty slots available on the slave.  Filled in when
+     * the task is launched.
      */
     public String previousRequestId;
     public String previousTaskId;
 
-    public InetSocketAddress schedulerAddress;
-    public InetSocketAddress appBackendAddress;
-
+    /** Filled in after the getTask() RPC completes. */
     public TTaskLaunchSpec taskSpec;
 
     public TaskSpec(TEnqueueTaskReservationsRequest request, InetSocketAddress appBackendAddress) {
@@ -140,12 +142,18 @@ public abstract class TaskScheduler {
     }
   }
 
-  // TASK SCHEDULERS MUST IMPLEMENT THE FOLLOWING
+  // TASK SCHEDULERS MUST IMPLEMENT THE FOLLOWING.
 
   /**
    * Handles a task reservation. Returns the number of queued reservations.
    */
   abstract int handleSubmitTaskReservation(TaskSpec taskReservation);
+
+  /**
+   * Cancels all task reservations with the given request id. Returns the number of task
+   * reservations cancelled.
+   */
+  abstract int cancelTaskReservations(String requestId);
 
   /**
    * Handles the completion of a task that has finished executing.

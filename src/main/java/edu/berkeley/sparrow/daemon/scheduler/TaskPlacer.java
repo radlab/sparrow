@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import edu.berkeley.sparrow.daemon.SparrowConf;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
@@ -24,6 +25,8 @@ import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
  * A TaskPlacer is responsible for determining where to enqueue task reservations, and how to
  * assign tasks to backends once a backend signals that it's ready to execute a task. TaskPlacers
  * are created per-job and persist state across these two phases.
+ *
+ * TaskPlacers are not thread safe; access to a particular TaskPlacer should be serialized.
  */
 public interface TaskPlacer {
 
@@ -43,6 +46,12 @@ public interface TaskPlacer {
    */
   public List<TTaskLaunchSpec> assignTask(THostPort nodeMonitorAddress);
 
-  /** Returns true if all node monitors where task reservations were enqueued have replied. */
-  public boolean allResponsesReceived();
+  /** Returns true if all of the job's tasks have been placed. */
+  public boolean allTasksPlaced();
+
+  /** Returns the node monitors with outstanding reservations for this request.
+   *
+   * After this method is called once, the TaskPlacer assumes all those node monitors were sent
+   * cancellation messages, so it will not return any node monitors in the future. */
+  public Set<THostPort> getOutstandingNodeMonitorsForCancellation();
 }
