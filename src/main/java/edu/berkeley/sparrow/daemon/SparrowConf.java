@@ -23,6 +23,7 @@ public class SparrowConf {
    * been scheduled.  Should be set to "true" or "false".
    */
   public final static String CANCELLATION = "cancellation";
+  public final static boolean DEFAULT_CANCELLATION = true;
 
   /* List of ports corresponding to node monitors (backend interface) this daemon is
    * supposed to run. In most deployment scenarios this will consist of a single port,

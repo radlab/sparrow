@@ -116,7 +116,7 @@ public class Scheduler {
 
     requestTaskPlacers = Maps.newConcurrentMap();
 
-    useCancellation = conf.getBoolean(SparrowConf.CANCELLATION);
+    useCancellation = conf.getBoolean(SparrowConf.CANCELLATION, SparrowConf.DEFAULT_CANCELLATION);
     if (useCancellation) {
         cancellationService = new CancellationService(nodeMonitorClientPool);
         new Thread(cancellationService).start();

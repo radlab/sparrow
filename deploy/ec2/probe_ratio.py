@@ -14,7 +14,7 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [0.8]
+    utilizations = [0.9]
     sample_ratios = [2.0]
     sample_ratio_constrained = 1
 
@@ -22,7 +22,7 @@ def main(argv):
     task_duration_ms = 100
     tasks_per_job = 1
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "debugging"
+    sparrow_branch = "cancellation"
     nm_task_scheduler = "fifo"
     num_backends = 4
     num_frontends = 1
@@ -31,7 +31,7 @@ def main(argv):
     trial_length = 500
     num_preferred_nodes = 0
     num_users = 1
-    cluster = "probe_ratio"
+    cluster = "cancel"
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
                                (task_duration_ms * tasks_per_job * num_frontends))
