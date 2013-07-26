@@ -118,8 +118,11 @@ public class Scheduler {
 
     useCancellation = conf.getBoolean(SparrowConf.CANCELLATION, SparrowConf.DEFAULT_CANCELLATION);
     if (useCancellation) {
-        cancellationService = new CancellationService(nodeMonitorClientPool);
-        new Thread(cancellationService).start();
+      LOG.debug("Initializing cancellation service");
+      cancellationService = new CancellationService(nodeMonitorClientPool);
+      new Thread(cancellationService).start();
+    } else {
+      LOG.debug("Not using cancellation");
     }
   }
 
@@ -176,6 +179,7 @@ public class Scheduler {
     if (req.getTasks().size() != specialTaskSetSize) {
       return false;
     }
+    LOG.debug("Using special case (" + specialTaskSetSize + " tasks)");
     for (TTaskSpec t: req.getTasks()) {
       if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
           (t.getPreference().getNodes().size() == 3)) {
