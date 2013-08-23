@@ -4,9 +4,10 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 import org.apache.thrift.TProcessor;
-import org.apache.thrift.server.THsHaServer;
-import org.apache.thrift.server.THsHaServer.Args;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.server.TServer;
+import org.apache.thrift.server.TThreadedSelectorServer;
+import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
 import org.apache.thrift.transport.TTransportException;
@@ -16,6 +17,7 @@ import org.apache.thrift.transport.TTransportException;
  */
 public class TServers {
   private final static Logger LOG = Logger.getLogger(TServers.class);
+  private final static int SELECTOR_THREADS = 4;
 
   /**
    * Launch a multi-threaded Thrift server with the given {@code processor}. Note that
@@ -32,10 +34,13 @@ public class TServers {
     } catch (TTransportException e) {
       throw new IOException(e);
     }
-    Args serverArgs = new Args(serverTransport);
+    TThreadedSelectorServer.Args serverArgs = new TThreadedSelectorServer.Args(serverTransport);
+    serverArgs.transportFactory(new TFramedTransport.Factory());
+    serverArgs.protocolFactory(new TBinaryProtocol.Factory());
     serverArgs.processor(processor);
+    serverArgs.selectorThreads(SELECTOR_THREADS);
     serverArgs.workerThreads(threads);
-    TServer server = new THsHaServer(serverArgs);
+    TServer server = new TThreadedSelectorServer(serverArgs);
     new Thread(new TServerRunnable(server)).start();
   }
 
