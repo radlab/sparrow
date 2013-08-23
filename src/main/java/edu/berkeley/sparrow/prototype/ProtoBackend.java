@@ -61,11 +61,10 @@ public class ProtoBackend implements BackendService.Iface {
 
   /**
    * This indicates how many threads can concurrently be answering function calls
-   * from the node monitor.  Each node monitor client gets a dedicated thread, so this
-   * should be no less than the expected number of clients. Each task is launched in a
-   * new thread.
-   *
-   * TODO: This should be configurable.  Will break if we use >16 core machines.
+   * from the NM. Each task is launched in a new thread from one of these threads. If tasks
+   * launches arrive fast enough that all worker threads are concurrently executing
+   * a task, this will queue. We currently launch new threads for each task to prevent
+   * this from happening.
    */
   private static final int THRIFT_WORKER_THREADS = 16;
   private static final int TASK_WORKER_THREADS = 16;
@@ -254,7 +253,7 @@ public class ProtoBackend implements BackendService.Iface {
 
     try {
       client.registerBackend(APP_ID, "localhost:" + listenPort);
-      LOG.debug("Client successfullly registered");
+      LOG.debug("Client successfully registered");
     } catch (TTransportException e) {
       LOG.debug("Error while registering backend: " + e.getMessage());
     }

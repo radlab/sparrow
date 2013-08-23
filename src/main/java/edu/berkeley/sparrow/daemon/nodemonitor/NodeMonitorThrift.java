@@ -28,18 +28,9 @@ public class NodeMonitorThrift implements NodeMonitorService.Iface,
                                           InternalService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_NM_THRIFT_PORT = 20501;
-  /**
-   * Number of threads to use for the application-facing node monitor service. Each Thrift client
-   * has a dedicated thread, so this should be set to no fewer than the maximum number of
-   * concurrent Thrift clients.
-   */
   public final static int DEFAULT_NM_THRIFT_THREADS = 32;
   public final static int DEFAULT_INTERNAL_THRIFT_PORT = 20502;
-  /**
-   * Number of threads to use for the scheduler-facing node monitor service. Each client has a
-   * dedicated thread, so this should be set to no fewer than the maximum number of clients.
-   */
-  public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 160;
+  public final static int DEFAULT_INTERNAL_THRIFT_THREADS = 8;
 
   private NodeMonitor nodeMonitor = new NodeMonitor();
   // The socket addr (ip:port) where we listen for requests from other Sparrow daemons.

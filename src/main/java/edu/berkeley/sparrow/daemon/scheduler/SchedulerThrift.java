@@ -25,18 +25,7 @@ import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 public class SchedulerThrift implements SchedulerService.Iface, GetTaskService.Iface {
   // Defaults if not specified by configuration
   public final static int DEFAULT_SCHEDULER_THRIFT_PORT = 20503;
-  /**
-   * Number of threads to use for the scheduler server. Each client has a
-   * dedicated thread until the client closes its connection, so this number should be no less
-   * than the expected number of concurrent clients!
-   */
-  private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 16;
-  /**
-   * Number of threads to use for the getTask() server. Each client has a
-   * dedicated thread until the client closes its connection, so this number should be no less
-   * than the expected number of concurrent clients!
-   */
-  private final static int DEFAULT_SCHEDULER_GET_TASK_THRIFT_THREADS = 1600;
+  private final static int DEFAULT_SCHEDULER_THRIFT_THREADS = 8;
   public final static int DEFAULT_GET_TASK_PORT = 20507;
 
   private Scheduler scheduler = new Scheduler();
@@ -52,20 +41,17 @@ public class SchedulerThrift implements SchedulerService.Iface, GetTaskService.I
         new SchedulerService.Processor<SchedulerService.Iface>(this);
     int port = conf.getInt(SparrowConf.SCHEDULER_THRIFT_PORT,
         DEFAULT_SCHEDULER_THRIFT_PORT);
-    int schedulerThreads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS,
+    int threads = conf.getInt(SparrowConf.SCHEDULER_THRIFT_THREADS,
         DEFAULT_SCHEDULER_THRIFT_THREADS);
     String hostname = Network.getHostName(conf);
     InetSocketAddress addr = new InetSocketAddress(hostname, port);
     scheduler.initialize(conf, addr);
-    TServers.launchThreadedThriftServer(port, schedulerThreads, processor);
-
-    int getTaskThreads = conf.getInt(SparrowConf.SCHEDULER_GET_TASK_THRIFT_THREADS,
-        DEFAULT_SCHEDULER_GET_TASK_THRIFT_THREADS);
+    TServers.launchThreadedThriftServer(port, threads, processor);
     int getTaskPort = conf.getInt(SparrowConf.GET_TASK_PORT,
         DEFAULT_GET_TASK_PORT);
     GetTaskService.Processor<GetTaskService.Iface> getTaskprocessor =
         new GetTaskService.Processor<GetTaskService.Iface>(this);
-    TServers.launchThreadedThriftServer(getTaskPort, getTaskThreads, getTaskprocessor);
+    TServers.launchSingleThreadThriftServer(getTaskPort, getTaskprocessor);
   }
 
   @Override

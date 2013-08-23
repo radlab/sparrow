@@ -26,7 +26,7 @@ import edu.berkeley.sparrow.thrift.TUserGroupInfo;
  */
 public class SparrowFrontendClient {
   private final static Logger LOG = Logger.getLogger(SparrowFrontendClient.class);
-  private final static int NUM_CLIENTS = 8; // Number of concurrent requests to support.
+  private final static int NUM_CLIENTS = 8; // Number of concurrent requests we support
   private final static int DEFAULT_LISTEN_PORT = 50201;
 
   BlockingQueue<SchedulerService.Client> clients =

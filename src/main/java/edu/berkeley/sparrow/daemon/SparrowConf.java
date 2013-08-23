@@ -10,9 +10,6 @@ public class SparrowConf {
   public final static String SCHEDULER_THRIFT_PORT = "scheduler.thrift.port";
   public final static String SCHEDULER_THRIFT_THREADS =
       "scheduler.thrift.threads";
-  // Number of threads for the getTask() interface.
-  public final static String SCHEDULER_GET_TASK_THRIFT_THREADS =
-      "scheduler.get_task.thrift.threads";
   // Listen port for the state store --> scheduler interface
   public final static String SCHEDULER_STATE_THRIFT_PORT = "scheduler.state.thrift.port";
   public final static String SCHEDULER_STATE_THRIFT_THREADS =
