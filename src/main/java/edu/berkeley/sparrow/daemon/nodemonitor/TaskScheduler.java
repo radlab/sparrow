@@ -12,7 +12,6 @@ import edu.berkeley.sparrow.daemon.util.Logging;
 import edu.berkeley.sparrow.daemon.util.Network;
 import edu.berkeley.sparrow.thrift.TEnqueueTaskReservationsRequest;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
-import edu.berkeley.sparrow.thrift.TResourceVector;
 import edu.berkeley.sparrow.thrift.TTaskLaunchSpec;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
 
@@ -56,19 +55,6 @@ public abstract class TaskScheduler {
       this.appBackendAddress = appBackendAddress;
       previousRequestId = "";
       previousTaskId = "";
-    }
-  }
-
-  protected class ResourceInfo {
-    /** Unlaunched tasks for which this resource information applies. */
-    public int remainingTasks;
-
-    /** Estimated resources. */
-    public TResourceVector resources;
-
-    public ResourceInfo(int tasks, TResourceVector resources) {
-     remainingTasks = tasks;
-     this.resources = resources;
     }
   }
 

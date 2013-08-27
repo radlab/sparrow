@@ -329,7 +329,7 @@ public class Scheduler {
           "unplaced tasks");
       return Lists.newArrayList();
     }
-
+    
     synchronized(taskPlacer) {
       List<TTaskLaunchSpec> taskLaunchSpecs = taskPlacer.assignTask(nodeMonitorAddress);
       if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {

@@ -3,8 +3,10 @@ package edu.berkeley.sparrow.prototype;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import joptsimple.OptionParser;
@@ -17,7 +19,6 @@ import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
-import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.collect.Lists;
 
@@ -25,7 +26,6 @@ import edu.berkeley.sparrow.daemon.nodemonitor.NodeMonitorThrift;
 import edu.berkeley.sparrow.daemon.util.TClients;
 import edu.berkeley.sparrow.daemon.util.TServers;
 import edu.berkeley.sparrow.thrift.BackendService;
-import edu.berkeley.sparrow.thrift.NodeMonitorService;
 import edu.berkeley.sparrow.thrift.NodeMonitorService.Client;
 import edu.berkeley.sparrow.thrift.TFullTaskId;
 import edu.berkeley.sparrow.thrift.TUserGroupInfo;
@@ -73,12 +73,42 @@ public class ProtoBackend implements BackendService.Iface {
   /** We assume we are speaking to local Node Manager. */
   private static final String NM_HOST = "localhost";
   private static int NM_PORT;
-
+  
   private static Client client;
 
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final ExecutorService executor =
       Executors.newFixedThreadPool(TASK_WORKER_THREADS);
+  
+  /**
+   * Keeps track of finished tasks.
+   * 
+   *  A single thread pulls items off of this queue and uses
+   * the client to notify the node monitor that tasks have finished.
+   */
+  private final BlockingQueue<TFullTaskId> finishedTasks = new LinkedBlockingQueue<TFullTaskId>();
+  
+  /**
+   * Thread that sends taskFinished() RPCs to the node monitor.
+   * 
+   * We do this in a single thread so that we just need a single client to the node monitor
+   * and don't need to create a new client for each task.
+   */
+  private class TasksFinishedRpcRunnable implements Runnable {
+	  @Override
+	  public void run() {
+		  while (true) {
+		  	try {
+		  		TFullTaskId task = finishedTasks.take();
+					client.tasksFinished(Lists.newArrayList(task));
+				} catch (InterruptedException e) {
+					LOG.error("Error taking a task from the queue: " + e.getMessage());
+				} catch (TException e) {
+					LOG.error("Error with tasksFinished() RPC:" + e.getMessage());
+				}
+		  }
+	  }
+  }
 
   /**
    * Thread spawned for each task. It runs for a given amount of time (and adds
@@ -103,18 +133,11 @@ public class ProtoBackend implements BackendService.Iface {
       }
 
       long taskStart = System.currentTimeMillis();
-      NodeMonitorService.Client client = null;
-      try {
-        client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
-      } catch (IOException e) {
-        LOG.fatal("Error creating NM client", e);
-      }
-
 
       int tasks = numTasks.addAndGet(1);
       double taskRate = ((double) tasks) * 1000 /
           (System.currentTimeMillis() - startTime);
-      LOG.debug("Aggregate task rate: " + taskRate);
+      LOG.debug("Aggregate task rate: " + taskRate + " (" + tasks + " launched)");
 
       Random r = new Random();
 
@@ -122,13 +145,7 @@ public class ProtoBackend implements BackendService.Iface {
       runBenchmark(benchmarkId, benchmarkIterations, r);
       LOG.debug("Benchmark runtime: " + (System.currentTimeMillis() - benchmarkStart));
 
-      try {
-        client.tasksFinished(Lists.newArrayList(taskId));
-      } catch (TException e) {
-        e.printStackTrace();
-      }
-      client.getInputProtocol().getTransport().close();
-      client.getOutputProtocol().getTransport().close();
+      finishedTasks.add(taskId);
       LOG.debug("Task running for " + (System.currentTimeMillis() - taskStart) + " ms");
     }
   }
@@ -204,11 +221,34 @@ public class ProtoBackend implements BackendService.Iface {
     user.setUser("*");
     user.setGroup("*");
   }
+  
+  /**
+   * Initializes the backend by registering with the node monitor.
+   * 
+   * Also starts a thread that handles finished tasks (by sending an RPC to the node monitor).
+   */
+  public void initialize(int listenPort) {
+    // Register server.
+    try {
+			client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
+		} catch (IOException e) {
+			LOG.debug("Error creating Thrift client: " + e.getMessage());
+		}
+
+    try {
+      client.registerBackend(APP_ID, "localhost:" + listenPort);
+      LOG.debug("Client successfully registered");
+    } catch (TException e) {
+      LOG.debug("Error while registering backend: " + e.getMessage());
+    }
+    
+    new Thread(new TasksFinishedRpcRunnable()).start();
+  }
 
   @Override
   public void launchTask(ByteBuffer message, TFullTaskId taskId,
       TUserGroupInfo user) throws TException {
-    LOG.info("Submitting task " + taskId.getTaskId() + "at " + System.currentTimeMillis());
+    LOG.info("Submitting task " + taskId.getTaskId() + " at " + System.currentTimeMillis());
 
     // Note we ignore user here
     executor.submit(new TaskRunnable(
@@ -241,21 +281,13 @@ public class ProtoBackend implements BackendService.Iface {
       } catch (ConfigurationException e) {}
     }
     // Start backend server
+    ProtoBackend protoBackend = new ProtoBackend();
     BackendService.Processor<BackendService.Iface> processor =
-        new BackendService.Processor<BackendService.Iface>(new ProtoBackend());
+        new BackendService.Processor<BackendService.Iface>(protoBackend);
 
     int listenPort = conf.getInt("listen_port", DEFAULT_LISTEN_PORT);
     NM_PORT = conf.getInt("node_monitor_port", NodeMonitorThrift.DEFAULT_NM_THRIFT_PORT);
     TServers.launchThreadedThriftServer(listenPort, THRIFT_WORKER_THREADS, processor);
-
-    // Register server
-    client = TClients.createBlockingNmClient(NM_HOST, NM_PORT);
-
-    try {
-      client.registerBackend(APP_ID, "localhost:" + listenPort);
-      LOG.debug("Client successfully registered");
-    } catch (TTransportException e) {
-      LOG.debug("Error while registering backend: " + e.getMessage());
-    }
+    protoBackend.initialize(listenPort);
   }
 }

@@ -44,7 +44,6 @@ public class TestUnconstrainedTaskPlacer {
   public void setUp() throws Exception {
     // Set up a simple configuration that logs on the console.
     BasicConfigurator.configure();
-
     tasks = Lists.newArrayList();
     taskIds = Sets.newHashSet();
     ByteBuffer message = ByteBuffer.allocate(1);
@@ -57,12 +56,55 @@ public class TestUnconstrainedTaskPlacer {
 
     backendNodes = Lists.newArrayList();
     backendNodes.add(new InetSocketAddress("3.4.5.6", 174));
-    backendNodes.add(new InetSocketAddress("127.0.0.1", 22));
+    backendNodes.add(new InetSocketAddress("127.124.0.1", 22));
     backendNodes.add(new InetSocketAddress("123.4.5.6", 20000));
     backendNodes.add(new InetSocketAddress("7.0.0.9", 45));
     backendNodes.add(new InetSocketAddress("234.5.6.7", 22));
     backendNodes.add(new InetSocketAddress("9.8.7.6", 1));
   }
+  
+  @Test
+  public void enqueueTaskReservationsWithMoreReservationsThanNodes() {
+	final double PROBE_RATIO = 2;
+	final int NUM_TASKS = 14;
+
+    ByteBuffer message = ByteBuffer.allocate(1);
+    TPlacementPreference placementPreference = new TPlacementPreference();
+    while (tasks.size() < NUM_TASKS) {
+      String id = "test task " + tasks.size();
+      taskIds.add(id);
+      tasks.add(new TTaskSpec(id, placementPreference, message));
+    }
+
+    TSchedulingRequest schedulingRequest = new TSchedulingRequest(APP_ID, tasks, user);
+    
+    final int NUM_ITERATIONS = 100;
+    for (int i = 0; i < NUM_ITERATIONS; ++i) {
+      UnconstrainedTaskPlacer taskPlacer = new UnconstrainedTaskPlacer(REQUEST_ID, PROBE_RATIO);
+
+      Map<InetSocketAddress, TEnqueueTaskReservationsRequest> requests =
+          taskPlacer.getEnqueueTaskReservationsRequests(schedulingRequest, REQUEST_ID, backendNodes,
+                                                        SCHEDULER_ADDRESS);
+      // Sanity check the list of requests.
+      final int EXPECTED_RESERVATIONS = 28;
+      int reservationsCount = 0;
+      for (Entry<InetSocketAddress, TEnqueueTaskReservationsRequest> entry : requests.entrySet()) {
+        // The node monitor the request is being sent to should be among the list of backend nodes.
+        assertTrue("Expect " + entry.getKey() + " to be among the set of backend nodes",
+                   backendNodes.contains(entry.getKey()));
+        TEnqueueTaskReservationsRequest request = entry.getValue();
+        assertEquals(request.getAppId(), APP_ID);
+        assertEquals(request.getUser(), user);
+        assertEquals(request.getRequestId(), REQUEST_ID);
+        assertEquals(request.getSchedulerAddress(), SCHEDULER_ADDRESS);
+        // Expect the reservations to be evenly balanced over the machines.
+        assertTrue(request.getNumTasks() == 4 || request.getNumTasks() == 5);
+        reservationsCount += request.getNumTasks();
+      }
+      assertEquals(reservationsCount, EXPECTED_RESERVATIONS);
+    }
+  }
+
 
   /**
    * Calls getEnqueueTaskReservations() for two tasks, with 6 possible backend nodes, and ensures
