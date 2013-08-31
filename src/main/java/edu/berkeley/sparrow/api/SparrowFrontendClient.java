@@ -104,20 +104,14 @@ public class SparrowFrontendClient {
   public boolean submitJob(String app,
       List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user)
           throws TException {
-    TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
-    try {
-      Client client = clients.take();
-      client.submitJob(request);
-      clients.put(client);
-    } catch (InterruptedException e) {
-      LOG.fatal(e);
-    } catch (TException e) {
-      LOG.error("Thrift exception when submitting job: " + e.getMessage());
-      throw(e);
-    } catch (IncompleteRequestException e) {
-      LOG.error(e);
-    }
-    return true;
+    return submitRequest(new TSchedulingRequest(app, tasks, user));
+  }
+  
+  public boolean submitJob(String app, List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks,
+  	  TUserGroupInfo user, String description) {
+  	TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
+  	request.setDescription(description);
+  	return submitRequest(request);
   }
 
   public boolean submitJob(String app,
@@ -126,6 +120,10 @@ public class SparrowFrontendClient {
           throws TException {
     TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
     request.setProbeRatio(probeRatio);
+    return submitRequest(request);
+  }
+    
+  public boolean submitRequest(TSchedulingRequest request) {
     try {
       Client client = clients.take();
       client.submitJob(request);
@@ -133,7 +131,7 @@ public class SparrowFrontendClient {
     } catch (InterruptedException e) {
       LOG.fatal(e);
     } catch (TException e) {
-      LOG.error(e);
+      LOG.error("Thrift exception when submitting job: " + e.getMessage());
       return false;
     } catch (IncompleteRequestException e) {
       LOG.error(e);

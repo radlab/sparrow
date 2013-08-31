@@ -269,19 +269,23 @@ public class Scheduler {
 
     String requestId = getRequestId();
 
+    String user = "";
+    if (request.getUser() != null) {
+      user = request.getUser().getUser();
+    }
+    String description = "";
+    if (request.getDescription() != null) {
+    	description = request.getDescription();
+    }
     // Logging the address here is somewhat redundant, since all of the
     // messages in this particular log file come from the same address.
     // However, it simplifies the process of aggregating the logs, and will
     // also be useful when we support multiple daemons running on a single
     // machine.
-    String user = "";
-    if (request.getUser() != null) {
-      user = request.getUser().getUser();
-    }
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
                                             request.getTasks().size(),
                                             address.getHost(), address.getPort(),
-                                            user));
+                                            user, description));
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
