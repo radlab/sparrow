@@ -155,9 +155,20 @@ public class Scheduler {
     // However, it simplifies the process of aggregating the logs, and will
     // also be useful when we support multiple daemons running on a single
     // machine.
+    String user = "";
+    if (req.getUser() != null) {
+    	user = req.getUser().getUser();
+    }
+    
+    String description = "";
+    if (req.getDescription() != null) {
+    	description = req.getDescription();
+    }
     AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
                                             req.getTasks().size(),
-                                            address.getAddress().getHostAddress()));
+                                            address.getAddress().getHostAddress(),
+                                            address.getPort(), user, description,
+                                            isConstrained(req)));
     Collection<TaskPlacementResponse> placement = null;
     try {
       placement = getJobPlacementResp(req, requestId);
@@ -294,6 +305,17 @@ public class Scheduler {
     LOG.debug("Returning task placement: " + out);
     return out;
   }
+  
+  private boolean isConstrained(TSchedulingRequest req) {
+    boolean constrained = false;
+    for (TTaskSpec task : req.getTasks()) {
+      constrained = constrained || (
+          task.preference != null &&
+          task.preference.nodes != null &&
+          !task.preference.nodes.isEmpty());
+    }
+    return constrained;
+  }
 
   /**
    * Internal method called by both submitJob() and getJobPlacement().
@@ -308,13 +330,7 @@ public class Scheduler {
     for (InetSocketAddress backend : backends) {
       backendList.add(backend);
     }
-    boolean constrained = false;
-    for (TTaskSpec task : tasks) {
-      constrained = constrained || (
-          task.preference != null &&
-          task.preference.nodes != null &&
-          !task.preference.nodes.isEmpty());
-    }
+    boolean constrained = isConstrained(req);
 
     // Fill in the resources in all tasks (if it's missing).
     for (TTaskSpec task : tasks) {

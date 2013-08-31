@@ -79,22 +79,7 @@ public class SparrowFrontendClient {
   public boolean submitJob(String app,
       List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user)
           throws TException {
-    TSchedulingRequest request = new TSchedulingRequest();
-    request.setTasks(tasks);
-    request.setApp(app);
-    request.setUser(user);
-    boolean result = false;
-    try {
-      Client client = clients.take();
-      result = client.submitJob(request);
-      clients.put(client);
-    } catch (InterruptedException e) {
-      LOG.fatal(e);
-    } catch (TException e) {
-      LOG.error(e);
-      return false;
-    }
-    return result;
+    return submitRequest(new TSchedulingRequest(app, tasks, user));
   }
 
   public List<TTaskPlacement> getJobPlacement(String app,
@@ -104,14 +89,48 @@ public class SparrowFrontendClient {
     request.setApp(app);
     request.setUser(user);
     List<TTaskPlacement> result = null;
+
     try {
       Client client = clients.take();
       result = client.getJobPlacement(request);
       clients.put(client);
     } catch (InterruptedException e) {
       LOG.fatal(e);
+    } catch (TException e) {
+      LOG.error("Thrift exception when submitting job: " + e.getMessage());
     }
     return result;
+  }
+  
+  public boolean submitJob(String app, List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks,
+  	  TUserGroupInfo user, String description) {
+  	TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
+  	request.setDescription(description);
+  	return submitRequest(request);
+  }
+
+  public boolean submitJob(String app,
+      List<edu.berkeley.sparrow.thrift.TTaskSpec> tasks, TUserGroupInfo user,
+      double probeRatio)
+          throws TException {
+    TSchedulingRequest request = new TSchedulingRequest(app, tasks, user);
+    request.setProbeRatio(probeRatio);
+    return submitRequest(request);
+  }
+    
+  public boolean submitRequest(TSchedulingRequest request) {
+    try {
+      Client client = clients.take();
+      client.submitJob(request);
+      clients.put(client);
+    } catch (InterruptedException e) {
+      LOG.fatal(e);
+      return false;
+    } catch (TException e) {
+      LOG.error("Thrift exception when submitting job: " + e.getMessage());
+      return false;
+    }
+    return true;
   }
 
   public void close() {
