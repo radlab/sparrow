@@ -31,6 +31,7 @@ cp ~/hdfs-site.xml /opt/hadoop/conf/
 cp ~/hadoop-env.sh /opt/hadoop/conf/
 cp ~/backends.txt /opt/hadoop/conf/slaves
 cp ~/hive-default.xml /opt/hive/conf/
+cp ~/hive-site.xml /opt/hive/conf/
 cp ~/shark-env.sh /root/shark/conf/shark-env.sh
 cp ~/spark-env.sh /root/spark/conf/spark-env.sh
 

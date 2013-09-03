@@ -25,16 +25,6 @@
 <!-- users do not have to edit hadoop configuration files (that may be managed as a centralized -->
 <!-- resource).                                                                                 -->
 
-<!-- Just need to set this to something other than local -->
-<property>
-<name>mapreduce.framework.name</name>
-<value>foo</value>
-</property>
-<property>
-<name>mapred.job.tracker</name>
-<value>foo</value>
-</property>
-
 <!-- Hive Execution Parameters -->
 <property>
   <name>mapred.reduce.tasks</name>

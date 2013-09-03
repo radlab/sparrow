@@ -22,7 +22,7 @@ for fe in $FRONTENDS; do
   export SPARK_MEM={{spark_backend_mem}}
   name=`host $ip | cut -d " " -f 5 | cut -d "." -f 1-3`
 
-  /root/spark/run -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=$HOSTNAME -Dspark.driver.host=$name -Dspark.driver.port=60500 -Dsparrow.app.name=$id -Dsparrow.app.port=$port -Dspark.httpBroadcast.uri=http://$ip:33324 spark.scheduler.sparrow.SparrowExecutorBackend > $log 2>&1 &
+  /root/spark/run -Dspark.scheduler=sparrow -Dspark.master.port=7077 -Dspark.hostname=$HOSTNAME -Dspark.driver.host=$name -Dspark.driver.port=60500 -Dsparrow.app.name=$id -Dsparrow.app.port=$port -Dspark.httpBroadcast.uri=http://$ip:33624 spark.scheduler.sparrow.SparrowExecutorBackend > $log 2>&1 &
   ((port++))
   PID=$!
   echo "Logging to $log"
