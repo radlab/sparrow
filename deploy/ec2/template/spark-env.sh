@@ -21,7 +21,7 @@ for jar in `find $SHARK_HOME/lib_managed/bundles -name '*jar'`; do
 done
 
 # Add Hive jars.
-export HIVE_HOME="/opt/hive"
+export HIVE_HOME="/opt/hive/build/dist"
 for jar in `find $HIVE_HOME/lib -name '*jar'`; do
   # Ignore the logging library since it has already been included with the Spark jar.
   if [[ "$jar" != *slf4j* ]]; then
