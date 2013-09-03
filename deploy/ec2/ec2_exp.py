@@ -70,7 +70,7 @@ def parse_args(force_action=True):
       help="Time to wait between killing backends and frontends")
   parser.add_option("-v", "--inter-query-delay", type="int", default=100,
       help="How many ms to wait between shark queries")
-  parser.add_option("-m", "--scheduler", type="string", default="mesos",
+  parser.add_option("-m", "--scheduler", type="string", default="sparrow",
       help="Which scheduler to use for running spark (mesos/sparrow)")
   parser.add_option("--spot-price", type="float", default=None,
       help="If specified, launch slaves as spot instances with the given " +
@@ -452,21 +452,14 @@ def stop_spark(frontends, backends, opts):
          "/root/stop_spark_backend.sh")
 
 def start_hdfs(frontends, backends, opts):
-  print "Starting name node"
+  print "Starting HDFS"
   ssh(frontends[0].public_dns_name, opts,
-      'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh start namenode"')
-  print "Starting data nodes"
-  ssh_all([be.public_dns_name for be in backends], opts,
-      'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh start datanode"')
+      'HADOOP_SSH_OPTS="-o StrictHostKeyChecking=no" /opt/hadoop/bin/start-dfs.sh')
 
 def stop_hdfs(frontends, backends,opts):
-  print "Stopping data nodes"
-  ssh_all([be.public_dns_name for be in backends], opts,
-    'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh stop datanode"')
-
-  print "Stopping name node"
+  print "Stopping HDFS"
   ssh(frontends[0].public_dns_name, opts,
-      'runuser -l hdfs -c "/opt/hadoop/bin/hadoop-daemon.sh stop namenode"')
+      'HADOOP_SSH_OPTS="-o StrictHostKeyChecking=no" /opt/hadoop/bin/stop-dfs.sh')
 
 # Start the prototype backends/frontends
 def start_proto(frontends, backends, opts):

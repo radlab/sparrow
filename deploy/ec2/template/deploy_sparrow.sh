@@ -26,7 +26,6 @@ wait
 
 if [ ! -d "/disk1/hdfs/name/current/" ]; then
   echo "Formatting Namenode"
-  export JAVA_HOME="/usr/bin/java"
   echo "Y" | sudo -u hdfs /opt/hadoop/bin/hadoop namenode -format
 else
   echo "Namenode formatted"

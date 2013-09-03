@@ -25,7 +25,7 @@ export SHARK_MASTER_MEM=1g
 # (Required) Point to your Scala installation.
 export SCALA_HOME="/opt/scala-2.9.3"
 export SCALA_VERSON=2.9.3
-export JAVA_HOME="/usr/bin/java"
+export JAVA_HOME="/usr/lib/jvm/java-6-sun/jre"
 
 # (Required) Point to the patched Hive binary distribution
 export HIVE_DEV_HOME="/opt/hive"
@@ -53,7 +53,7 @@ export MASTER="sparrow@$my_ip:20503,$before_me$after_me"
 # Java options
 # On EC2, change the local.dir to /mnt/tmp
 SPARK_JAVA_OPTS="-Dspark.local.dir=/tmp "
-SPARK_JAVA_OPTS+="-Dspark.kryoserializer.buffer.mb=10 "
+SPARK_JAVA_OPTS+="-Dspark.serializer=spark.KryoSerializer -Dspark.kryoserializer.buffer.mb=10 "
 SPARK_JAVA_OPTS+="-verbose:gc -XX:-PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseConcMarkSweepGC"
 SPARK_JAVA_OPTS+=" -Dsparrow.app.name=spark_`hostname -i`"
 # Spark options that are usually sent to the executor using environment variables packaged
