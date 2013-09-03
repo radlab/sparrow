@@ -28,6 +28,7 @@ chown hdfs.hdfs /disk1/hdfs/data
 cat /etc/hosts | grep -v internal > tmp && mv tmp /etc/hosts
 
 cp ~/hdfs-site.xml /opt/hadoop/conf/
+cp ~/hadoop-env.sh /opt/hadoop/conf/
 cp ~/hive-default.xml /opt/hive/conf/
 cp ~/shark-env.sh /root/shark/conf/shark-env.sh
 
@@ -42,3 +43,4 @@ cd -
 
 # Reference correct directory in hive queries
 bash -c "sed -i 's/HOST_IP/`hostname -i`/g' ~/tpch/*"
+

@@ -1,48 +1,62 @@
 #!/usr/bin/env bash
 
-# Set Shark environment variables for your site in this file. Some useful
-# variables to set are:
+# Copyright (C) 2012 The Regents of The University California.
+# All rights reserved.
 #
-# - MESOS_NATIVE_LIBRARY, to point to your Mesos native library (libmesos.so)
-# - SCALA_HOME, to point to your Scala installation.
-# - HIVE_HOME, to point to the Hive binary distribution.
-# - SPARK_CLASSPATH, to add elements to Spark's classpath.
-# - SPARK_JAVA_OPTS, to add JVM options.
-# - SPARK_MEM, to change the amount of memory used per node (this should
-#   be in the same format as the JVM's -Xmx option, e.g. 300m or 1g).
-# - SPARK_LIBRARY_PATH, optional, to add extra search paths for native
-#   libraries.
-# - HIVE_CONF_DIR, optional, to specify the path of Hive configuration files
-#   (default HIVE_HOME/conf)
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-export SCALA_VERSION=2.9.1
-
-# Set Spark's memory per machine -- you might want to increase this
+# (Required) Amount of memory used per slave node. This should be in the same
+# format as the JVM's -Xmx option, e.g. 300m or 1g.
 export SPARK_MEM=15g
 
-# Java options
-# On EC2, change the local.dir to /mnt/tmp
-export SPARK_JAVA_OPTS="-Dspark.local.dir=/tmp -Dspark.kryoserializer.buffer.mb=10  -verbose:gc -XX:-PrintGCDetails -XX:+PrintGCTimeStamps -Dsparrow.app.name=spark_`hostname -i` -XX:+UseConcMarkSweepGC"
+# (Required) Set the master program's memory
+export SHARK_MASTER_MEM=1g
 
-# HIVE_HOME, point to Hive binary distribution
-export HIVE_HOME="/opt/hive/"
+# (Required) Point to your Scala installation.
+export SCALA_HOME="/opt/scala-2.9.3"
+export SCALA_VERSON=2.9.3
+export JAVA_HOME="/usr/bin/java"
 
-# Point to your Scala installation.
-export SCALA_HOME="/opt/scala-2.9.1-1/"
+# (Required) Point to the patched Hive binary distribution
+export HIVE_DEV_HOME="/opt/hive"
+export HIVE_HOME="$HIVE_DEV_HOME/build/dist"
 
+# (Optional) Specify the location of Hive's configuration directory. By default,
+# it points to $HIVE_HOME/conf
+export HIVE_CONF_DIR="$HIVE_DEV_HOME/conf"
+
+# For running Shark in distributed mode, set the following:
 export HADOOP_HOME="/opt/hadoop/"
+export SPARK_HOME="/disk1/tmp/spark/"
 
 my_ip=`hostname -i`
 before_me=`cat /root/sparrow_schedulers.txt | grep -B 1000 $my_ip | grep -v $my_ip | tr "\n" ","`
 after_me=`cat /root/sparrow_schedulers.txt | grep -A 1000 $my_ip | grep -v $my_ip | tr "\n" ","`
 export MASTER="sparrow@$my_ip:20503,$before_me$after_me"
 
-# Set these options when running through spark-ec2 scripts
-#export MASTER=`cat /root/mesos-ec2/cluster-url`
-#export HADOOP_HOME=/root/ephemeral-hdfs
-#export MESOS_NATIVE_LIBRARY=/usr/local/lib/libmesos.so
-#export SCALA_HOME=/root/scala-$SCALA_VERSION.final
+# Only required if using Mesos:
+#export MESOS_NATIVE_LIBRARY=/usr/local/lib/libmesos.so 
 
-# The following is only needed for development and testing (SBT test uses this).
-#export HIVE_DEV_HOME=""
-#export HIVE_HOME=$HIVE_DEV_HOME/build/dist
+# (Optional) Extra classpath
+#export SPARK_LIBRARY_PATH=""
+
+# Java options
+# On EC2, change the local.dir to /mnt/tmp
+SPARK_JAVA_OPTS="-Dspark.local.dir=/tmp "
+SPARK_JAVA_OPTS+="-Dspark.kryoserializer.buffer.mb=10 "
+SPARK_JAVA_OPTS+="-verbose:gc -XX:-PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseConcMarkSweepGC"
+SPARK_JAVA_OPTS+=" -Dsparrow.app.name=spark_`hostname -i`"
+# Spark options that are usually sent to the executor using environment variables packaged
+# from the Spark master, but that we need to set manually when running with Sparrow.
+SPARK_JAVA_OPTS+=" -Dspark.broadcast.port=33624 -Dspark.driver.port=60500"
+export SPARK_JAVA_OPTS

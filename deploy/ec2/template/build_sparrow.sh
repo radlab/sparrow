@@ -27,11 +27,11 @@ fi;
 
 
 if [ ! -d "spark" ]; then
-  git clone git://github.com/pwendell/spark.git -b {{spark_git_branch}}
+  git clone git://github.com/kayousterhout/spark.git -b {{spark_git_branch}}
 fi;
 
 if [ ! -d "shark" ]; then
-  git clone git://github.com/pwendell/shark.git -b sparrow
+  git clone git://github.com/kayousterhout/shark.git -b sparrow
 fi;
 
 cd sparrow
@@ -40,13 +40,32 @@ if [ ! -e "/tmp/sparrow/target/sparrow-1.0-SNAPSHOT.jar" ]; then
 fi
 cp /tmp/sparrow/target/sparrow-1.0-SNAPSHOT.jar $SPARROW_INSTALL_DIR
 
+# Copy the Sparrow jar to a place where Spark includes it in the build.
+if [ ! -d "/tmp/spark/core/lib" ]; then
+  mkdir /tmp/spark/core/lib
+fi
+cp /tmp/sparrow/target/sparrow-1.0-SNAPSHOT.jar /tmp/spark/core/lib/
+
 cd /tmp/spark
 if [ ! -e "/tmp/spark/core/target/scala-2.9.1" ]; then
   sbt/sbt compile
   sbt/sbt publish-local
 fi
 
+# Manually download httpcore, which SBT seems to have issues with
+wget http://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore/4.1.2/httpcore-4.1.2.jar
+HTTPCORE_DIR=/root/.m2/repository/org/apache/httpcomponents/httpcore/4.1.2
+mkdir -p $HTTPCORE_DIR
+mv httpcore-4.1.2.jar $HTTPCORE_DIR
+
 cd /tmp/shark
+
+# Copy shark-conv into the conf/ directory, because it's needed for building.
+if [ ! -d "conf" ]; then
+  mkdir conf
+fi
+cp ~/shark-env.sh conf/
+
 if [ ! -e "/tmp/shark/target/scala-2.9.1/classes/shark/SharkEnv.class" ]; then
 sbt/sbt products
 fi
