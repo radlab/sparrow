@@ -7,7 +7,7 @@
 export JAVA_HOME=/usr/lib/jvm/java-6-sun/jre
 
 # Extra Java CLASSPATH elements.  Optional.
-export HADOOP_CLASSPATH=/opt/hive/conf
+export HADOOP_CLASSPATH="/opt/hive/conf/:/opt/hive/build/dist/lib"
 
 # The maximum amount of heap to use, in MB. Default is 1000.
 # export HADOOP_HEAPSIZE=2000

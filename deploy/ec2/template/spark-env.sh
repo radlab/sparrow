@@ -29,6 +29,9 @@ for jar in `find $HIVE_HOME/lib -name '*jar'`; do
   fi
 done
 
+# Add location of Hive configuration file.
+SPARK_CLASSPATH+=:/opt/hive/conf/
+
 SPARK_JAVA_OPTS=""
 # - SPARK_MEM, to change the amount of memory used per node (this should
 #   be in the same format as the JVM's -Xmx option, e.g. 300m or 1g).

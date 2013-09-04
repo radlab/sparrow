@@ -195,13 +195,13 @@ public class Scheduler {
     if (req.getTasks().size() != specialTaskSetSize) {
       return false;
     }
-    LOG.debug("Using special case (" + specialTaskSetSize + " tasks)");
     for (TTaskSpec t: req.getTasks()) {
       if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
           (t.getPreference().getNodes().size() == 3)) {
         return false;
       }
     }
+    LOG.debug("Using special case (" + specialTaskSetSize + " tasks)");
     return true;
   }
 
