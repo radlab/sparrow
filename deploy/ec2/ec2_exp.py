@@ -28,7 +28,7 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> <cluster> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-tpch-tables, start-shark-tpch")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-database, create-tpch-tables, start-shark-tpch")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-23c5894a",
@@ -89,7 +89,9 @@ def parse_args(force_action=True):
   parser.add_option("--reduce-tasks", type="int", default=5,
       help="Number of reduce tasks to use for Shark queries.")
   parser.add_option("--spark-backend-mem", default="2g",
-      help="Amount of memory to give spark backends.")
+      help="Amount of memory to give spark backends."),
+  parser.add_option("--scale-factor", default="2.5",
+      help="Scale factor to use when creating TPCH database (used with create-database)")
 
   (opts, args) = parser.parse_args()
   if len(args) < 2 and force_action:
@@ -271,7 +273,7 @@ def launch_cluster(conn, opts, cluster_name):
 
 # Wait for a set of launched instances to exit the "pending" state
 # (i.e. either to start running or to fail and be terminated)
-def wait_for_instances(conn, instances):
+def wait_for_instances(instances):
   while True:
     for i in instances:
       i.update()
@@ -480,6 +482,12 @@ def stop_proto(frontends, backends, opts):
   ssh_all([be.public_dns_name for be in backends], opts,
          "/root/stop_proto_backend.sh")
 
+def create_database(frontends, opts):
+  scale_factor = opts.scale_factor
+  print "Creating TPCH database in HDFS on primary node with scale factor " + scale_factor
+  ssh(frontends[0].public_dns_name, opts,
+      "/root/create_database.sh %s" % scale_factor)
+
 def create_tpch_tables(frontends, backends, opts):
   print "Creating tables on primary node (takes longer)"
   ssh(frontends[0].public_dns_name, opts, 
@@ -566,8 +574,8 @@ def main():
   # to make sure all nodes have booted.
   (frontends, backends) = find_existing_cluster(conn, opts, cluster)
   print "Waiting for instances to start up"
-  wait_for_instances(conn, frontends)
-  wait_for_instances(conn, backends)
+  wait_for_instances(frontends)
+  wait_for_instances(backends)
 
   print "Waiting %d more seconds..." % opts.wait
   time.sleep(opts.wait)
@@ -612,6 +620,8 @@ def main():
     login_frontend(frontends, backends, opts)
   elif action == "login-be":
     login_backend(frontends, backends, opts)
+  elif action == "create-database":
+    create_database(frontends, opts)
   elif action == "create-tpch-tables":
     create_tpch_tables(frontends, backends, opts)
   elif action == "start-shark-tpch":

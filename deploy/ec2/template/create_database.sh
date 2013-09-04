@@ -46,4 +46,3 @@ sudo -u hdfs /opt/hadoop/bin/hadoop dfs -chmod -R 777 "hdfs://{{name_node}}:8020
 echo "Making Hive warehouse dir for denorm table"
 sudo -u hdfs /opt/hadoop/bin/hadoop dfs -mkdir "hdfs://{{name_node}}:8020/tpch/denorm-warehouse/"
 
-sudo -u hdfs /opt/hadoop/bin/hadoop dfs -mkdir "hdfs://{{name_node}}:8020/tpch/"

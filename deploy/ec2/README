@@ -36,3 +36,12 @@ NOTE:
 Right now if you start and stop the proto application while keeping Sparrow
 running (i.e. you don't also restart Sparrow) things break. You will get a
 confusing Thrift error if you do this.
+
+If you'd like to run the full TPC-H experiment, you need to run two scripts:
+1) prepare_tpch_experiments.sh <num_frontends> <num_backends>:
+This script launches the given number of frontend and backend machines,
+and loads the TPCH data into HDFS and then into Shark.
+
+2) tpch_experiments.sh:
+This runs the TPCH experiments and can be executed multiple times after
+the prepare_tpch_experiments.sh script has been run.

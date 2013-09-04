@@ -21,8 +21,8 @@ import time
 num_nodes = 100
 wait_delay = 20 * 60
 results_dirname = "results"
-partitions = 1
-reducers = 2
+partitions = 2
+reducers = 1
 ratios = [(2, 2)] #-p (sample ratio unconstrianed), -q (sample ratio constrained)
 rates = [275]
 backend_mem = "5g"
