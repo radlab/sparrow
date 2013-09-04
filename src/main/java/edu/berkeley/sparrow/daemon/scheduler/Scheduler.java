@@ -98,9 +98,6 @@ public class Scheduler {
   private double defaultProbeRatioUnconstrained;
   private double defaultProbeRatioConstrained;
 
-  /** A special case scheduling parameter for Spark RDD layouts. */
-  private int specialTaskSetSize;
-
   /**
    * For each request, the task placer that should be used to place the request's tasks. Indexed
    * by the request ID.
@@ -127,8 +124,6 @@ public class Scheduler {
         SparrowConf.DEFAULT_SAMPLE_RATIO);
     defaultProbeRatioConstrained = conf.getDouble(SparrowConf.SAMPLE_RATIO_CONSTRAINED,
         SparrowConf.DEFAULT_SAMPLE_RATIO_CONSTRAINED);
-    specialTaskSetSize = conf.getInt(SparrowConf.SPECIAL_TASK_SET_SIZE,
-        SparrowConf.DEFAULT_SPECIAL_TASK_SET_SIZE);
 
     requestTaskPlacers = Maps.newConcurrentMap();
 
@@ -189,25 +184,15 @@ public class Scheduler {
     }
   }
 
-  /** This is a special case where we want to ensure a very specific scheduling allocation for
-   * Spark partitions.*/
-  private boolean isSpecialCase(TSchedulingRequest req) {
-    if (req.getTasks().size() != specialTaskSetSize) {
-      return false;
-    }
-    for (TTaskSpec t: req.getTasks()) {
-      if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
-          (t.getPreference().getNodes().size() == 3)) {
-        return false;
-      }
-    }
-    LOG.debug("Using special case (" + specialTaskSetSize + " tasks)");
-    return true;
-  }
-
-  /** Handles special case. */
-  private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
-    LOG.info("Handling special case request: " + req);
+  /** Adds constraints such that tasks in the job will be spread evenly across the cluster.
+   * 
+   *  We expect three of these special jobs to be submitted; 3 sequential calls to this
+   *  method will result in spreading the tasks for the 3 jobs across the cluster such that no
+   *  more than 1 task is assigned to each machine.
+   */
+  private TSchedulingRequest addConstraintsToSpreadTasks(TSchedulingRequest req)
+  				throws TException {
+    LOG.info("Handling spread tasks request: " + req);
     int specialCaseIndex = specialCaseCounter.incrementAndGet();
     if (specialCaseIndex < 1 || specialCaseIndex > 3) {
       LOG.error("Invalid special case index: " + specialCaseIndex);
@@ -234,7 +219,7 @@ public class Scheduler {
     }
     Collections.shuffle(backends);
 
-    if (!(allBackends.size() >= (specialTaskSetSize * 3))) {
+    if (!(allBackends.size() >= (req.getTasks().size() * 3))) {
       LOG.error("Special case expects at least three times as many machines as tasks.");
       return null;
     }
@@ -251,18 +236,35 @@ public class Scheduler {
     LOG.info("New request: " + newReq);
     return newReq;
   }
+  
+  /** Checks whether we should add constraints to this job to evenly spread tasks over machines.
+   * 
+   * This is a hack used to force Spark to cache data in 3 locations: we run 3 select * queries
+   * on the same table and spread the tasks for those queries evenly across the cluster such that
+   * the input data for the query is triple replicated and spread evenly across the cluster.
+   * 
+   * We signal that Sparrow should use this hack by adding SPREAD_TASKS to the job's description.
+   */
+  private boolean isSpreadTasksJob(TSchedulingRequest request) {
+  	if ((request.getDescription() != null) &&
+  			(request.getDescription().indexOf("SPREAD_TASKS") != -1)) {
+      LOG.debug("Spreading tasks for job with (" + request.getTasks().size() + " tasks)");
+  		return true;
+  	}
+  	return false;
+  }
 
   public void submitJob(TSchedulingRequest request) throws TException {
     // Short-circuit case that is used for liveness checking
     if (request.tasks.size() == 0) { return; }
-    if (isSpecialCase(request)) {
-      submitJobWithoutCheck(handleSpecialCase(request));
+    if (isSpreadTasksJob(request)) {
+      handleJobSubmission(addConstraintsToSpreadTasks(request));
     } else {
-      submitJobWithoutCheck(request);
+      handleJobSubmission(request);
     }
   }
 
-  public void submitJobWithoutCheck(TSchedulingRequest request) throws TException {
+  public void handleJobSubmission(TSchedulingRequest request) throws TException {
     LOG.debug(Logging.functionCall(request));
 
     long start = System.currentTimeMillis();

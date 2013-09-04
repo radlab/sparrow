@@ -74,9 +74,6 @@ public class SparrowConf {
 
   /** The hostname of this machine. */
   public final static String HOSTNAME = "hostname";
-
-  /** The size of the task set to consider a signal from spark about allocation */
-  public final static String SPECIAL_TASK_SET_SIZE = "special.task.set.size";
   /**
    * Use an invalid default value, so that the "special task set" is only used by those
    * who know what they're doing.
