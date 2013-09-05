@@ -22,6 +22,7 @@ import functools
 import logging
 import math
 import os
+import re
 import subprocess
 import stats
 import sys
@@ -30,6 +31,7 @@ import time
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
+INVALID_ID = -1
 
 START_SEC = 200
 END_SEC = 250
@@ -156,6 +158,8 @@ class Task:
                 self.node_monitor_launch_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME)
 
+TPCH_QUERY_ID_REGEX = re.compile('--(\d+)--')
+
 class Request:
     def __init__(self, id):
         self.__id = id
@@ -183,6 +187,14 @@ class Request:
 
         self.__user = ""
 
+        # TPCH query number.
+        self.tpch_id = INVALID_ID
+        # Unique query identifier assigned by shark (used to differentiate
+        # different executions of the same TPC-H query).
+        self.shark_id = INVALID_ID
+        # Spark stage ID
+        self.stage_id = INVALID_ID
+
     def user(self):
         return self.__user
 
@@ -209,6 +221,19 @@ class Request:
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
         self.__user = user
+        description_parts = description.split("-")
+        if len(description_parts) < 4:
+            print "Description not formatted as Spark/Shark description: " % description
+        else:
+            self.shark_id = description_parts[1]
+            self.stage_id = description_parts[-1]
+            match = TPCH_QUERY_ID_REGEX.search(description)
+            if match == None:
+                print "Couldn't find TPCH query id in description: %s" % description
+                return
+            self.tpch_id = match.group(1)
+            print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
+                (self.shark_id, self.stage_id, self.tpch_id, description)
 
     def add_enqueue_reservation_launch(self, time, address):
         if address not in self.__enqueue_reservation_rtts:
@@ -440,6 +465,9 @@ class LogParser:
         self.__node_monitor_queue_lengths = {}
         self.__users = set()
 
+    def get_requests(self):
+        return self.__requests
+
     def parse_file(self, filename):
         file = open(filename, "r")
         for line in file:
@@ -459,7 +487,8 @@ class LogParser:
             if audit_event_params[0] == "arrived":
                 request = self.__get_request(audit_event_params[1])
                 request.add_arrival(time, audit_event_params[2],
-                                    audit_event_params[3], audit_event_params[5])
+                                    audit_event_params[3], audit_event_params[5],
+                                    audit_event_params[6])
                 if audit_event_params[5]:
                   self.__users.add(audit_event_params[5])
             elif audit_event_params[0] == "scheduler_launch_enqueue_task":
