@@ -34,10 +34,6 @@ cp ~/hive-site.xml /opt/hive/conf/
 cp ~/shark-env.sh /root/shark/conf/shark-env.sh
 cp ~/spark-env.sh /root/spark/conf/spark-env.sh
 
-cd /opt/hive/conf
-bash -c "sed -i 's/HOST_IP/`hostname -i`/g' hive-default.xml"
-cd -
-
 # Create references to per-frontend hive tables
 cd /opt/tpch_hive/
 bash -c "sed -i 's/\/tpch/\/`hostname -i`/g' *.hive"
