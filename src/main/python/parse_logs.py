@@ -216,14 +216,17 @@ class Request:
             # TODO: otherwise, add 0.
         return subsequent_tasks_launched
 
-    def add_arrival(self, time, num_tasks, address, user):
+    def add_arrival(self, time, num_tasks, address, user, description, constrained):
         self.__arrival_time = time
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
         self.__user = user
+        self.constrained = false
+        if constrained == "true":
+          self.constrained = true
         description_parts = description.split("-")
         if len(description_parts) < 4:
-            print "Description not formatted as Spark/Shark description: " % description
+            print "Description not formatted as Spark/Shark description: " + description
         else:
             self.shark_id = description_parts[1]
             self.stage_id = description_parts[-1]
@@ -233,7 +236,7 @@ class Request:
                 return
             self.tpch_id = match.group(1)
             print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
-                (self.shark_id, self.stage_id, self.tpch_id, description)
+                (self.shark_id, self.stage_id, self.tpch_id, description))
 
     def add_enqueue_reservation_launch(self, time, address):
         if address not in self.__enqueue_reservation_rtts:

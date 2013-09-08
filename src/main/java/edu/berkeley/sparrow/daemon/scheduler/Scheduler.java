@@ -279,15 +279,6 @@ public class Scheduler {
     if (request.getDescription() != null) {
     	description = request.getDescription();
     }
-    // Logging the address here is somewhat redundant, since all of the
-    // messages in this particular log file come from the same address.
-    // However, it simplifies the process of aggregating the logs, and will
-    // also be useful when we support multiple daemons running on a single
-    // machine.
-    AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
-                                            request.getTasks().size(),
-                                            address.getHost(), address.getPort(),
-                                            user, description));
 
     String app = request.getApp();
     List<TTaskSpec> tasks = request.getTasks();
@@ -300,6 +291,15 @@ public class Scheduler {
           task.preference.nodes != null &&
           !task.preference.nodes.isEmpty());
     }
+    // Logging the address here is somewhat redundant, since all of the
+    // messages in this particular log file come from the same address.
+    // However, it simplifies the process of aggregating the logs, and will
+    // also be useful when we support multiple daemons running on a single
+    // machine.
+    AUDIT_LOG.info(Logging.auditEventString("arrived", requestId,
+                                            request.getTasks().size(),
+                                            address.getHost(), address.getPort(),
+                                            user, description, constrained));
 
     TaskPlacer taskPlacer;
     if (constrained) {
