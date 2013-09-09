@@ -36,7 +36,8 @@ def main(argv):
       num_backends = argv[2]
 
       print "Launching %s frontends and %s backends" % (num_frontends, num_backends)
-      launch_cmd = ("./ec2-exp.sh -t cr1.8xlarge -a ami-75733d1c -i %s --spot-price=1.50 launch %s -f %s -b %s" %
+# add --spot-price=foo for spot pricing
+      launch_cmd = ("./ec2-exp.sh -t cr1.8xlarge -a ami-75733d1c -i %s launch %s -f %s -b %s" %
           (key_loc, cluster_name, num_frontends, num_backends))
       run_cmd(launch_cmd)
 
