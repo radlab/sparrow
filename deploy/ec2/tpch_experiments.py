@@ -21,12 +21,12 @@ import time
 num_nodes = 100
 wait_delay = 20 * 60
 results_dirname = "results"
-partitions = 2
-reducers = 1
+partitions = 6
+reducers = 4
 ratios = [(2, 2)] #-p (sample ratio unconstrianed), -q (sample ratio constrained)
 rates = [275]
 backend_mem = "5g"
-cluster_name = "sparrow"
+cluster_name = "tpch"
 #sparrow_branch = "per_task_old_code"
 sparrow_branch = "sparrow"
 key_loc = "patkey.pem"

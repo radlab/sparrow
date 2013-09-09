@@ -28,11 +28,11 @@ from optparse import OptionParser
 
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> <cluster> [options]" +
-    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-database, create-tpch-tables, start-shark-tpch")
+    "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-sparrow-throughput, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-database, create-tpch-tables, start-shark-tpch")
   parser.add_option("-z", "--zone", default="us-east-1b",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-c783ccae",
-      help="Amazon Machine Image ID to use")
+      help="Amazon Machine Image ID to use (use ami-75733d1c for HVM instance types)")
   parser.add_option("-t", "--instance-type", default="m2.2xlarge",
       help="Type of instance to launch (default: m2.2xlarge). " +
            "WARNING: must be 64 bit, thus small instances won't work")
@@ -83,15 +83,17 @@ def parse_args(force_action=True):
       help="Classname (not fully qualified!) of the frontend to use")
   parser.add_option("-r", "--parallelism", type="int", default=8,
       help="Level of parallelism for dummy queries.")
-  parser.add_option("-u", "--num_partitions", type="int", default=-1,
-      help="Number of partitions for shark tables. Also used to determine"
-           " when to use the Sparrow 'special case' code.")
+  parser.add_option("-u", "--num_partitions", type="int", default=1,
+      help="Number of partitions for shark tables.")
   parser.add_option("--reduce-tasks", type="int", default=5,
       help="Number of reduce tasks to use for Shark queries.")
   parser.add_option("--spark-backend-mem", default="2g",
       help="Amount of memory to give spark backends."),
   parser.add_option("--scale-factor", default="2.5",
       help="Scale factor to use when creating TPCH database (used with create-database)")
+  parser.add_option("--total-cores", default="160",
+      help="Total number of cores in the cluster (used to determine launch rate for "
+           "throughput experiments)")
 
   (opts, args) = parser.parse_args()
   if len(args) < 2 and force_action:
@@ -360,6 +362,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "users": users,
     "frontend_type": opts.frontend_type,
     "cpus": "%s" % opts.cpus,
+    "total_cores": "%s" % opts.total_cores,
     "spark_backend_mem": "%s" % opts.spark_backend_mem
   }
 
@@ -400,6 +403,13 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
 
   print "Deploying sparrow to other machines..."
   ssh(driver_machine, opts, "/root/deploy_sparrow.sh")
+
+def start_sparrow_throughput(frontends, backends, opts):
+  start_sparrow(frontends, backends, opts)
+  start_spark_shark(frontends, backends, opts)
+  driver = frontends[0].public_dns_name
+  print "Starting throughput experiment on " + driver
+  ssh(driver, opts, "/root/start_throughput_exp_sparrow.sh")
 
 def start_sparrow(frontends, backends, opts):
   all_machines = []
@@ -591,6 +601,9 @@ def main():
     start_sparrow(frontends, backends, opts)
   elif action == "stop-sparrow":
     stop_sparrow(frontends, backends, opts)
+  elif action == "start-sparrow-throughput":
+    # Starts a throughput testing experiment using Sparrow.
+    start_sparrow_throughput(frontends, backends, opts)
   elif action == "start-mesos":
     start_mesos(frontends, backends, opts)
   elif action == "stop-mesos":

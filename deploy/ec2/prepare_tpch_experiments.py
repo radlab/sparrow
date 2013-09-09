@@ -28,16 +28,16 @@ def main(argv):
     print "Specifying num_frontends and num_backends will cause a cluster to be launched"
     return
 
-  cluster_name = "sparrow"
+  cluster_name = "tpch"
   key_loc = "patkey.pem"
 
-  if len(argv) == 2:
+  if len(argv) == 3:
       num_frontends = argv[1]
       num_backends = argv[2]
 
       print "Launching %s frontends and %s backends" % (num_frontends, num_backends)
-      launch_cmd = ("./ec2-exp.sh -i %s launch %s -f %s -b %s" %
-          (key_loc, num_frontends, num_backends, cluster_name))
+      launch_cmd = ("./ec2-exp.sh -t cr1.8xlarge -a ami-75733d1c -i %s --spot-price=1.50 launch %s -f %s -b %s" %
+          (key_loc, cluster_name, num_frontends, num_backends))
       run_cmd(launch_cmd)
 
       print "Sleeping for 1 minute after launching machines"
@@ -55,7 +55,7 @@ def main(argv):
   hdfs_cmd = "./ec2-exp.sh -i %s start-hdfs %s" % (key_loc, cluster_name)
   run_cmd(hdfs_cmd)
 
-  scale_factor = 0.1
+  scale_factor = 0.5
   print "***********Creating database"
   create_db_cmd = ("./ec2-exp.sh -i %s create-database %s --scale-factor %s" %
                    (key_loc, cluster_name, scale_factor))

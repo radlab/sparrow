@@ -12,6 +12,10 @@ def main(argv):
         return
 
     log_parser = parse_logs.LogParser()
+    
+    # Use 5 minutes in the middle of the experiment, by default.
+    start_sec = 1800
+    end_sec = 2200
 
     log_files = []
     output_dir = "experiment"
@@ -26,11 +30,9 @@ def main(argv):
         elif kv[0] == PARAMS[1]:
             output_dir = kv[1]
         elif kv[0] == PARAMS[2]:
-            global START_SEC
-            START_SEC = int(kv[1])
+            start_sec = int(kv[1])
         elif kv[0] == PARAMS[3]:
-            global END_SEC
-            END_SEC = int(kv[1])
+            end_sec = int(kv[1])
         else:
             print "Warning: ignoring parameter %s" % kv[0]
 
@@ -45,11 +47,29 @@ def main(argv):
 
     requests = log_parser.get_requests()
 
-    # Separate out results for each query and each type of query. TPCH query ID : particular query : requests map!\
+    # Separate out results for each query and each type of query, and use only
+    # the results between START_TIME and END_TIME (relative to the beginning of the experiment).
+    # TPCH query ID : particular query : requests map!\
+    earliest_time = log_parser.earliest_time()
+    time_min = earliest_time + start_sec * 1000
+    time_max = earliest_time + end_sec * 1000
+    print "Min time: %s, max time: %s" % (time_min, time_max)
+    too_early = 0
+    too_late = 0
+    used_requests = 0
+    total_time = 0
     query_type_to_queries = {}
-    for r in requests:
+    for r in requests.values():
+        if r.arrival_time() < time_min:
+            too_early += 1
+            continue
+        elif r.arrival_time() > time_max:
+            too_late += 1
+            continue
+        used_requests += 1
+        total_time += sum(x for x in r.service_times())
         if r.tpch_id not in query_type_to_queries:
-          query_type_to_queries[r.tpch_id] = []
+          query_type_to_queries[r.tpch_id] = {}
         queries = query_type_to_queries[r.tpch_id]
 
         # This assumes that only one shark frontend is submitting queries to
@@ -58,35 +78,50 @@ def main(argv):
         if query_id not in queries:
           queries[query_id] = []
         queries[query_id].append(r)
+    print "%s too early, %s too late, %s total used" % (too_early, too_late, used_requests)
+    total_slots = 80.0
+    load = total_time / (total_slots * (end_sec - start_sec) * 1000)
+    print "Load %s (total time: %s)" % (load, total_time)
 
-    query_type_to_optimal = {}
-    query_type_to_actual = {}
     for tpch_id, queries in query_type_to_queries.iteritems():
-        print "Parsing queries for " + tpch_id
+        print "Parsing queries for %s" % tpch_id
         optimals = []
         actuals = []
+        fulls = []
         for id_tuple, requests in queries.iteritems():
-            print "%s requests" % len(requests)
+            #print "%s requests" % len(requests)
             requests.sort(key = lambda x: x.arrival_time())
             optimal = 0
             actual = 0
             start = -1
             end = 0
             for request in requests:
-                opt = sum(r.optimal_response_time() for r in requests)
-                act = sum(r.response_time() for r in requests)
-                print ("Request from %s (Shark %s, stage %s, constrained: %s): optimal %s, actual %s" %
-                  (id_tuple[1], id_tuple[0], request.stage_id, request.constrained, opt, act))
+                #print request
+                opt = request.optimal_response_time()
                 optimal += opt
+                act = request.response_time()
                 actual += act
+                #print ("Request from %s (Shark %s, stage %s, arrival %s, constrained: %s): optimal %s, actual %s" %
+                #  (id_tuple[1], id_tuple[0], request.stage_id, request.arrival_time(), request.constrained, opt, act))
                 if start == -1:
-                  start = r.arrival_time()
-                end = r.arrival_time() + r.response_time()
+                  #print "setting start %s" % request.arrival_time()
+                  start = request.arrival_time()
+                end = request.arrival_time() + request.response_time()
+            #print "For query %s from %s: optimal %s actual %s full %s" % (id_tuple[1], id_tuple[0], optimal, actual, end - start)
+            #print "end: %s" % end
             optimals.append(optimal)
             actuals.append(actual)
-            correct_actual
-        query_type_to_optimal[tpch_id] = optimals
-        query_type_to_actual[tpch_id] = actuals
+            fulls.append(end - start)
+
+        optimals.sort()
+        actuals.sort()
+        file = open("results_%s" % tpch_id, "w")
+        file.write("optimal\tactual\n")
+        NUM_DATA_POINTS = 100
+        for i in range(NUM_DATA_POINTS):
+            i = float(i) / NUM_DATA_POINTS
+            file.write("%f\t%d\t%d\n" % (i, parse_logs.get_percentile(optimals, i), parse_logs.get_percentile(actuals, i)))
+        file.close()
 
 if __name__ == "__main__":
      main(sys.argv[1:])

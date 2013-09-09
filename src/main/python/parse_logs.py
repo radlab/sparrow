@@ -97,6 +97,10 @@ class Task:
         self.previous_request_id = ""
         self.previous_task_id = ""
 
+    def __str__(self):
+        return ("Task %s: Scheduler launch %s, NM launch %s, NM complete %s, predicted sched. complete: %f" %
+                (self.id, self.scheduler_launch_time, self.node_monitor_launch_time, self.completion_time, self.adjusted_completion_time()))
+
     def set_scheduler_launch_time(self, time):
         if self.scheduler_launch_time != INVALID_TIME:
             self.__logger.warn(("Task %s launched at scheduler twice; expect "
@@ -195,6 +199,13 @@ class Request:
         # Spark stage ID
         self.stage_id = INVALID_ID
 
+    def __str__(self):
+        ret = "ID %s SHARK %s (stage %s), TPCH %s, %s tasks: " % (self.__id, self.shark_id, self.stage_id, self.tpch_id, len(self.__tasks))
+        for task in self.__tasks.values():
+            ret += str(task)
+            ret += " "
+        return ret
+
     def user(self):
         return self.__user
 
@@ -221,9 +232,9 @@ class Request:
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
         self.__user = user
-        self.constrained = false
+        self.constrained = False
         if constrained == "true":
-          self.constrained = true
+          self.constrained = True
         description_parts = description.split("-")
         if len(description_parts) < 4:
             print "Description not formatted as Spark/Shark description: " + description
@@ -232,11 +243,14 @@ class Request:
             self.stage_id = description_parts[-1]
             match = TPCH_QUERY_ID_REGEX.search(description)
             if match == None:
-                print "Couldn't find TPCH query id in description: %s" % description
+                is_warmup_query = (description.find("SPREAD_EVENLY") != -1)
+                is_create_table_query = (description.find("create table denorm") != -1)
+                if not (is_warmup_query or is_create_table_query):
+                    self.__logger.WARN("Couldn't find TPCH query id in description: %s" % description)
                 return
             self.tpch_id = match.group(1)
-            print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
-                (self.shark_id, self.stage_id, self.tpch_id, description))
+            #print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
+            #    (self.shark_id, self.stage_id, self.tpch_id, description))
 
     def add_enqueue_reservation_launch(self, time, address):
         if address not in self.__enqueue_reservation_rtts:
@@ -468,6 +482,9 @@ class LogParser:
         self.__node_monitor_queue_lengths = {}
         self.__users = set()
 
+    def earliest_time(self):
+        return self.__earliest_time
+
     def get_requests(self):
         return self.__requests
 
@@ -476,22 +493,18 @@ class LogParser:
         for line in file:
             # Strip off the newline at the end of the line.
             items = line[:-1].split("\t")
-            if len(items) != 3:
-                self.__logger.warn(("Ignoring log message '%s' with unexpected "
-                                  "number of items (expected 3; found %d)") %
-                                 (line, len(items)))
-                continue
 
             # Time is expressed in epoch milliseconds.
             time = int(items[self.TIME_INDEX])
             self.__earliest_time = min(self.__earliest_time, time)
 
-            audit_event_params = items[self.AUDIT_EVENT_INDEX].split(":")
+            audit_event_params = " ".join(items[self.AUDIT_EVENT_INDEX:]).split(":")
             if audit_event_params[0] == "arrived":
                 request = self.__get_request(audit_event_params[1])
+                # TODO: replace last param with "constrained", once that's added
                 request.add_arrival(time, audit_event_params[2],
                                     audit_event_params[3], audit_event_params[5],
-                                    audit_event_params[6])
+                                    audit_event_params[6], "")
                 if audit_event_params[5]:
                   self.__users.add(audit_event_params[5])
             elif audit_event_params[0] == "scheduler_launch_enqueue_task":

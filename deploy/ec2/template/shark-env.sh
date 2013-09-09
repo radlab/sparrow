@@ -25,7 +25,8 @@ export SHARK_MASTER_MEM=1g
 # (Required) Point to your Scala installation.
 export SCALA_HOME="/opt/scala-2.9.3"
 export SCALA_VERSON=2.9.3
-export JAVA_HOME="/usr/lib/jvm/java-6-sun/jre"
+# Use this for non-HVM amis: export JAVA_HOME="/usr/lib/jvm/java-6-sun/jre"
+export JAVA_HOME="/usr/lib/jvm/jre-1.6.0-openjdk.x86_64"
 
 # (Required) Point to the patched Hive binary distribution
 export HIVE_DEV_HOME="/opt/hive"
@@ -42,7 +43,8 @@ export SPARK_HOME="/disk1/tmp/spark/"
 my_ip=`hostname -i`
 before_me=`cat /root/sparrow_schedulers.txt | grep -B 1000 $my_ip | grep -v $my_ip | tr "\n" ","`
 after_me=`cat /root/sparrow_schedulers.txt | grep -A 1000 $my_ip | grep -v $my_ip | tr "\n" ","`
-export MASTER="sparrow@$my_ip:20503,$before_me$after_me"
+export MASTER="sparrow@$my_ip:20503,"
+# Temp fix: need to add this back to the master thing for fault tolerance $before_me$after_me"
 
 # Only required if using Mesos:
 #export MESOS_NATIVE_LIBRARY=/usr/local/lib/libmesos.so 
@@ -59,4 +61,5 @@ SPARK_JAVA_OPTS+=" -Dsparrow.app.name=spark_`hostname -i`"
 # Spark options that are usually sent to the executor using environment variables packaged
 # from the Spark master, but that we need to set manually when running with Sparrow.
 SPARK_JAVA_OPTS+=" -Dspark.broadcast.port=33624 -Dspark.driver.port=60500"
+SPARK_JAVA_OPTS+=" -Dspark.io.compression.codec=spark.io.LZFCompressionCodec"
 export SPARK_JAVA_OPTS
