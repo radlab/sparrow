@@ -64,7 +64,6 @@ public class SparrowConf {
   public final static int DEFAULT_RESERVATION_MS = 15;
 
   /** The size of the task set to consider a signal from spark about allocation */
-  public final static String SPECIAL_TASK_SET_SIZE = "special.task.set.size";
   public final static int DEFAULT_SPECIAL_TASK_SET_SIZE = 2;
 
   // Parameters for static operation (least usable system tests).

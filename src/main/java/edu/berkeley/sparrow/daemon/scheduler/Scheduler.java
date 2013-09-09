@@ -60,10 +60,6 @@ public class Scheduler {
   TaskPlacer constrainedPlacer;
   TaskPlacer unconstrainedPlacer;
 
-
-  /** A special case scheduling parameter for Spark RDD layouts. */
-  private int specialTaskSetSize;
-
   /** How many times the special case has been triggered. */
   private AtomicInteger specialCaseCounter = new AtomicInteger(0);
 
@@ -109,9 +105,6 @@ public class Scheduler {
     address = socket;
     String mode = conf.getString(SparrowConf.DEPLYOMENT_MODE, "unspecified");
 
-    specialTaskSetSize = conf.getInt(SparrowConf.SPECIAL_TASK_SET_SIZE,
-      SparrowConf.DEFAULT_SPECIAL_TASK_SET_SIZE);
-
     this.conf = conf;
     if (mode.equals("configbased")) {
       state = new ConfigSchedulerState();
@@ -138,14 +131,14 @@ public class Scheduler {
   }
 
   public boolean submitJob(TSchedulingRequest request) throws TException {
-    if (isSpecialCase(request)) {
-      return submitJobWithoutCheck(handleSpecialCase(request));
+    if (isSpreadTasksJob(request)) {
+      return handleJobSubmission(addConstraintsToSpreadTasks(request));
     } else {
-      return submitJobWithoutCheck(request);
+      return handleJobSubmission(request);
     }
   }
 
-  public boolean submitJobWithoutCheck(TSchedulingRequest req) throws TException {
+  public boolean handleJobSubmission(TSchedulingRequest req) throws TException {
     LOG.debug(Logging.functionCall(req));
     long start = System.currentTimeMillis();
 
@@ -223,24 +216,26 @@ public class Scheduler {
         "Probe time: " + (probeFinish - start));
     return true;
   }
-
-  /** This is a special case where we want to ensure a very specific scheduling allocation for
-   * Spark partitions.*/
-  private boolean isSpecialCase(TSchedulingRequest req) {
-      if (req.getTasks().size() != specialTaskSetSize) {
-          return false;
-      }
-      for (TTaskSpec t: req.getTasks()) {
-          if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
-                  (t.getPreference().getNodes().size() == 3)) {
-              return false;
-          }
-      }
+  
+  /** Checks whether we should add constraints to this job to evenly spread tasks over machines.
+   * 
+   * This is a hack used to force Spark to cache data in 3 locations: we run 3 select * queries
+   * on the same table and spread the tasks for those queries evenly across the cluster such that
+   * the input data for the query is triple replicated and spread evenly across the cluster.
+   * 
+   * We signal that Sparrow should use this hack by adding SPREAD_TASKS to the job's description.
+   */
+  private boolean isSpreadTasksJob(TSchedulingRequest request) {
+    if ((request.getDescription() != null) &&
+        (request.getDescription().indexOf("SPREAD_TASKS") != -1)) {
+      LOG.debug("Spreading tasks for job with (" + request.getTasks().size() + " tasks)");
       return true;
+    }
+    return false;
   }
 
   /** Handles special case. */
-  private TSchedulingRequest handleSpecialCase(TSchedulingRequest req) throws TException {
+  private TSchedulingRequest addConstraintsToSpreadTasks(TSchedulingRequest req) throws TException {
     LOG.info("Handling special case request: " + req);
     int specialCaseIndex = specialCaseCounter.incrementAndGet();
     if (specialCaseIndex < 1 || specialCaseIndex > 3) {
@@ -268,7 +263,7 @@ public class Scheduler {
     }
     Collections.shuffle(backends);
 
-    if (!(allBackends.size() >= (specialTaskSetSize * 3))) {
+    if (!(allBackends.size() >= (req.getTasks().size() * 3))) {
       LOG.error("Special case expects at least three times as many machines as tasks.");
       return null;
     }
