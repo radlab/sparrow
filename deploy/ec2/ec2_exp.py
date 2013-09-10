@@ -29,7 +29,7 @@ from optparse import OptionParser
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> <cluster> [options]" +
     "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-sparrow-throughput, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-database, create-tpch-tables, start-shark-tpch")
-  parser.add_option("-z", "--zone", default="us-east-1b",
+  parser.add_option("-z", "--zone", default="us-east-1a",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-c783ccae",
       help="Amazon Machine Image ID to use (use ami-75733d1c for HVM instance types)")
