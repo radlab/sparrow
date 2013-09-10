@@ -391,6 +391,7 @@ public class Scheduler {
     InetSocketAddress frontend = frontendSockets.get(app);
     if (frontend == null) {
       LOG.error("Requested message sent to unregistered app: " + app);
+      return;
     }
     try {
       AsyncClient client = frontendClientPool.borrowClient(frontend);
