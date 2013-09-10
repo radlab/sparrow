@@ -53,23 +53,23 @@ public class TestWaterLevelAssignmentPolicy {
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     // Create five task requests
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     task1.setEstimatedResources(TResources.createResourceVector(0, 1));
     tasks.add(task1);
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     tasks.add(task2);
     task2.setEstimatedResources(TResources.createResourceVector(0, 1));
     TTaskSpec task3 = new TTaskSpec();
-    task3.taskID = "3";
+    task3.taskId = "3";
     tasks.add(task3);
     task3.setEstimatedResources(TResources.createResourceVector(0, 1));
     TTaskSpec task4 = new TTaskSpec();
-    task4.taskID = "4";
+    task4.taskId = "4";
     tasks.add(task4);
     task4.setEstimatedResources(TResources.createResourceVector(0, 1));
     TTaskSpec task5 = new TTaskSpec();
-    task5.taskID = "5";
+    task5.taskId = "5";
     tasks.add(task5);
     task5.setEstimatedResources(TResources.createResourceVector(0, 1));
     
@@ -120,15 +120,15 @@ public class TestWaterLevelAssignmentPolicy {
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     // Create three task requests
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     task1.setEstimatedResources(TResources.createResourceVector(0, 1));
     tasks.add(task1);
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     tasks.add(task2);
     task2.setEstimatedResources(TResources.createResourceVector(0, 1));
     TTaskSpec task3 = new TTaskSpec();
-    task3.taskID = "3";
+    task3.taskId = "3";
     tasks.add(task3);
     task3.setEstimatedResources(TResources.createResourceVector(0, 1));
     

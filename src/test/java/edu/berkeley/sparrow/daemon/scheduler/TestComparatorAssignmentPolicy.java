@@ -26,11 +26,11 @@ public class TestComparatorAssignmentPolicy {
     // Create two task requests
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     tasks.add(task1);
     
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     tasks.add(task2);
     
     Map<InetSocketAddress, TResourceUsage> usage = Maps.newHashMap();
@@ -70,8 +70,8 @@ public class TestComparatorAssignmentPolicy {
     for (TaskPlacementResponse resp : out) {
       if (resp.getNodeAddr().equals(socket1)) { seenNodeOne = true; }
       if (resp.getNodeAddr().equals(socket2)) { seenNodeTwo = true; }
-      if (resp.getTaskSpec().taskID.equals("1")) { seenTaskOne = true; }
-      if (resp.getTaskSpec().taskID.equals("2")) { seenTaskTwo = true; }
+      if (resp.getTaskSpec().taskId.equals("1")) { seenTaskOne = true; }
+      if (resp.getTaskSpec().taskId.equals("2")) { seenTaskTwo = true; }
     }
     
     assertTrue(seenTaskOne);
@@ -88,15 +88,15 @@ public class TestComparatorAssignmentPolicy {
     // Create three task requests
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     tasks.add(task1);
     
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     tasks.add(task2);
     
     TTaskSpec task3 = new TTaskSpec();
-    task3.taskID = "3";
+    task3.taskId = "3";
     tasks.add(task3);
     
     Map<InetSocketAddress, TResourceUsage> usage = Maps.newHashMap();
@@ -136,11 +136,11 @@ public class TestComparatorAssignmentPolicy {
     // Create two task requests
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     tasks.add(task1);
     
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     tasks.add(task2);
     
     Map<InetSocketAddress, TResourceUsage> usage = Maps.newHashMap();
@@ -180,8 +180,8 @@ public class TestComparatorAssignmentPolicy {
     for (TaskPlacementResponse resp : out) {
       if (resp.getNodeAddr().equals(socket1)) { seenNodeOne = true; }
       if (resp.getNodeAddr().equals(socket4)) { seenNodeFour = true; }
-      if (resp.getTaskSpec().taskID.equals("1")) { seenTaskOne = true; }
-      if (resp.getTaskSpec().taskID.equals("2")) { seenTaskTwo = true; }
+      if (resp.getTaskSpec().taskId.equals("1")) { seenTaskOne = true; }
+      if (resp.getTaskSpec().taskId.equals("2")) { seenTaskTwo = true; }
     }
     
     assertTrue(seenTaskOne);

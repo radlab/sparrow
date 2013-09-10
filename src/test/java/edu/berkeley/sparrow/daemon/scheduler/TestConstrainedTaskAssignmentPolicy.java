@@ -30,42 +30,42 @@ public class TestConstrainedTaskAssignmentPolicy {
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     task1.preference = new TPlacementPreference();
     task1.preference.nodes = Arrays.asList("1.1.1.1", "2.2.2.2", "3.3.3.3");
     task1.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task1);
     
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     task2.preference = new TPlacementPreference();
     task2.preference.nodes = Arrays.asList("2.2.2.2", "3.3.3.3", "4.4.4.4");
     task2.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task2);
     
     TTaskSpec task3 = new TTaskSpec();
-    task3.taskID = "3";
+    task3.taskId = "3";
     task3.preference = new TPlacementPreference();
     task3.preference.nodes = Arrays.asList("3.3.3.3", "4.4.4.4", "5.5.5.5");
     task3.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task3);
     
     TTaskSpec task4 = new TTaskSpec();
-    task4.taskID = "4";
+    task4.taskId = "4";
     task4.preference = new TPlacementPreference();
     task4.preference.nodes = Arrays.asList("5.5.5.5", "6.6.6.6", "1.1.1.1");
     task4.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task4);
     
     TTaskSpec task5 = new TTaskSpec();
-    task5.taskID = "5";
+    task5.taskId = "5";
     task5.preference = new TPlacementPreference();
     task5.preference.nodes = Arrays.asList("1.1.1.1", "2.2.2.2", "3.3.3.3");
     task5.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task5);
     
     TTaskSpec task6 = new TTaskSpec();
-    task6.taskID = "6";
+    task6.taskId = "6";
     task6.preference = new TPlacementPreference();
     task6.preference.nodes = Arrays.asList("2.2.2.2", "3.3.3.3", "4.4.4.4");
     task6.estimatedResources = TResources.createResourceVector(0, 1);
@@ -125,21 +125,21 @@ public class TestConstrainedTaskAssignmentPolicy {
     Collection<TTaskSpec> tasks = new LinkedList<TTaskSpec>();
     
     TTaskSpec task1 = new TTaskSpec();
-    task1.taskID = "1";
+    task1.taskId = "1";
     task1.preference = new TPlacementPreference();
     task1.preference.nodes = Arrays.asList("1.1.1.1", "2.2.2.2", "3.3.3.3");
     task1.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task1);
     
     TTaskSpec task2 = new TTaskSpec();
-    task2.taskID = "2";
+    task2.taskId = "2";
     task2.preference = new TPlacementPreference();
     task2.preference.nodes = Arrays.asList("1.1.1.1", "2.2.2.2", "3.3.3.3");
     task2.estimatedResources = TResources.createResourceVector(0, 1);
     tasks.add(task2);
     
     TTaskSpec task3 = new TTaskSpec();
-    task3.taskID = "3";
+    task3.taskId = "3";
     task3.preference = new TPlacementPreference();
     task3.preference.nodes = Arrays.asList("1.1.1.1", "2.2.2.2", "3.3.3.3");
     task3.estimatedResources = TResources.createResourceVector(0, 1);
