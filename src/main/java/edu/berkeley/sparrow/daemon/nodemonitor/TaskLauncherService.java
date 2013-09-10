@@ -47,8 +47,7 @@ public class TaskLauncherService {
         }
         
         try {
-          client.launchTask(task.message, task.taskId, task.user, 
-              task.estimatedResources);
+          client.launchTask(task.message, task.taskId, task.user);
         } catch (TException e) {
           LOG.error("Error launching task: " + task.taskId, e);
           return; // Don't put this client back if there was an error

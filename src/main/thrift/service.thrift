@@ -42,8 +42,7 @@ service NodeMonitorService {
 # from a NodeMonitor.
 service BackendService {  
   void launchTask(1: binary message, 2: types.TFullTaskId taskId,
-                  3: types.TUserGroupInfo user,
-                  4: types.TResourceVector estimatedResources);
+                  3: types.TUserGroupInfo user);
 
 }
 
