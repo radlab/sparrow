@@ -25,10 +25,10 @@ partitions = 6
 reducers = 4
 ratios = [(2, 2)] #-p (sample ratio unconstrianed), -q (sample ratio constrained)
 rates = [275]
-backend_mem = "5g"
+backend_mem = "15g"
 cluster_name = "tpch"
-#sparrow_branch = "per_task_old_code"
-sparrow_branch = "sparrow"
+sparrow_branch = "per_task_old_code"
+#sparrow_branch = "sparrow"
 key_loc = "patkey.pem"
 
 def run_cmd(cmd):
@@ -46,7 +46,7 @@ for rate in rates:
     run_cmd(start_cmd)
     time.sleep(wait_delay)
 
-    collect_dir = "%s/%s_%s_%s_%s" % (results_dirname, num_nodes, rate, p, q)
+    collect_dir = "%s" % results_dirname
     if not os.path.exists(collect_dir):
       os.mkdir(collect_dir)
     collect_cmd = "./ec2-exp.sh -i %s collect-logs %s --log-dir=%s" % (key_loc, cluster_name, collect_dir)

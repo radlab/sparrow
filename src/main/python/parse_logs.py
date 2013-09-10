@@ -33,8 +33,8 @@ INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
 INVALID_ID = -1
 
-START_SEC = 200
-END_SEC = 250
+START_SEC = 30
+END_SEC = 300
 
 REQUEST_COUNT_GRANUL = 30
 
@@ -104,7 +104,7 @@ class Task:
     def set_scheduler_launch_time(self, time):
         if self.scheduler_launch_time != INVALID_TIME:
             self.__logger.warn(("Task %s launched at scheduler twice; expect "
-                                "task to only launch once") % id)
+                                "task to only launch once") % self.id)
         self.scheduler_launch_time = time
 
     def set_node_monitor_launch_time(self, time):
@@ -116,7 +116,7 @@ class Task:
     def set_completion_time(self, time):
         if self.completion_time != INVALID_TIME:
             self.__logger.warn(("Task %s completed twice; "
-                              "expect task to only complete once") % id)
+                              "expect task to only complete once") % self.id)
         self.completion_time = time
 
     def set_previous_task(self, previous_request_id, previous_task_id):
@@ -200,10 +200,10 @@ class Request:
         self.stage_id = INVALID_ID
 
     def __str__(self):
-        ret = "ID %s SHARK %s (stage %s), TPCH %s, %s tasks: " % (self.__id, self.shark_id, self.stage_id, self.tpch_id, len(self.__tasks))
-        for task in self.__tasks.values():
-            ret += str(task)
-            ret += " "
+        ret = "ID %s SHARK %s (stage %s), Constrained %s TPCH %s, %s tasks: " % (self.__id, self.shark_id, self.stage_id, self.constrained, self.tpch_id, len(self.__tasks))
+        #for task in self.__tasks.values():
+        #    ret += str(task)
+        #    ret += " "
         return ret
 
     def user(self):
@@ -246,7 +246,7 @@ class Request:
                 is_warmup_query = (description.find("SPREAD_EVENLY") != -1)
                 is_create_table_query = (description.find("create table denorm") != -1)
                 if not (is_warmup_query or is_create_table_query):
-                    self.__logger.WARN("Couldn't find TPCH query id in description: %s" % description)
+                    self.__logger.warn("Couldn't find TPCH query id in description: %s" % description)
                 return
             self.tpch_id = match.group(1)
             #print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
