@@ -104,6 +104,14 @@ public class Scheduler {
    */
   private ConcurrentMap<String, TaskPlacer> requestTaskPlacers;
 
+  /**
+   * When a job includes SPREAD_EVENLY in the description and has this number of tasks,
+   * Sparrow spreads the tasks evenly over machines to evenly cache data. We need this (in
+   * addition to the SPREAD_EVENLY descriptor) because only the reduce phase -- not the map
+   * phase -- should be spread.
+   */
+  private int spreadEvenlyTaskSetSize;
+  
   private Configuration conf;
 
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
@@ -135,6 +143,9 @@ public class Scheduler {
     } else {
       LOG.debug("Not using cancellation");
     }
+    
+    spreadEvenlyTaskSetSize = conf.getInt(SparrowConf.SPREAD_EVENLY_TASK_SET_SIZE,
+    				SparrowConf.DEFAULT_SPREAD_EVENLY_TASK_SET_SIZE);
   }
 
   public boolean registerFrontend(String appId, String addr) {
@@ -251,11 +262,14 @@ public class Scheduler {
   		// Need to check to see if there are 3 constraints; if so, it's the map phase of the
   		// first job that reads the data from HDFS, so we shouldn't override the constraints.
   		for (TTaskSpec t: request.getTasks()) {
-  		  if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
-  				  (t.getPreference().getNodes().size() == 3)) {
-  				return false;
-  			}
-  		}
+        if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
+            (t.getPreference().getNodes().size() == 3)) {
+          return false;
+        }
+      }
+      if (request.getTasks().size() != spreadEvenlyTaskSetSize) {
+        return false;
+      }
       LOG.debug("Spreading tasks for job with " + request.getTasks().size() + " tasks");
   		return true;
   	}

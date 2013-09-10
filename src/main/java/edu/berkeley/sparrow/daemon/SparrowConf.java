@@ -87,4 +87,7 @@ public class SparrowConf {
   public final static String STATIC_APP_NAME = "static.app.name";
 
   public static final String GET_TASK_PORT = "get_task.port";
+  
+  public final static String SPREAD_EVENLY_TASK_SET_SIZE = "spread_evenly_task_set_size";
+  public final static int DEFAULT_SPREAD_EVENLY_TASK_SET_SIZE = 1;
 }

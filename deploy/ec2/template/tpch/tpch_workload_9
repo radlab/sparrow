@@ -11,7 +11,7 @@ select --SPREAD_EVENLY--
 count(*) from denorm_cached;
 select --SPREAD_EVENLY--
 count(*) from denorm_cached;
-set mapred.reduce.tasks={{num_partitions_minus_one}};
+set mapred.reduce.tasks={{reduce_tasks}};
 select --4--
   count(1), o_orderpriority from 
   (select distinct l_orderkey, o_orderpriority from denorm_cached where

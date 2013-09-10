@@ -11,7 +11,7 @@ select --SPREAD_EVENLY--
 count(*) from denorm_cached;
 select --SPREAD_EVENLY--
 count(*) from denorm_cached;
-set mapred.reduce.tasks={{num_partitions_minus_one}};
+set mapred.reduce.tasks={{reduce_tasks}};
 select --6--
 sum(l_extendedprice*l_discount) as revenue
 from 
