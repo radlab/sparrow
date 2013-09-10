@@ -162,7 +162,7 @@ class Task:
                 self.node_monitor_launch_time != INVALID_TIME and
                 self.completion_time != INVALID_TIME)
 
-TPCH_QUERY_ID_REGEX = re.compile('--(\d+)--')
+TPCH_QUERY_ID_REGEX = re.compile('--(\d+) (\d+)--')
 
 class Request:
     def __init__(self, id):
@@ -236,10 +236,9 @@ class Request:
         if constrained == "true":
           self.constrained = True
         description_parts = description.split("-")
-        if len(description_parts) < 4:
+        if len(description_parts) < 2:
             print "Description not formatted as Spark/Shark description: " + description
         else:
-            self.shark_id = description_parts[1]
             self.stage_id = description_parts[-1]
             match = TPCH_QUERY_ID_REGEX.search(description)
             if match == None:
@@ -248,7 +247,9 @@ class Request:
                 if not (is_warmup_query or is_create_table_query):
                     self.__logger.warn("Couldn't find TPCH query id in description: %s" % description)
                 return
-            self.tpch_id = match.group(1)
+            # An identifier that's unique for the Shark driver, but not across all drivers.
+            self.shark_id = match.group(1)
+            self.tpch_id = match.group(2)
             #print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
             #    (self.shark_id, self.stage_id, self.tpch_id, description))
 

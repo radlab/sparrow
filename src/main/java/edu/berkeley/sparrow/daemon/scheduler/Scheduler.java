@@ -256,7 +256,7 @@ public class Scheduler {
   				return false;
   			}
   		}
-      LOG.debug("Spreading tasks for job with (" + request.getTasks().size() + " tasks)");
+      LOG.debug("Spreading tasks for job with " + request.getTasks().size() + " tasks");
   		return true;
   	}
   	return false;

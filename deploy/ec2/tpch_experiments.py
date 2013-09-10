@@ -41,7 +41,7 @@ for rate in rates:
   for (p, q) in ratios:
     dep_cmd = "./ec2-exp.sh deploy %s -g %s -i %s --reduce-tasks=%s -p %s -q %s -u %s -v %s --spark-backend-mem=%s" % (
       cluster_name, sparrow_branch, key_loc, reducers, p, q, partitions, rate, backend_mem)
-    run_cmd(dep_cmd)
+    #run_cmd(dep_cmd)
     run_cmd(restart_cmd)
     run_cmd(start_cmd)
     time.sleep(wait_delay)
