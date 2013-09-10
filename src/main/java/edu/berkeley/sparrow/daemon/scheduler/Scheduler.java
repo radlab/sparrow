@@ -247,7 +247,7 @@ public class Scheduler {
    */
   private boolean isSpreadTasksJob(TSchedulingRequest request) {
   	if ((request.getDescription() != null) &&
-  			(request.getDescription().indexOf("SPREAD_TASKS") != -1)) {
+  			(request.getDescription().indexOf("SPREAD_EVENLY") != -1)) {
       LOG.debug("Spreading tasks for job with (" + request.getTasks().size() + " tasks)");
   		return true;
   	}
