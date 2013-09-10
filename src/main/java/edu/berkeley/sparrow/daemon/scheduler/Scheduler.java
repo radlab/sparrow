@@ -62,6 +62,14 @@ public class Scheduler {
 
   /** How many times the special case has been triggered. */
   private AtomicInteger specialCaseCounter = new AtomicInteger(0);
+  
+  /**
+   * When a job includes SPREAD_EVENLY in the description and has this number of tasks,
+   * Sparrow spreads the tasks evenly over machines to evenly cache data. We need this (in
+   * addition to the SPREAD_EVENLY descriptor) because only the reduce phase -- not the map
+   * phase -- should be spread.
+   */
+  private int spreadEvenlyTaskSetSize;
 
   private Configuration conf;
 
@@ -117,6 +125,8 @@ public class Scheduler {
     state.initialize(conf);
     constrainedPlacer.initialize(conf, nodeMonitorClientPool);
     unconstrainedPlacer.initialize(conf, nodeMonitorClientPool);
+    spreadEvenlyTaskSetSize = conf.getInt(SparrowConf.SPREAD_EVENLY_TASK_SET_SIZE,
+    				SparrowConf.DEFAULT_SPREAD_EVENLY_TASK_SET_SIZE);
   }
 
   public boolean registerFrontend(String appId, String addr) {
@@ -236,6 +246,9 @@ public class Scheduler {
   				  (t.getPreference().getNodes().size() == 3)) {
   				return false;
   			}
+  		}
+  		if (request.getTasks().size() != spreadEvenlyTaskSetSize) {
+  			return false;
   		}
       return true;
     }
