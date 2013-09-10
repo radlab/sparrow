@@ -357,7 +357,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
     "post_warmup_s": "%s" % post_warmup_s,
     "node_monitor_task_scheduler": "%s" % nm_task_scheduler,
     "num_partitions": "%s" % opts.num_partitions,
-    "num_partitions_minus_one": "%s" % (opts.reduce_tasks),
+    "reduce_tasks": "%s" % (opts.reduce_tasks),
     "inter_query_delay": "%s" % opts.inter_query_delay,
     "users": users,
     "frontend_type": opts.frontend_type,

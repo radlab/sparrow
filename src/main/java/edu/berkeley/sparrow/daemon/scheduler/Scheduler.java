@@ -263,7 +263,7 @@ public class Scheduler {
   		// first job that reads the data from HDFS, so we shouldn't override the constraints.
   		for (TTaskSpec t: request.getTasks()) {
         if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
-            (t.getPreference().getNodes().size() == 3)) {
+            (t.getPreference().getNodes().size() > 0)) {
           return false;
         }
       }
