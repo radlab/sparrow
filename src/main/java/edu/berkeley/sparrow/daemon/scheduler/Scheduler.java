@@ -238,7 +238,6 @@ public class Scheduler {
   private boolean isSpreadTasksJob(TSchedulingRequest request) {
     if ((request.getDescription() != null) &&
         (request.getDescription().indexOf("SPREAD_EVENLY") != -1)) {
-      LOG.debug("Spreading tasks for job with (" + request.getTasks().size() + " tasks)");
       // Need to check to see if there are 3 constraints; if so, it's the map phase of the
   		// first job that reads the data from HDFS, so we shouldn't override the constraints.
   		for (TTaskSpec t: request.getTasks()) {
@@ -250,6 +249,8 @@ public class Scheduler {
   		if (request.getTasks().size() != spreadEvenlyTaskSetSize) {
   			return false;
   		}
+
+      LOG.debug("Spreading tasks for job with (" + request.getTasks().size() + " tasks)");
       return true;
     }
     return false;
