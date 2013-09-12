@@ -263,16 +263,25 @@ public class Scheduler {
   		// first job that reads the data from HDFS, so we shouldn't override the constraints.
   		for (TTaskSpec t: request.getTasks()) {
         if (t.getPreference() != null && (t.getPreference().getNodes() != null)  &&
-            (t.getPreference().getNodes().size() > 0)) {
+            (t.getPreference().getNodes().size() == 3)) {
+        	LOG.debug("Not special case: one of request's tasks had 3 preferences");
           return false;
         }
       }
       if (request.getTasks().size() != spreadEvenlyTaskSetSize) {
+      	LOG.debug("Not special case: job had " + request.getTasks().size() +
+            " tasks rather than the expected " + spreadEvenlyTaskSetSize);
         return false;
       }
+    	if (specialCaseCounter.get() >= 3) {
+    		LOG.error("Not using special case because special case code has already been " +
+    	      " called 3 more more times!");
+    		return false;
+    	}
       LOG.debug("Spreading tasks for job with " + request.getTasks().size() + " tasks");
   		return true;
   	}
+  	LOG.debug("Not special case: description did not contain SPREAD_EVENLY");
   	return false;
   }
 
