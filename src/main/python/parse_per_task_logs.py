@@ -12,6 +12,7 @@ import functools
 import logging
 import math
 import os
+import re
 import sys
 import stats
 import time
@@ -19,6 +20,8 @@ import time
 INVALID_TIME = 0
 INVALID_TIME_DELTA = -sys.maxint - 1
 INVALID_QUEUE_LENGTH = -1
+INVALID_ID = -1
+TPCH_QUERY_ID_REGEX = re.compile('--(\d+) (\d+)--')
 
 START_SEC = 200
 END_SEC = 300
@@ -209,6 +212,21 @@ class Request:
         # Address of the scheduler that received the request (and placed it).
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
+        
+        self.__user = ""
+
+        # TPCH query number.
+        self.tpch_id = INVALID_ID
+        # Unique query identifier assigned by shark (used to differentiate
+        # different executions of the same TPC-H query).
+        self.shark_id = INVALID_ID
+        # Spark stage ID
+        self.stage_id = INVALID_ID
+        self.constrained = False
+
+    def __str__(self):
+        ret = "ID %s SHARK %s (stage %s), Constrained %s TPCH %s, %s tasks: " % (self.__id, self.shark_id, self.stage_id, self.constrained, self.tpch_id, len(self.__tasks))
+        return ret
 
     def probe_stats(self):
         probe_items_sorted = \
@@ -224,10 +242,30 @@ class Request:
         return out
 
 
-    def add_arrival(self, time, num_tasks, address):
+    def add_arrival(self, time, num_tasks, address, user, description, constrained):
         self.__arrival_time = time
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
+        self.constrained = False
+        if constrained == "true":
+          self.constrained = True
+        description_parts = description.split("-")
+        if len(description_parts) < 2:
+            print "Description not formatted as Spark/Shark description: " + description
+        else:
+            self.stage_id = description_parts[-1]
+            match = TPCH_QUERY_ID_REGEX.search(description)
+            if match == None:
+                is_warmup_query = (description.find("SPREAD_EVENLY") != -1)
+                is_create_table_query = (description.find("create table denorm") != -1)
+                if not (is_warmup_query or is_create_table_query):
+                    self.__logger.warn("Couldn't find TPCH query id in description: %s" % description)
+                return
+            # An identifier that's unique for the Shark driver, but not across all drivers.
+            self.shark_id = match.group(1)
+            self.tpch_id = match.group(2)
+            #print ("Shark ID: %s, stage id: %s, TPCH id: %s for description %s" %
+            #    (self.shark_id, self.stage_id, self.tpch_id, description))
 
     def add_probe_launch(self, address, time):
         probe = self.__get_probe(address)
@@ -316,6 +354,9 @@ class Request:
                 x = task.service_time()
                 service_times.append(task.service_time())
         return service_times
+
+    def optimal_response_time(self):
+        return max([t.service_time() for t in self.__tasks.values()])
 
     def queue_times(self):
         """ Returns a list of queue times for all complete __tasks. """
@@ -481,26 +522,29 @@ class LogParser:
         self.__requests = {}
         self.__logger = logging.getLogger("LogParser")
         self.__earliest_time = (time.time() * 1000)**2
+
+    def earliest_time(self):
+        return self.__earliest_time
+
+    def get_requests(self):
+        return self.__requests
+
     def parse_file(self, filename):
         file = open(filename, "r")
         for line in file:
             # Strip off the newline at the end of the line.
             items = line[:-1].split("\t")
-            if len(items) != 3:
-                self.__logger.warn(("Ignoring log message '%s' with unexpected "
-                                  "number of items (expected 3; found %d)") %
-                                 (line, len(items)))
-                continue
 
             # Time is expressed in epoch milliseconds.
             time = int(items[self.TIME_INDEX])
             self.__earliest_time = min(self.__earliest_time, time)
 
-            audit_event_params = items[self.AUDIT_EVENT_INDEX].split(":")
+            audit_event_params = " ".join(items[self.AUDIT_EVENT_INDEX:]).split(":")
             if audit_event_params[0] == "arrived":
                 request = self.__get_request(audit_event_params[1])
                 request.add_arrival(time, audit_event_params[2],
-                                    audit_event_params[3])
+                                    audit_event_params[3], audit_event_params[5],
+                                    audit_event_params[6], audit_event_params[7])
             elif audit_event_params[0] == "probe_launch":
                 request = self.__get_request(audit_event_params[1])
                 request.add_probe_launch(audit_event_params[2], time)
@@ -528,6 +572,8 @@ class LogParser:
                 # First param = ip address is not used
                 self.__add_task_completion(audit_event_params[1],
                                            audit_event_params[2], time)
+            else:
+              print "Unexpected event: " + audit_event_params[0]
 
     def output_results(self, file_prefix):
         # Response time is the time from when the job arrived at a scheduler

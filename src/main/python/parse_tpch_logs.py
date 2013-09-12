@@ -3,6 +3,7 @@ import os
 import sys
 
 import parse_logs
+import parse_per_task_logs
 
 def main(argv):
     PARAMS = ["log_dir", "output_dir", "start_sec", "end_sec"]
@@ -11,11 +12,12 @@ def main(argv):
                " ".join(["[%s=v]" % k for k in PARAMS]))
         return
 
+    #log_parser = parse_per_task_logs.LogParser()
     log_parser = parse_logs.LogParser()
     
     # Use 5 minutes in the middle of the experiment, by default.
     start_sec = 400
-    end_sec = 700
+    end_sec = 500
 
     log_files = []
     output_dir = "experiment"
@@ -52,11 +54,20 @@ def main(argv):
     # the results between START_TIME and END_TIME (relative to the beginning of the experiment).
     # TPCH query ID : particular query : requests map!\
     earliest_time = log_parser.earliest_time()
+    last_time = max([x.arrival_time() for x in requests.values()])
+    print last_time
+    print earliest_time
+    print "Last was %s after earliest" % (last_time - earliest_time)
     time_min = earliest_time + start_sec * 1000
     time_max = earliest_time + end_sec * 1000
     print "Min time: %s, max time: %s" % (time_min, time_max)
     query_type_to_queries = {}
+    incomplete = 0
     for r in requests.values():
+        #r.set_clock_skews()
+        if not r.complete():
+          incomplete += 1
+          continue
         if r.tpch_id not in query_type_to_queries:
           query_type_to_queries[r.tpch_id] = {}
         queries = query_type_to_queries[r.tpch_id]
@@ -68,6 +79,8 @@ def main(argv):
           queries[query_id] = []
         queries[query_id].append(r)
 
+    print "%s incomplete requests" % incomplete
+
     too_early = 0
     too_late = 0
     used_requests = 0
@@ -78,7 +91,6 @@ def main(argv):
         actuals = []
         fulls = []
         for id_tuple, requests in queries.iteritems():
-            print "********Parsing new query"
             requests.sort(key = lambda x: x.arrival_time())
             # Check whether the query started within the right interval.
             query_arrival = requests[0].arrival_time()
@@ -94,7 +106,7 @@ def main(argv):
             start = -1
             end = 0
             for request in requests:
-                print request
+                #print request
                 total_time += sum(x for x in r.service_times())
                 opt = request.optimal_response_time()
                 optimal += opt
@@ -121,7 +133,7 @@ def main(argv):
             i = float(i) / NUM_DATA_POINTS
             file.write("%f\t%d\t%d\n" % (i, parse_logs.get_percentile(optimals, i), parse_logs.get_percentile(actuals, i)))
         file.close()
-    total_slots = 80.0
+    total_slots = 40.0
     load = total_time / (total_slots * (end_sec - start_sec) * 1000)
     print "Load %s (total time: %s)" % (load, total_time)
     print "%s too early, %s too late, %s total used" % (too_early, too_late, used_requests)

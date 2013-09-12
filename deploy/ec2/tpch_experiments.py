@@ -20,15 +20,15 @@ import time
 
 num_nodes = 100
 wait_delay = 20 * 60
-results_dirname = "results"
+results_dirname = "results_wed_4p_6r"
 partitions = 6
 reducers = 4
 ratios = [(2, 2)] #-p (sample ratio unconstrianed), -q (sample ratio constrained)
-rates = [275]
+rates = [45]
 backend_mem = "15g"
 cluster_name = "tpch"
-sparrow_branch = "per_task_old_code"
-#sparrow_branch = "sparrow"
+#sparrow_branch = "per_task_old_code"
+sparrow_branch = "master"
 key_loc = "patkey.pem"
 
 def run_cmd(cmd):

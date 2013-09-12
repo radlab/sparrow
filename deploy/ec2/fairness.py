@@ -38,14 +38,15 @@ def main(argv):
     task_duration_ms = 100
     tasks_per_job = 3
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "debugging"
-    num_backends = 10
-    num_frontends = 1
+    sparrow_branch = "master"
+    num_backends = 100
+    num_frontends = 10
     cores_per_backend = 4
     # Run each trial for many minutes.
     trial_length = 700
     num_preferred_nodes = 0
     nm_task_scheduler = "round_robin"
+    cluster_name = "fairness"
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
                                (task_duration_ms * tasks_per_job * num_frontends))
@@ -57,8 +58,8 @@ def main(argv):
 
     if launch_instances:
         print "********Launching instances..."
-        run_cmd("./ec2-exp.sh launch -f %s -b %s -i %s" %
-                (num_frontends, num_backends, private_ssh_key))
+        run_cmd("./ec2-exp.sh launch %s -f %s -b %s -i %s" %
+                (cluster_name, num_frontends, num_backends, private_ssh_key))
         time.sleep(10)
 
     for sample_ratio in sample_ratios:
@@ -77,15 +78,15 @@ def main(argv):
             opts.frontend_type = "FairnessTestingFrontend"
 
             conn = boto.connect_ec2()
-            frontends, backends = ec2_exp.find_existing_cluster(conn, opts)
+            frontends, backends = ec2_exp.find_existing_cluster(conn, opts, cluster_name)
 
             print ("********Launching experiment at utilization %s with sample ratio %s..." %
                    (utilization, sample_ratio))
 
             print ("********Deploying with arrival rate %s and warmup arrival rate %s"
                    % (arrival_rate_s, warmup_arrival_rate_s))
-            ec2_exp.deploy_cluster(frontends, backends, opts, warmup_arrival_rate_s, warmup_s,
-                                   post_warmup_s, nm_task_scheduler)
+            #ec2_exp.deploy_cluster(frontends, backends, opts, warmup_arrival_rate_s, warmup_s,
+            #                       post_warmup_s, nm_task_scheduler)
             ec2_exp.start_sparrow(frontends, backends, opts)
 
             print "*******Sleeping after starting Sparrow"

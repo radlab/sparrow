@@ -32,7 +32,7 @@ def parse_args(force_action=True):
   parser.add_option("-z", "--zone", default="us-east-1a",
       help="Availability zone to launch instances in")
   parser.add_option("-a", "--ami", default="ami-c783ccae",
-      help="Amazon Machine Image ID to use (use ami-75733d1c for HVM instance types)")
+      help="Amazon Machine Image ID to use (use ami-894801e0 for HVM instance types)")
   parser.add_option("-t", "--instance-type", default="m2.2xlarge",
       help="Type of instance to launch (default: m2.2xlarge). " +
            "WARNING: must be 64 bit, thus small instances won't work")

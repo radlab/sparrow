@@ -125,11 +125,6 @@ class Task:
         self.previous_request_id = previous_request_id
         self.previous_task_id = previous_task_id
 
-    def queued_time(self):
-        """ Returns the time spent from when the task was submitted until the NM requested it
-            from the scheduler. """
-        return (self.node_monitor_get_task_time - self.node_monitor_submit_time)
-
     def service_time(self):
         """ Returns the service time (time executing on backend)."""
         #print self.node_monitor_address, self.completion_time - self.node_monitor_launch_time
@@ -387,6 +382,14 @@ class Request:
                 per_node_service_times[task.node_monitor_address] = []
             per_node_service_times[task.node_monitor_address].append(task.service_time())
 
+    def get_per_node_queued_times(self, per_node_queued_times):
+        """ Adds the queued time for each node to the mapping of service times. """
+        for task in self.__tasks.values():
+            if task.node_monitor_address not in per_node_queued_times:
+                per_node_queued_times[task.node_monitor_address] = []
+            per_node_queued_times[task.node_monitor_address].append(task.adjusted_completion_time() - self.__arrival_time)
+
+
     def optimal_response_time(self):
         return max([t.service_time() for t in self.__tasks.values()])
 
@@ -505,7 +508,7 @@ class LogParser:
                 # TODO: replace last param with "constrained", once that's added
                 request.add_arrival(time, audit_event_params[2],
                                     audit_event_params[3], audit_event_params[5],
-                                    audit_event_params[6], "")
+                                    audit_event_params[6], audit_event_params[7])
                 if audit_event_params[5]:
                   self.__users.add(audit_event_params[5])
             elif audit_event_params[0] == "scheduler_launch_enqueue_task":
@@ -573,6 +576,21 @@ class LogParser:
                 gnuplot_file.write(",\\\n")
             is_first = False
             gnuplot_file.write("'%s_queue_lengths' using 1:2 lw 1 with lp" % node_monitor_address)
+
+    def output_per_node_queued_time(self, output_directory):
+        per_node_queued_times = {}
+        for request in self.__requests.values():
+            request.get_per_node_queued_times(per_node_queued_times)
+
+        file = open(os.path.join(output_directory, "per_node_queued_times"), "w")
+        file.write("NMAddress\tQueuedtime(50th/90th/99th)\n")
+        for (node_monitor_address, queued_times) in per_node_queued_times.items():
+            queued_times.sort()
+            file.write("%s\t%s\t%s\t%s\n" %
+                       (node_monitor_address, get_percentile(queued_times, 0.5),
+                        get_percentile(queued_times, 0.9), get_percentile(queued_times, 0.99)))
+        file.close()
+
 
     def output_per_node_service_time(self, output_directory):
         per_node_service_times = {}
@@ -1005,6 +1023,7 @@ def main(argv):
     log_parser.output_complete_incomplete_requests_vs_time(output_dir)
     log_parser.output_tasks_completed_vs_arrival(output_dir)
     log_parser.output_per_node_service_time(output_dir)
+    log_parser.output_per_node_queued_time(output_dir)
 
 
 if __name__ == "__main__":

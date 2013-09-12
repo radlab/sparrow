@@ -37,7 +37,7 @@ def main(argv):
 
       print "Launching %s frontends and %s backends" % (num_frontends, num_backends)
 # add --spot-price=foo for spot pricing
-      launch_cmd = ("./ec2-exp.sh -t cr1.8xlarge --spot-price=2.00 -a ami-75733d1c -i %s launch %s -f %s -b %s" %
+      launch_cmd = ("./ec2-exp.sh -t cr1.8xlarge --spot-price=2.00 -a ami-894801e0 -i %s launch %s -f %s -b %s" %
           (key_loc, cluster_name, num_frontends, num_backends))
       run_cmd(launch_cmd)
 
@@ -49,14 +49,15 @@ def main(argv):
   run_cmd(stop_hdfs_cmd)
  
   print "***********Deploying Code and Config Files"
-  deploy_cmd = "./ec2-exp.sh -i %s deploy %s" % (key_loc, cluster_name)
+  backend_mem="15g"
+  deploy_cmd = "./ec2-exp.sh -i %s deploy %s --spark-backend-mem %s" % (key_loc, cluster_name, backend_mem)
   run_cmd(deploy_cmd)
 
   print "***********Starting HDFS"
   hdfs_cmd = "./ec2-exp.sh -i %s start-hdfs %s" % (key_loc, cluster_name)
   run_cmd(hdfs_cmd)
 
-  scale_factor = 0.1
+  scale_factor = 0.5
   print "***********Creating database"
   create_db_cmd = ("./ec2-exp.sh -i %s create-database %s --scale-factor %s" %
                    (key_loc, cluster_name, scale_factor))
