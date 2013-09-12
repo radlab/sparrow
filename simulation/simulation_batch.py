@@ -21,8 +21,8 @@ import Queue
 from util import Job, TaskDistributions
 
 MEDIAN_TASK_DURATION = 100
-NETWORK_DELAY = 1
-TASKS_PER_JOB = 500
+NETWORK_DELAY = 0.5
+TASKS_PER_JOB = 100
 # This needs to be set!
 SLOTS_PER_WORKER = 4
 TOTAL_WORKERS = 10000

@@ -22,10 +22,10 @@ import Queue
 from util import Job, TaskDistributions
 
 MEDIAN_TASK_DURATION = 100
-NETWORK_DELAY = 1
-TASKS_PER_JOB = 10
+NETWORK_DELAY = 0.5
+TASKS_PER_JOB = 100
 SLOTS_PER_WORKER = 4
-TOTAL_WORKERS = 100
+TOTAL_WORKERS = 10000
 PROBE_RATIO = 2
 CANCELLATION = False
 WORK_STEALING = True
@@ -280,10 +280,19 @@ class Simulation(object):
         self.event_queue.put((0, JobArrival(self, self.interarrival_delay, self.task_distribution)))
         last_time = 0
         last_report = self.remaining_jobs
+        half_jobs = self.remaining_jobs / 2
+        output_worker_loads = False
         while self.remaining_jobs > 0:
             #if self.remaining_jobs != last_report and self.remaining_jobs % 100 == 0:
             #    print self.remaining_jobs, "jobs remaining"
             #    last_report = self.remaining_jobs
+            # At a point in the middle of the experiment, get the distribution of tasks
+            # on each worker.
+            if not output_worker_loads and self.remaining_jobs == half_jobs:
+                worker_loads = [len(w.free_slots) for w in self.workers]
+                plot_cdf(worker_loads, "%s_worker_loads.data" % self.file_prefix)
+                output_worker_loads = True
+
             current_time, event = self.event_queue.get()
             assert current_time >= last_time
             last_time = current_time
