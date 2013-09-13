@@ -8,7 +8,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.Lists;
+
 import edu.berkeley.sparrow.thrift.*;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
@@ -72,6 +74,8 @@ public class Scheduler {
   private int spreadEvenlyTaskSetSize;
 
   private Configuration conf;
+  
+  private boolean usePerTaskSampling;
 
   /**
    * A callback handler for asynchronous task launches.
@@ -127,6 +131,9 @@ public class Scheduler {
     unconstrainedPlacer.initialize(conf, nodeMonitorClientPool);
     spreadEvenlyTaskSetSize = conf.getInt(SparrowConf.SPREAD_EVENLY_TASK_SET_SIZE,
     				SparrowConf.DEFAULT_SPREAD_EVENLY_TASK_SET_SIZE);
+    
+    usePerTaskSampling = conf.getBoolean(SparrowConf.USE_PER_TASK_SAMPLING, false);
+    LOG.debug("usePerTaskSampling set to " + usePerTaskSampling);
   }
 
   public boolean registerFrontend(String appId, String addr) {
@@ -255,6 +262,18 @@ public class Scheduler {
     }
     return false;
   }
+  
+  private void addRandomConstraints(TSchedulingRequest req, List<InetSocketAddress> backendList) {
+    List<InetSocketAddress> nodeList = Lists.newArrayList(backendList);
+    // Get a random subset of nodes by shuffling list
+    Collections.shuffle(nodeList);
+    int backendIndex = 0;
+    for (TTaskSpec task : req.getTasks()) {
+    	task.preference = new TPlacementPreference();
+      task.preference.addToNodes(nodeList.get(backendIndex++).getHostName());
+      task.preference.addToNodes(nodeList.get(backendIndex++).getHostName());
+    }
+  }
 
   /** Handles special case. */
   private TSchedulingRequest addConstraintsToSpreadTasks(TSchedulingRequest req) throws TException {
@@ -348,6 +367,14 @@ public class Scheduler {
       backendList.add(backend);
     }
     boolean constrained = isConstrained(req);
+    
+    if (usePerTaskSampling && !constrained) {
+    	addRandomConstraints(req, backendList);
+    }
+    constrained = isConstrained(req);
+    if (usePerTaskSampling && !constrained) {
+    	LOG.error("Constraints didn't get properly added to request!");
+    }
 
     // Fill in the resources in all tasks (if it's missing).
     for (TTaskSpec task : tasks) {

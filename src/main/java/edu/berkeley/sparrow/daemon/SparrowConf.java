@@ -77,4 +77,6 @@ public class SparrowConf {
   
   public final static String SPREAD_EVENLY_TASK_SET_SIZE = "spread_evenly_task_set_size";
   public final static int DEFAULT_SPREAD_EVENLY_TASK_SET_SIZE = 1;
+  
+  public final static String USE_PER_TASK_SAMPLING = "per_task";
 }
