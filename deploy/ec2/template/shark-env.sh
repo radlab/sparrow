@@ -27,6 +27,7 @@ export SCALA_HOME="/opt/scala-2.9.3"
 export SCALA_VERSON=2.9.3
 # Use this for non-HVM amis:
 export JAVA_HOME="/usr/lib/jvm/java-6-sun/jre"
+# Use this for HVM amis:
 #export JAVA_HOME="/usr/lib/jvm/jre-1.6.0-openjdk.x86_64"
 
 # (Required) Point to the patched Hive binary distribution

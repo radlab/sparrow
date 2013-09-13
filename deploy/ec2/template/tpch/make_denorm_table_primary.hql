@@ -1,4 +1,4 @@
-SET mapred.reduce.tasks={{num_partitions_minus_one}};
+SET mapred.reduce.tasks={{reduce_tasks}};
 drop table if exists denorm;
 create table denorm
 row format delimited fields terminated by '|'
