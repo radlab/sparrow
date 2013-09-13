@@ -98,8 +98,8 @@ class Task:
         self.previous_task_id = ""
 
     def __str__(self):
-        return ("Task %s: Scheduler launch %s, NM launch %s, NM complete %s, predicted sched. complete: %f" %
-                (self.id, self.scheduler_launch_time, self.node_monitor_launch_time, self.completion_time, self.adjusted_completion_time()))
+        return ("Task %s: Scheduler launch %s, NM launch %s, NM complete %s, predicted sched. complete: %f, service time: %s" %
+                (self.id, self.scheduler_launch_time, self.node_monitor_launch_time, self.completion_time, self.adjusted_completion_time(), self.service_time()))
 
     def set_scheduler_launch_time(self, time):
         if self.scheduler_launch_time != INVALID_TIME:
@@ -193,12 +193,13 @@ class Request:
         self.shark_id = INVALID_ID
         # Spark stage ID
         self.stage_id = INVALID_ID
+        self.constrained = False
 
     def __str__(self):
         ret = "ID %s SHARK %s (stage %s), Constrained %s TPCH %s, %s tasks: " % (self.__id, self.shark_id, self.stage_id, self.constrained, self.tpch_id, len(self.__tasks))
-        #for task in self.__tasks.values():
-        #    ret += str(task)
-        #    ret += " "
+        for task in self.__tasks.values():
+            ret += str(task)
+            ret += " "
         return ret
 
     def user(self):
@@ -227,7 +228,6 @@ class Request:
         self.__num_tasks = int(num_tasks)
         self.__scheduler_address = address
         self.__user = user
-        self.constrained = False
         if constrained == "true":
           self.constrained = True
         description_parts = description.split("-")
@@ -359,7 +359,8 @@ class Request:
 
     def service_times(self):
         """ Returns a list of service times for complete __tasks. """
-        return [task.service_time() for task in self.__tasks.values() if task.complete()]
+        service_times = [task.service_time() for task in self.__tasks.values() if task.complete(True)]
+        return service_times
 
     def queue_times(self):
         """ Returns a list of queue times for all complete __tasks. """
@@ -745,7 +746,7 @@ class LogParser:
         gnuplot_file.write("plot '%s' using 1:2 lw 4 with lp notitle\n" %
                            running_tasks_filename)
 
-    def output_aggregate_stats(self, requests, output_directory, suffix=""):
+    def output_aggregate_stats(self, requests, output_directory, name_suffix=""):
         # Overhead versus best possible response time of a request, given its service times
         overheads = []
 
@@ -819,7 +820,7 @@ class LogParser:
                         get_new_task_times.append(0)
 
         # Output data for response time and network delay CDFs.
-        results_filename = "results%s.data" % suffix
+        results_filename = "results%s.data" % name_suffix
         file = open(os.path.join(output_directory, results_filename), "w")
         file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRTT(getTask)\t"
                    "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\t"
@@ -1031,6 +1032,16 @@ def main(argv):
     log_parser.output_per_node_service_time(output_dir)
     log_parser.output_per_node_queued_time(output_dir)
 
+    print "Outputting constrained/unconstrained results"
+    constrained_requests = dict((request_id,request) for (request_id, request) in
+                                 log_parser.get_requests().items() if request.constrained)
+    print "%s constrained" % len(constrained_requests)
+    log_parser.output_aggregate_stats(constrained_requests, output_dir, "_constrained")
+
+    unconstrained_requests = dict((request_id,request) for (request_id, request) in
+                                 log_parser.get_requests().items() if not request.constrained)
+    print "%s unconstrained" % len(unconstrained_requests)
+    log_parser.output_aggregate_stats(unconstrained_requests, output_dir, "_unconstrained")
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -20,12 +20,12 @@ import time
 
 num_nodes = 100
 wait_delay = 20 * 60
-results_dirname = "results_wed_4p_6r"
-partitions = 6
-reducers = 4
+results_dirname = "results_fri_cancellation"
+partitions = 33
+reducers = 8
 ratios = [(2, 2)] #-p (sample ratio unconstrianed), -q (sample ratio constrained)
 rates = [360]
-backend_mem = "15g"
+backend_mem = "5g"
 cluster_name = "tpch"
 #sparrow_branch = "per_task_old_code"
 sparrow_branch = "master"

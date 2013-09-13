@@ -85,6 +85,7 @@ def main(argv):
     too_late = 0
     used_requests = 0
     total_time = 0
+    total_tasks = 0
     total_jobs = 0
     for tpch_id, queries in query_type_to_queries.iteritems():
         print "Parsing queries for %s" % tpch_id
@@ -109,7 +110,9 @@ def main(argv):
             total_jobs += len(requests)
             for request in requests:
                 #print request
-                total_time += sum(x for x in r.service_times())
+                service_times = request.service_times()
+                total_time += sum(service_times)
+                total_tasks += len(service_times)
                 opt = request.optimal_response_time()
                 optimal += opt
                 act = request.response_time()
@@ -137,7 +140,7 @@ def main(argv):
         file.close()
     total_slots = 40.0
     load = total_time / (total_slots * (end_sec - start_sec) * 1000)
-    print "Load %s (total time: %s)" % (load, total_time)
+    print "Load %s (total time: %s, total tasks %s)" % (load, total_time, total_tasks)
     print "%s too early, %s too late, %s total used" % (too_early, too_late, used_requests)
     print "%s total jobs" % (total_jobs)
 
