@@ -4,8 +4,8 @@
 # remote nodes.
 
 # The java implementation to use.  Required.
-#export JAVA_HOME=/usr/lib/jvm/java-6-sun/jre
-export JAVA_HOME=/usr/lib/jvm/jre-1.6.0-openjdk.x86_64
+export JAVA_HOME=/usr/lib/jvm/java-6-sun/jre
+#export JAVA_HOME=/usr/lib/jvm/jre-1.6.0-openjdk.x86_64
 
 # Extra Java CLASSPATH elements.  Optional.
 export HADOOP_CLASSPATH="/opt/hive/conf/:/opt/hive/build/dist/lib"

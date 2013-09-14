@@ -46,6 +46,8 @@ if [ ! -d "/tmp/spark/core/lib" ]; then
 fi
 cp /tmp/sparrow/target/sparrow-1.0-SNAPSHOT.jar /tmp/spark/core/lib/
 
+exit
+
 cd /tmp/spark
 if [ ! -e "/tmp/spark/core/target/scala-2.9.1" ]; then
   sbt/sbt compile

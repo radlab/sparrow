@@ -29,9 +29,9 @@ from optparse import OptionParser
 def parse_args(force_action=True):
   parser = OptionParser(usage="sparrow-exp <action> <cluster> [options]" +
     "\n\n<action> can be: launch, deploy, start-sparrow, stop-sparrow, start-proto, stop-proto, start-hdfs, stop-hdfs, start-sparrow-throughput, start-spark-shark, stop-spark, restart-spark-shark, command, collect-logs, destroy, login-fe, login-be, create-database, create-tpch-tables, start-shark-tpch")
-  parser.add_option("-z", "--zone", default="us-east-1a",
+  parser.add_option("-z", "--zone", default="us-east-1d",
       help="Availability zone to launch instances in")
-  parser.add_option("-a", "--ami", default="ami-c783ccae",
+  parser.add_option("-a", "--ami", default="ami-533a733a",
       help="Amazon Machine Image ID to use (use ami-894801e0 for HVM instance types)")
   parser.add_option("-t", "--instance-type", default="m2.2xlarge",
       help="Type of instance to launch (default: m2.2xlarge). " +
@@ -319,8 +319,8 @@ def find_existing_cluster(conn, opts, cluster_name):
 
     return (frontend_nodes, backend_nodes)
   else:
-    print "ERROR: Could not find full cluster: fe=%s be=%s" % (
-      frontend_nodes, backend_nodes)
+    print "ERROR: Could not find full cluster named %s: fe=%s be=%s" % (
+      cluster_name, frontend_nodes, backend_nodes)
     sys.exit(1)
 
 

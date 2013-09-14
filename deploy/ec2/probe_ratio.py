@@ -30,24 +30,24 @@ def main(argv):
     if len(argv) >= 1 and argv[0] == "True":
         launch_instances = True
 
-    utilizations = [0.9]
-    sample_ratios = [2.0]
-    sample_ratio_constrained = 1
+    utilizations = [0.8, 0.9]
+    sample_ratios = [1.1, 1.2, 1.5, 2.0, 3.0]
+    sample_ratio_constrained = 2
 
     # Amount of time it takes each task to run in isolation
     task_duration_ms = 100
-    tasks_per_job = 2
+    tasks_per_job = 10
     private_ssh_key = "patkey.pem"
-    sparrow_branch = "cancellation"
+    sparrow_branch = "master"
     nm_task_scheduler = "fifo"
-    num_backends = 20
-    num_frontends = 2
-    cores_per_backend = 4
+    num_backends = 100
+    num_frontends = 10
+    cores_per_backend = 8
     # Run each trial for 5 minutes.
     trial_length = 500
     num_preferred_nodes = 0
     num_users = 1
-    cluster = "cancel"
+    cluster = "probe"
 
     full_utilization_rate_s = (float(num_backends * cores_per_backend * 1000) /
                                (task_duration_ms * tasks_per_job * num_frontends))
