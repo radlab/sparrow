@@ -36,7 +36,7 @@ public class Scheduler {
   private final static Logger AUDIT_LOG = Logging.getAuditLogger(Scheduler.class);
 
   /** Used to uniquely identify requests arriving at this scheduler. */
-  private int counter = 0;
+  private AtomicInteger counter = new AtomicInteger(0);
   private InetSocketAddress address;
 
   /** Socket addresses for each frontend. */
@@ -412,7 +412,7 @@ public class Scheduler {
     /* The request id is a string that includes the IP address of this scheduler followed
      * by the counter.  We use a counter rather than a hash of the request because there
      * may be multiple requests to run an identical job. */
-    return String.format("%s_%d", Hostname.getIPAddress(conf), counter++);
+    return String.format("%s_%d", Hostname.getIPAddress(conf), counter.incrementAndGet());
   }
 
   private class sendFrontendMessageCallback implements
