@@ -31,7 +31,7 @@ def main(argv):
         launch_instances = True
 
     utilizations = [0.8, 0.9]
-    sample_ratios = [1.1, 1.2, 1.5, 2.0, 3.0]
+    sample_ratios = [1.2, 1.5, 2.0, 3.0]
     sample_ratio_constrained = 2
 
     # Amount of time it takes each task to run in isolation
@@ -44,7 +44,7 @@ def main(argv):
     num_frontends = 10
     cores_per_backend = 8
     # Run each trial for 5 minutes.
-    trial_length = 500
+    trial_length = 400
     num_preferred_nodes = 0
     num_users = 1
     cluster = "probe"
@@ -76,6 +76,7 @@ def main(argv):
             opts.sample_ratio_constrained = sample_ratio_constrained
             opts.tasks_per_job = tasks_per_job
             opts.num_preferred_nodes = num_preferred_nodes
+            opts.cpus = cores_per_backend
 
             conn = boto.connect_ec2()
             frontends, backends = ec2_exp.find_existing_cluster(conn, opts, cluster)
@@ -95,7 +96,7 @@ def main(argv):
             ec2_exp.start_proto(frontends, backends, opts)
             time.sleep(trial_length)
 
-            log_dirname = "/Users/keo/Documents/opportunistic-scheduling/sparrow/deploy/ec2/cancellation_%s_%s" % (utilization, sample_ratio)
+            log_dirname = "/home/ec2-user/sparrow/deploy/ec2/probe_ratio_%s_%s" % (utilization, sample_ratio)
             while os.path.exists(log_dirname):
                 log_dirname = "%s_a" % log_dirname
             os.mkdir(log_dirname)
@@ -109,12 +110,12 @@ def main(argv):
             print "********Collecting logs and placing in %s" % log_dirname
             opts.log_dir = log_dirname
             ec2_exp.collect_logs(frontends, backends, opts)
-            run_cmd("gunzip %s/*.gz" % log_dirname)
+            #run_cmd("gunzip %s/*.gz" % log_dirname)
 
-            print "********Parsing logs"
-            run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=%s "
-                     "output_dir=%s/results start_sec=350 end_sec=450 && cd -") %
-                    (log_dirname, log_dirname))
+            #print "********Parsing logs"
+            #run_cmd(("cd ../../src/main/python/ && ./parse_logs.sh log_dir=%s "
+            #         "output_dir=%s/results start_sec=350 end_sec=450 && cd -") %
+            #        (log_dirname, log_dirname))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

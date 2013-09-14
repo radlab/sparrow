@@ -91,7 +91,7 @@ def parse_args(force_action=True):
       help="Amount of memory to give spark backends."),
   parser.add_option("--scale-factor", default="2.5",
       help="Scale factor to use when creating TPCH database (used with create-database)")
-  parser.add_option("--total-cores", default="160",
+  parser.add_option("--total-cores", default="200",
       help="Total number of cores in the cluster (used to determine launch rate for "
            "throughput experiments)")
 

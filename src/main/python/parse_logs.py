@@ -232,7 +232,8 @@ class Request:
           self.constrained = True
         description_parts = description.split("-")
         if len(description_parts) < 2:
-            print "Description not formatted as Spark/Shark description: " + description
+            pass
+            #print "Description not formatted as Spark/Shark description: " + description
         else:
             self.stage_id = description_parts[-1]
             match = TPCH_QUERY_ID_REGEX.search(description)
@@ -493,6 +494,7 @@ class LogParser:
         return self.__requests
 
     def parse_file(self, filename):
+        print "parsing %s" % filename
         file = open(filename, "r")
         for line in file:
             # Strip off the newline at the end of the line.
@@ -551,7 +553,8 @@ class LogParser:
                 previous_request = self.__get_request(audit_event_params[2])
                 previous_request.add_subsequent_task_launch_failure(audit_event_params[3])
             else:
-                self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
+                if audit_event_params[0] != "node_monitor_cancellation":
+                    self.__logger.warn("Received unknown audit event: " + audit_event_params[0])
 
         for request in self.__requests.values():
             request.set_node_monitor_get_task_times_for_tasks()
@@ -697,6 +700,7 @@ class LogParser:
 
     def output_results(self, output_directory):
         self.output_aggregate_stats(self.__requests, output_directory)
+        return
 
         for user in self.__users:
             if user == "warmupUser":
@@ -774,9 +778,9 @@ class LogParser:
             for request in requests.values():
                 request.complete(True)
             return
-        considered_requests = filter(lambda k: k.arrival_time() >= start_time and
-                                     k.arrival_time() <= end_time and
-                                     k.complete(), requests.values())
+        considered_requests = requests.values()
+        considered_requests.sort(key = lambda x: x.arrival_time())
+        considered_requests = considered_requests[45000:-20000]       
         print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(requests.values()) - len(considered_requests))
         print "Requests per second:"
