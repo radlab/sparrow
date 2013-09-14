@@ -14,5 +14,5 @@ echo "Done starting master and workers; sleeping before starting tester"
 sleep 5s
 echo "Starting throughput tester"
 
-/root/spark/run spark.scheduler.sparrow.ThroughputTester "spark://`hostname`:7077" {{total_cores}} > $log 2>&1 &
+/root/spark/run spark.scheduler.sparrow.ThroughputTester "spark://`hostname`:7077" {{total_cores}} 10000,1000,500,100 > $log 2>&1 &
 
