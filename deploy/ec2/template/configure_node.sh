@@ -19,6 +19,7 @@ mkdir -p /disk1/hdfs/name
 chown hdfs.hdfs /disk1/hdfs/name
 
 mkdir -p /disk1/sparrow
+mkdir -p /disk1/spark-tmp
 mkdir -p /disk1/hdfs/data
 mkdir -p /disk1/tmp/
 mkdir -p /disk1/tmp/spark/

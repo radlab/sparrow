@@ -32,7 +32,7 @@ done
 # Add location of Hive configuration file.
 SPARK_CLASSPATH+=:/opt/hive/conf/
 
-SPARK_JAVA_OPTS="-Dspark.io.compression.codec=spark.io.LZFCompressionCodec"
+SPARK_JAVA_OPTS="-Dspark.io.compression.codec=spark.io.LZFCompressionCodec -Dspark.local.dir=/disk1/spark-tmp"
 # - SPARK_MEM, to change the amount of memory used per node (this should
 #   be in the same format as the JVM's -Xmx option, e.g. 300m or 1g).
 # - SPARK_LIBRARY_PATH, to add extra search paths for native libraries.

@@ -20,15 +20,15 @@ import time
 
 num_nodes = 100
 wait_delay = 20 * 60
-results_dirname = "results_fri_cancellation"
+results_dirname = "results_per_task"
 partitions = 33
 reducers = 8
 ratios = [(2, 2)] #-p (sample ratio unconstrianed), -q (sample ratio constrained)
-rates = [360]
+rates = [310]
 backend_mem = "5g"
 cluster_name = "tpch"
-#sparrow_branch = "per_task_old_code"
-sparrow_branch = "master"
+sparrow_branch = "per_task_old_code"
+#sparrow_branch = "master"
 key_loc = "patkey.pem"
 
 def run_cmd(cmd):

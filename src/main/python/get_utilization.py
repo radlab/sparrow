@@ -31,9 +31,11 @@ def main(argv):
 
   events = []
   events_per_node = {}
-  RUNNING = "node_monitor_task_launch"
+  RUNNING = "nodemonitor_task_runnable"
+  #RUNNING="node_monitor_task_launch"
   START_INT = 1
-  COMPLETED = "task_completed"
+  COMPLETED = "nodemonitor_task_completed"
+  #COMPLETED = "task_completed"
   END_INT = -1
 
   task_to_node = {}
