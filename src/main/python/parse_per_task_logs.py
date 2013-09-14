@@ -5,8 +5,6 @@ All times are in milliseconds unless otherwise indicated.
 TODO(kay): Generally, make things fail more gracefully, since it's possible
 (and likely) that we'll see anomalies in the log files, but we still want to
 get as much info as possible out of them.
-
-TODO(kay): Add functionality to make response time vs. utilization graph.
 """
 import functools
 import logging
@@ -575,7 +573,7 @@ class LogParser:
             else:
               print "Unexpected event: " + audit_event_params[0]
 
-    def output_results(self, file_prefix):
+    def output_results(self, file_prefix, constrained=""):
         # Response time is the time from when the job arrived at a scheduler
         # to when it completed.
         response_times = []
@@ -597,14 +595,18 @@ class LogParser:
         for request in self.__requests.values():
           request.set_clock_skews()
 
-	complete_requests = filter(lambda k: k.complete(),
+        complete_requests = filter(lambda k: k.complete(),
                                    self.__requests.values())
         print "%s complete requests" % len(complete_requests)
         considered_requests = filter(lambda k: k.arrival_time() >= start_time and
                                      k.arrival_time() <= end_time and
                                      k.complete(),
                                      self.__requests.values())
-	print "Included %s requests" % len(considered_requests)
+        if constrained == "constrained":
+          considered_requests = filter(lambda x: x.constrained, self.__requests.values())
+        elif constrained == "unconstrained":
+          considered_requests = filter(lambda x: not x.constrained, self.__requests.values())
+        print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(self.__requests.values()) - len(considered_requests))
         for request in considered_requests:
             scheduler_address = request.scheduler_address()
@@ -634,7 +636,7 @@ class LogParser:
             response_times.append(response_time)
 
         # Output data for response time and network delay CDFs.
-        results_filename = "%s_results.data" % file_prefix
+        results_filename = "%s_results%s.data" % (file_prefix, constrained)
         file = open(results_filename, "w")
         file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\tProbeTime\tRcvProbingTime\tProbingTime\tWorstProbeTime\tQueueLength\n")
         num_data_points = 100
@@ -824,6 +826,8 @@ def main(argv):
         log_parser.parse_file(filename)
 
     log_parser.output_results(output_filename)
+    log_parser.output_results(output_filename, "constrained")
+    log_parser.output_results(output_filename, "unconstrained")
 
 
 if __name__ == "__main__":
