@@ -700,6 +700,8 @@ class LogParser:
 
     def output_results(self, output_directory):
         self.output_aggregate_stats(self.__requests, output_directory)
+        self.output_aggregate_stats([x for x in self.__requests if x.constrained], output_directory, "constrained")
+        self.output_aggregate_stats([x for x in self.__requests if not x.constrained], output_directory, "unconstrained")
         return
 
         for user in self.__users:
@@ -743,7 +745,7 @@ class LogParser:
         gnuplot_file.write("plot '%s' using 1:2 lw 4 with lp notitle\n" %
                            running_tasks_filename)
 
-    def output_aggregate_stats(self, requests, output_directory):
+    def output_aggregate_stats(self, requests, output_directory, suffix=""):
         # Overhead versus best possible response time of a request, given its service times
         overheads = []
 
@@ -778,9 +780,9 @@ class LogParser:
             for request in requests.values():
                 request.complete(True)
             return
-        considered_requests = requests.values()
-        considered_requests.sort(key = lambda x: x.arrival_time())
-        considered_requests = considered_requests[45000:-20000]       
+        considered_requests = filter(lambda k: k.arrival_time() >= start_time and
+                                     k.arrival_time() <= end_time and
+                                     k.complete(), requests.values())
         print "Included %s requests" % len(considered_requests)
         print "Excluded %s requests" % (len(requests.values()) - len(considered_requests))
         print "Requests per second:"
@@ -817,7 +819,7 @@ class LogParser:
                         get_new_task_times.append(0)
 
         # Output data for response time and network delay CDFs.
-        results_filename = "results.data"
+        results_filename = "results%s.data" % suffix
         file = open(os.path.join(output_directory, results_filename), "w")
         file.write("%ile\tResponseTime\tNetworkRTT(EnqueueRes.)\tNetworkRTT(getTask)\t"
                    "NetworkRTT(combined)\tGetNewTask\tServiceTime\tQueuedTime\t"
