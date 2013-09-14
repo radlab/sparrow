@@ -586,6 +586,7 @@ class LogParser:
         queue_lengths = []
         rcv_probing_times = []
         worst_probe_times = []
+        overheads = []
         # Store clock skews as a map of pairs of addresses to a list of
         # (clock skew, time) pairs. Store addresses in tuple in increasing
         # order, so that we get the clock skew calculated in both directions.
@@ -627,18 +628,17 @@ class LogParser:
             queue_times.extend(request.queue_times())
             response_time = request.response_time()
             probe_times.extend(request.probe_times())
-            if request.probing_time() > 40:
-              print request._Request__id
             probing_times.append(request.probing_time())
             queue_lengths.extend(request.queue_lengths())
             rcv_probing_times.append(request.receive_and_probing_time())
             worst_probe_times.append(request.worst_necessary_probe_time())
             response_times.append(response_time)
+            overheads.append(response_time - request.optimal_response_time())
 
         # Output data for response time and network delay CDFs.
         results_filename = "%s_results%s.data" % (file_prefix, constrained)
         file = open(results_filename, "w")
-        file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\tProbeTime\tRcvProbingTime\tProbingTime\tWorstProbeTime\tQueueLength\n")
+        file.write("%ile\tResponseTime\tNetworkDelay\tServiceTime\tQueuedTime\tProbeTime\tRcvProbingTime\tProbingTime\tWorstProbeTime\tQueueLength\tOverhead\n")
         num_data_points = 100
         response_times.sort()
         network_delays.sort()
@@ -649,11 +649,12 @@ class LogParser:
         probing_times.sort()
         rcv_probing_times.sort()
         worst_probe_times.sort()
+        overheads.sort()
 
 
         for i in range(100):
             i = float(i) / 100
-            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
+            file.write("%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n" % (i,
                 get_percentile(response_times, i),
                 get_percentile(network_delays, i),
                 get_percentile(service_times, i),
@@ -662,7 +663,8 @@ class LogParser:
                 get_percentile(rcv_probing_times, i),
                 get_percentile(probing_times, i),
                 get_percentile(worst_probe_times, i),
-                get_percentile(queue_lengths, i)))
+                get_percentile(queue_lengths, i),
+                get_percentile(overheads, i)))
 
         file.close()
 
