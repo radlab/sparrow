@@ -165,7 +165,8 @@ class Request:
         self.__num_tasks = 0
         self.__arrival_time = INVALID_TIME
         self.__tasks = {}
-
+        
+        self.constrained = False
         # Address of the scheduler that received the request (and placed it).
         self.__scheduler_address = ""
         self.__logger = logging.getLogger("Request")
@@ -701,8 +702,10 @@ class LogParser:
 
     def output_results(self, output_directory):
         self.output_aggregate_stats(self.__requests, output_directory)
-        self.output_aggregate_stats([x for x in self.__requests if x.constrained], output_directory, "constrained")
-        self.output_aggregate_stats([x for x in self.__requests if not x.constrained], output_directory, "unconstrained")
+        constrained_requests = dict((k, v) for (k, v) in self.__requests.items() if v.constrained)
+        self.output_aggregate_stats(constrained_requests, output_directory, "constrained")
+        unconstrained_requests = dict((k, v) for (k, v) in self.__requests.items() if not v.constrained)
+        self.output_aggregate_stats(unconstrained_requests, output_directory, "unconstrained")
         return
 
         for user in self.__users:

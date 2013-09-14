@@ -667,7 +667,7 @@ class LogParser:
                 get_percentile(overheads, i)))
 
         file.close()
-
+        return
         self.plot_response_time_cdf(results_filename, file_prefix)
         """
         # Output data about clock skews.  Currently this writes a different
