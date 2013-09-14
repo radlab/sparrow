@@ -62,7 +62,7 @@ def parse_args(force_action=True):
       help="Which benchmark to run")
   parser.add_option("-e", "--benchmark-iterations", type="int", default=100,
       help="Iterations of benchmark to run")
-  parser.add_option("-p", "--sample-ratio", type="float", default=1.05,
+  parser.add_option("-p", "--sample-ratio", type="float", default=2,
       help="Sample ratio for unconstrained tasks")
   parser.add_option("-q", "--sample-ratio-constrained", type=int, default=2,
       help="Sample ratio for constrained tasks")
@@ -323,11 +323,12 @@ def find_existing_cluster(conn, opts, cluster_name):
       cluster_name, frontend_nodes, backend_nodes)
     sys.exit(1)
 
+""" Replaces all of the variables in the tempate files, based on opts.
 
-# Deploy Sparrow binaries and configuration on a launched cluster
-def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0,
-                   post_warmup_s=0, nm_task_scheduler="fifo",
-                   users="user0:1:0"):
+Returns the name of the directory with all of the files that need to be deployed.
+"""
+def generate_deploy_files(frontends, backends, opts, warmup_job_arrival_s, warmup_s, post_warmup_s,
+                          nm_task_scheduler, users):
   # Replace template vars
   tmp_dir = tempfile.mkdtemp()
 
@@ -382,6 +383,31 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
 	      text = text.replace("{{" + key + "}}", template_vars[key])
 	    dest.write(text)
 	    dest.close()
+  return tmp_dir
+
+# Deploy Sparrow configuration on a launched cluster (but don't rebuild).
+def redeploy_sparrow(machines, frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0,
+                     post_warmup_s=0, nm_task_scheduler="fifo",
+                     users="user0:1:0"):
+  # Replace template vars
+  tmp_dir = generate_deploy_files(frontends, backends, opts, warmup_job_arrival_s, warmup_s,
+                                  post_warmup_s, nm_task_scheduler, users)
+
+  for machine in machines:
+    print "Copying files to: %s ..." % machine.public_dns_name
+
+    # Rsync this to one machine
+    command = (("rsync -rv -e 'ssh -o StrictHostKeyChecking=no -i %s' " +
+        "'%s/' 'root@%s:~/'") % (opts.identity_file, tmp_dir, machine.public_dns_name))
+    subprocess.check_call(command, shell=True)
+
+# Deploy Sparrow binaries and configuration on a launched cluster
+def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0,
+                   post_warmup_s=0, nm_task_scheduler="fifo",
+                   users="user0:1:0"):
+  # Replace template vars
+  tmp_dir = generate_deploy_files(frontends, backends, opts, warmup_job_arrival_s, warmup_s,
+                                  post_warmup_s, nm_task_scheduler, users)
 
   driver_machine = frontends[0].public_dns_name
   print "Chose driver machine: %s ..." % driver_machine
@@ -407,9 +433,7 @@ def deploy_cluster(frontends, backends, opts, warmup_job_arrival_s=0, warmup_s=0
 def start_sparrow_throughput(frontends, backends, opts):
   start_sparrow(frontends, backends, opts)
   start_spark_shark(frontends, backends, opts)
-  driver = frontends[0].public_dns_name
-  print "Starting throughput experiment on " + driver
-  ssh(driver, opts, "/root/start_throughput_exp_sparrow.sh")
+  ssh_all([fe.public_dns_name for fe in frontends], opts, "/root/start_throughput_exp_sparrow.sh")
 
 def start_sparrow(frontends, backends, opts):
   all_machines = []

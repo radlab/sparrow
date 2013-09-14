@@ -31,7 +31,7 @@ def main(argv):
         launch_instances = True
 
     utilizations = [0.8, 0.9]
-    sample_ratios = [1, 1.1, 1.2, 1.5, 2.0, 3.0]
+    sample_ratios = [1.1, 1.2, 1.5, 2.0, 3.0]
     sample_ratio_constrained = 2
 
     # Amount of time it takes each task to run in isolation
@@ -53,7 +53,7 @@ def main(argv):
                                (task_duration_ms * tasks_per_job * num_frontends))
 
     # Warmup information
-    warmup_s = 30
+    warmup_s = 120
     post_warmup_s = 30
     warmup_arrival_rate_s = 0.4 * full_utilization_rate_s
 
@@ -77,6 +77,7 @@ def main(argv):
             opts.tasks_per_job = tasks_per_job
             opts.num_preferred_nodes = num_preferred_nodes
             opts.cpus = cores_per_backend
+            opts.benchmark_iterations = 100
 
             conn = boto.connect_ec2()
             frontends, backends = ec2_exp.find_existing_cluster(conn, opts, cluster)
@@ -88,6 +89,11 @@ def main(argv):
                    % (arrival_rate_s, warmup_arrival_rate_s))
             ec2_exp.deploy_cluster(frontends, backends, opts, warmup_arrival_rate_s, warmup_s,
                                    post_warmup_s, nm_task_scheduler)
+            # Redeploy on half of the frontends with a longer duration for each task and a correspondingly
+            # lower arrival rate.
+            opts.arrival_rate = arrival_rate_s / 100.
+            opts.benchmark_iterations = 10000
+            ec2_exp.redeploy_sparrow(frontends[:5], backends, opts, warmup_arrival_rate_s / 100., warmup_s, post_warmup_s, nm_task_scheduler) 
             ec2_exp.start_sparrow(frontends, backends, opts)
 
             print "*******Sleeping after starting Sparrow"
