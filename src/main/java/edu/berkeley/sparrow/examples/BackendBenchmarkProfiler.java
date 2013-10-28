@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.sparrow.prototype;
+package edu.berkeley.sparrow.examples;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +34,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+
 
 /**
  * A standalone script for profiling benchmark capacity on a given machine.

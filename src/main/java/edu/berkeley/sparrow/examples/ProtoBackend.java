@@ -1,12 +1,12 @@
 /*
  * Copyright 2013 The Regents of The University California
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.sparrow.prototype;
+package edu.berkeley.sparrow.examples;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -89,24 +89,24 @@ public class ProtoBackend implements BackendService.Iface {
   /** We assume we are speaking to local Node Manager. */
   private static final String NM_HOST = "localhost";
   private static int NM_PORT;
-  
+
   private static Client client;
 
   private static final Logger LOG = Logger.getLogger(ProtoBackend.class);
   private static final ExecutorService executor =
       Executors.newFixedThreadPool(TASK_WORKER_THREADS);
-  
+
   /**
    * Keeps track of finished tasks.
-   * 
+   *
    *  A single thread pulls items off of this queue and uses
    * the client to notify the node monitor that tasks have finished.
    */
   private final BlockingQueue<TFullTaskId> finishedTasks = new LinkedBlockingQueue<TFullTaskId>();
-  
+
   /**
    * Thread that sends taskFinished() RPCs to the node monitor.
-   * 
+   *
    * We do this in a single thread so that we just need a single client to the node monitor
    * and don't need to create a new client for each task.
    */
@@ -229,18 +229,9 @@ public class ProtoBackend implements BackendService.Iface {
     LOG.debug("Benchmark result " + result);
   }
 
-  private TUserGroupInfo user; // We force all tasks to be run by same user
-
-  public ProtoBackend() {
-    LOG.debug("Created");
-    this.user = new TUserGroupInfo();
-    user.setUser("*");
-    user.setGroup("*");
-  }
-  
   /**
    * Initializes the backend by registering with the node monitor.
-   * 
+   *
    * Also starts a thread that handles finished tasks (by sending an RPC to the node monitor).
    */
   public void initialize(int listenPort) {
@@ -257,7 +248,7 @@ public class ProtoBackend implements BackendService.Iface {
     } catch (TException e) {
       LOG.debug("Error while registering backend: " + e.getMessage());
     }
-    
+
     new Thread(new TasksFinishedRpcRunnable()).start();
   }
 

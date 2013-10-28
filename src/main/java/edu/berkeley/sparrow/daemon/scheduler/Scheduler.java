@@ -1,12 +1,12 @@
 /*
  * Copyright 2013 The Regents of The University California
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -111,7 +111,7 @@ public class Scheduler {
    * phase -- should be spread.
    */
   private int spreadEvenlyTaskSetSize;
-  
+
   private Configuration conf;
 
   public void initialize(Configuration conf, InetSocketAddress socket) throws IOException {
@@ -143,7 +143,7 @@ public class Scheduler {
     } else {
       LOG.debug("Not using cancellation");
     }
-    
+
     spreadEvenlyTaskSetSize = conf.getInt(SparrowConf.SPREAD_EVENLY_TASK_SET_SIZE,
     				SparrowConf.DEFAULT_SPREAD_EVENLY_TASK_SET_SIZE);
   }
@@ -196,7 +196,7 @@ public class Scheduler {
   }
 
   /** Adds constraints such that tasks in the job will be spread evenly across the cluster.
-   * 
+   *
    *  We expect three of these special jobs to be submitted; 3 sequential calls to this
    *  method will result in spreading the tasks for the 3 jobs across the cluster such that no
    *  more than 1 task is assigned to each machine.
@@ -247,13 +247,13 @@ public class Scheduler {
     LOG.info("New request: " + newReq);
     return newReq;
   }
-  
+
   /** Checks whether we should add constraints to this job to evenly spread tasks over machines.
-   * 
+   *
    * This is a hack used to force Spark to cache data in 3 locations: we run 3 select * queries
    * on the same table and spread the tasks for those queries evenly across the cluster such that
    * the input data for the query is triple replicated and spread evenly across the cluster.
-   * 
+   *
    * We signal that Sparrow should use this hack by adding SPREAD_TASKS to the job's description.
    */
   private boolean isSpreadTasksJob(TSchedulingRequest request) {
@@ -303,7 +303,7 @@ public class Scheduler {
     String requestId = getRequestId();
 
     String user = "";
-    if (request.getUser() != null) {
+    if (request.getUser() != null && request.getUser().getUser() != null) {
       user = request.getUser().getUser();
     }
     String description = "";
@@ -384,7 +384,7 @@ public class Scheduler {
           "unplaced tasks");
       return Lists.newArrayList();
     }
-    
+
     synchronized(taskPlacer) {
       List<TTaskLaunchSpec> taskLaunchSpecs = taskPlacer.assignTask(nodeMonitorAddress);
       if (taskLaunchSpecs == null || taskLaunchSpecs.size() > 1) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package edu.berkeley.sparrow.prototype;
+package edu.berkeley.sparrow.examples;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;

@@ -1,1 +1,0 @@
-This folder contains simple frontends and backends to use in testing Sparrow's performance.
