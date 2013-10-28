@@ -1,12 +1,12 @@
 /*
  * Copyright 2013 The Regents of The University California
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -110,12 +110,13 @@ public class TaskLauncherService {
 
     /** Uses a getTask() RPC to get the task specification from the appropriate scheduler. */
     private List<TTaskLaunchSpec> executeGetTaskRpc(TaskSpec task) {
-      String schedulerAddress = task.schedulerAddress.getHostName();
+      String schedulerAddress = task.schedulerAddress.getAddress().getHostAddress();
       if (!schedulerClients.containsKey(schedulerAddress)) {
         try {
           schedulerClients.put(schedulerAddress,
-              TClients.createBlockingGetTaskClient(task.schedulerAddress.getHostName(),
-                                                   SchedulerThrift.DEFAULT_GET_TASK_PORT));
+              TClients.createBlockingGetTaskClient(
+                  task.schedulerAddress.getAddress().getHostAddress(),
+                 SchedulerThrift.DEFAULT_GET_TASK_PORT));
         } catch (IOException e) {
           LOG.error("Error creating thrift client: " + e.getMessage());
           List<TTaskLaunchSpec> emptyTaskLaunchSpecs = Lists.newArrayList();
@@ -178,7 +179,7 @@ public class TaskLauncherService {
       numThreads = Resources.getSystemCPUCount(conf);
     }
     this.scheduler = scheduler;
-    nodeMonitorInternalAddress = new THostPort(Network.getHostName(conf), nodeMonitorPort);
+    nodeMonitorInternalAddress = new THostPort(Network.getIPAddress(conf), nodeMonitorPort);
     ExecutorService service = Executors.newFixedThreadPool(numThreads);
     for (int i = 0; i < numThreads; i++) {
       service.submit(new TaskLaunchRunnable());
