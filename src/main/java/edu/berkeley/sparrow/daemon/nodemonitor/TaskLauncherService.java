@@ -116,7 +116,7 @@ public class TaskLauncherService {
           schedulerClients.put(schedulerAddress,
               TClients.createBlockingGetTaskClient(
                   task.schedulerAddress.getAddress().getHostAddress(),
-                 SchedulerThrift.DEFAULT_GET_TASK_PORT));
+                  SchedulerThrift.DEFAULT_GET_TASK_PORT));
         } catch (IOException e) {
           LOG.error("Error creating thrift client: " + e.getMessage());
           List<TTaskLaunchSpec> emptyTaskLaunchSpecs = Lists.newArrayList();
