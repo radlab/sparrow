@@ -42,6 +42,11 @@ loads.reverse()
 for load in loads:
     print "Running simulations at %s load" % load
 
+    print "******Multiget"
+    s = simulation_multi.Simulation(NUM_JOBS, "multi_tasks_%s" % load, load, DISTRIBUTION)
+    s.run()
+
+
     print "Sparrow"
     simulation_cancellation.WORK_STEALING = False
     simulation_cancellation.CANCELLATION = False

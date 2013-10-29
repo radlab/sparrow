@@ -29,6 +29,7 @@ class Job(object):
         self.start_time = start_time
         self.end_time = start_time
         self.unscheduled_tasks = []
+        # TODO: This won't be correctly populated when tasks are stolen.
         self.time_all_tasks_scheduled = 0
         self.last_probe_reply_time= 0
         # Change this line to change to distribution of task durations.

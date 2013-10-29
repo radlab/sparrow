@@ -28,7 +28,7 @@ SLOTS_PER_WORKER = 4
 TOTAL_WORKERS = 10000
 PROBE_RATIO = 2
 CANCELLATION = False
-WORK_STEALING = True
+WORK_STEALING = False
 NUM_SCHEDULERS = 1
 
 def get_percentile(N, percent, key=lambda x:x):
@@ -226,7 +226,10 @@ class Simulation(object):
     def get_task(self, job_id, worker, current_time):
         self.total_get_tasks += 1
         job = self.jobs[job_id]
-        job.add_probe_response(worker, current_time)
+        # Need to add a network delay here to account for the fact that we
+        # call get_task when the probe is launched (not when it is received) to
+        # avoid additional event processing.
+        job.add_probe_response(worker, current_time + NETWORK_DELAY)
         response_time = current_time + 2*NETWORK_DELAY
         if len(job.unscheduled_tasks) > 0:
             self.successful_get_tasks += 1
@@ -259,7 +262,7 @@ class Simulation(object):
         return events
 
     def get_any_task(self, worker, scheduler, current_time):
-        """ Used by an idle worker, to attempt to steal extra work. """
+        """ Used by an idle worker, to attempt to steal extra work."""
         self.attempted_tasks_stolen += 1
         response_time = current_time + 2*NETWORK_DELAY
         unscheduled_jobs = self.unscheduled_jobs[scheduler]
@@ -344,6 +347,16 @@ class Simulation(object):
         plot_cdf(response_times, "%s_response_times.data" % self.file_prefix)
         print "Average response time: ", numpy.mean(response_times)
 
+        wait_times = [j.time_all_tasks_scheduled - j.start_time for j in complete_jobs
+                      if j.start_time > 500]
+        plot_cdf(wait_times, "%s_wait_times.data" % self.file_prefix)
+        print "Average wait time: ", numpy.mean(wait_times)
+
+        num_no_wait_jobs = len([w for w in wait_times if w == 2 * NETWORK_DELAY])
+        frac_no_wait_jobs = num_no_wait_jobs * 1.0 / len(complete_jobs)
+        print "No wait jobs: %s/%s (%f)" % (num_no_wait_jobs, len(complete_jobs),
+                                            frac_no_wait_jobs)
+
         cancellation_time_window = [job.last_probe_reply_time - job.time_all_tasks_scheduled
                                     for job in complete_jobs]
         plot_cdf(cancellation_time_window, "%s_cancellation_window.data" % self.file_prefix)
@@ -354,7 +367,7 @@ class Simulation(object):
 
 def main():
     logging.basicConfig(level=logging.ERROR)
-    sim = Simulation(100000, "ws_cancellation", 0.95, TaskDistributions.EXP_JOBS)
+    sim = Simulation(5000, "test", 0.8, TaskDistributions.EXP_JOBS)
     sim.run()
 
 if __name__ == "__main__":
