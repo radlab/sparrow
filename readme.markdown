@@ -2,7 +2,7 @@ Sparrow Scheduler
 ================================
 Sparrow is a high throughput, low latency, and fault-tolerant distributed cluster scheduler. Sparrow is designed for applications that require resource allocations frequently for very short jobs, such as analytics frameworks. Sparrow schedules from a distributed set of schedulers that maintain no shared state. Instead, to schedule a job, a scheduler obtains intantaneous load information by sending probes to a subset of worker machines. The scheduler places the job's tasks on the least loaded of the probed workers. This technique allows Sparrow to schedule in milliseconds, two orders of magnitude faster than existing approaches. Sparrow also handles failures: if a scheduler fails, a client simply directs scheduling requests to an alternate scheduler.
 
-To read more about Sparrow, check out our [tech report](http://www.eecs.berkeley.edu/Pubs/TechRpts/2013/EECS-2013-29.html).
+To read more about Sparrow, check out our [paper](http://delivery.acm.org/10.1145/2530000/2522716/p69-ousterhout.pdf).
 
 If you're interested in using Sparrow, we recommend that you join the [Sparrow mailing list](https://groups.google.com/group/sparrow-scheduler-users).
 
@@ -13,19 +13,24 @@ Code Layout
 
 `/sparrow/src/main/java/edu/berkeley/sparrow` (most of the interesting java code)
 
+`/sparrow/src/main/java/edu/berkeley/sparrow/examples` (Example applications that use Sparrow)
+
 `/deploy/`     (contains ec2 deployment scripts)
 
 Building Sparrow
 -------------------------
 
-Sparrow is under development right now and is not yet production ready. You should be able to build it, however, using Maven:
+You can build Sparrow using Maven:
 
 <pre>
 $ mvn compile
 $ mvn package -Dmaven.test.skip=true
 </pre>
 
-There are a variety of deployment related files in `sparrow/deploy/ec2`. These mostly focus on deploying and testing Sparrow in ec2, but for the truly curious, they do give insight on configuring and running Sparrow in its current form.
+Sparrow and Spark
+------------------------
+
+We have ported [Spark](http://spark.incubator.apache.org/), an in-memory analytics framework, to schedule using Sparrow. To use Spark with Sparrow, you'll need to use the [our forked version of Spark](https://github.com/kayousterhout/spark/tree/sparrow), which includes the Sparrow scheduling plugin.
 
 Research
 -------------------------
